@@ -54,7 +54,7 @@ fn main() -> std::io::Result<()> {
     let mut mode = Mode::Normal;
 
     let mut count: u16 = 1;
-    let mut chained: Vec<KeyCode> = vec![];
+    let mut chained: Vec<char> = vec![];
 
     loop {
         if let Event::Key(event) = read()? {
@@ -78,6 +78,34 @@ fn main() -> std::io::Result<()> {
                         buffer[cursor.row].remove(cursor.col);
                     }
                 }
+                (KeyCode::Char(c), Mode::Normal) if c == 'o' => {
+                    cursor.row += 1;
+                    buffer.insert(cursor.row, vec![]);
+                    cursor.col = 0;
+                    mode = Mode::Insert;
+                }
+                (KeyCode::Char(c), Mode::Normal) if c == 'O' => {
+                    if cursor.row > 0 {
+                        buffer.insert(cursor.row, vec![]);
+                        cursor.col = 0;
+                        mode = Mode::Insert;
+                    }
+                }
+                (KeyCode::Char(c), Mode::Normal)
+                    if c == 'd' && chained.len() > 0 && chained[0] == 'd' =>
+                {
+                    if buffer.len() > 1 {
+                        buffer.remove(cursor.row);
+                        if cursor.row == buffer.len() {
+                            cursor.row -= 1;
+                        }
+                    } else {
+                        buffer[0] = vec![];
+                        cursor.col = 0;
+                    }
+                    chained = vec![]
+                }
+
                 (KeyCode::Char(c), Mode::Normal) if c == 'q' => break,
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
                     let c = c.to_digit(10).unwrap() as u16;
@@ -87,6 +115,7 @@ fn main() -> std::io::Result<()> {
                     count *= 10;
                     count += c;
                 }
+                (KeyCode::Char(c), Mode::Normal) => chained.push(c),
 
                 (KeyCode::Esc, Mode::Insert) => {
                     mode = Mode::Normal;
