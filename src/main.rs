@@ -105,6 +105,48 @@ fn main() -> std::io::Result<()> {
                     }
                     chained = vec![]
                 }
+                (KeyCode::Char(c), Mode::Normal) if c == 'w' => {
+                    let mut next_char = if cursor.col + 1 != buffer[cursor.row].len() {
+                        buffer[cursor.row][cursor.col + 1]
+                    } else if cursor.row + 1 != buffer.len() {
+                        buffer[cursor.row + 1][0]
+                    } else {
+                        // Functionally aborts the callback
+                        buffer[cursor.row][cursor.col]
+                    };
+                    while next_char.is_alphanumeric() {
+                        if cursor.col + 1 != buffer[cursor.row].len() {
+                            cursor.col += 1;
+                        } else if cursor.row + 1 != buffer.len() {
+                            cursor.row += 1;
+                            cursor.col = 0;
+                        } else {
+                            break;
+                        }
+                        next_char = buffer[cursor.row][cursor.col];
+                    }
+                }
+                (KeyCode::Char(c), Mode::Normal) if c == 'b' => {
+                    let mut next_char = if cursor.col != 0 {
+                        buffer[cursor.row][cursor.col - 1]
+                    } else if cursor.row != 0 {
+                        buffer[cursor.row - 1][buffer[cursor.row - 1].len()]
+                    } else {
+                        // Functionally aborts the callback
+                        buffer[cursor.row][cursor.col]
+                    };
+                    while next_char.is_alphanumeric() {
+                        if cursor.col != 0 {
+                            cursor.col -= 1;
+                        } else if cursor.row != 0 {
+                            cursor.row -= 1;
+                            cursor.col = buffer[cursor.row].len();
+                        } else {
+                            break;
+                        }
+                        next_char = buffer[cursor.row][cursor.col];
+                    }
+                }
 
                 (KeyCode::Char(c), Mode::Normal) if c == 'q' => break,
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
