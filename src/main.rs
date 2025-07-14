@@ -68,6 +68,7 @@ fn main() -> std::io::Result<()> {
         Cmd::new("o", o_cmd),
         Cmd::new("O", O_cmd),
         Cmd::new("dd", dd_cmd),
+        Cmd::new("dw", dd_cmd),
     ];
 
     let mut mode = Mode::Normal;
