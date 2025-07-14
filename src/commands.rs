@@ -105,3 +105,24 @@ pub fn dd_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode
         cursor.col = 0;
     }
 }
+pub fn dw_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
+    let mut next_char = if cursor.col + 1 != buffer[cursor.row].len() {
+        buffer[cursor.row][cursor.col + 1]
+    } else if cursor.row + 1 != buffer.len() {
+        buffer[cursor.row + 1][0]
+    } else {
+        // Functionally aborts the callback
+        buffer[cursor.row][cursor.col]
+    };
+    while next_char.is_alphanumeric() {
+        if buffer[cursor.row].len() == 0 {
+            buffer.remove(cursor.row);
+        }
+        if cursor.col + 1 != buffer[cursor.row].len() {
+            buffer[cursor.row].remove(cursor.col);
+        } else {
+            break;
+        }
+        next_char = buffer[cursor.row][cursor.col];
+    }
+}
