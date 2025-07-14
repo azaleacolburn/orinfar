@@ -19,13 +19,13 @@ impl Command {
 
 // Callbacks
 pub fn w_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
-    let mut next_char = if cursor.col + 1 != buffer[cursor.row].len() {
+    let mut next_char = if cursor.col + 1 <= buffer[cursor.row].len() {
         buffer[cursor.row][cursor.col + 1]
     } else if cursor.row + 1 != buffer.len() {
         buffer[cursor.row + 1][0]
     } else {
         // Functionally aborts the callback
-        buffer[cursor.row][cursor.col]
+        return;
     };
     while next_char.is_alphanumeric() {
         if cursor.col + 1 != buffer[cursor.row].len() {
@@ -37,6 +37,9 @@ pub fn w_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode)
             break;
         }
         next_char = buffer[cursor.row][cursor.col];
+    }
+    if cursor.col != buffer[cursor.row].len() {
+        cursor.col += 1;
     }
 }
 
@@ -116,9 +119,8 @@ pub fn dw_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode
     };
     while next_char.is_alphanumeric() {
         if buffer[cursor.row].len() == 0 {
-            buffer.remove(cursor.row);
-        }
-        if cursor.col + 1 != buffer[cursor.row].len() {
+            buffer[cursor.row].remove(cursor.col);
+        } else if cursor.col + 1 != buffer[cursor.row].len() {
             buffer[cursor.row].remove(cursor.col);
         } else {
             break;
