@@ -20,7 +20,9 @@ use crossterm::{
     ExecutableCommand,
 };
 
-use crate::commands::{b_cmd, dd_cmd, dollar_cmd, o_cmd, underscore_cmd, w_cmd, x_cmd, O_cmd};
+use crate::commands::{
+    b_cmd, dd_cmd, dollar_cmd, dw_cmd, o_cmd, underscore_cmd, w_cmd, x_cmd, O_cmd,
+};
 
 #[derive(Clone, Debug)]
 struct Cursor {
@@ -68,7 +70,7 @@ fn main() -> std::io::Result<()> {
         Cmd::new("o", o_cmd),
         Cmd::new("O", O_cmd),
         Cmd::new("dd", dd_cmd),
-        Cmd::new("dw", dd_cmd),
+        Cmd::new("dw", dw_cmd),
     ];
 
     let mut mode = Mode::Normal;
@@ -97,7 +99,10 @@ fn main() -> std::io::Result<()> {
                     let mut matched_list = commands.iter().filter(|cmd| chained == cmd.chain);
                     if let Some(matched) = matched_list.next() {
                         assert!(matched_list.next().is_none());
-                        (matched.callback)(&mut buffer, &mut cursor, &mut mode);
+                        for _ in 0..count {
+                            (matched.callback)(&mut buffer, &mut cursor, &mut mode);
+                        }
+                        count = 1;
                         chained = vec![];
                     }
                 }
