@@ -77,11 +77,12 @@ pub fn underscore_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &
     cursor.col = first
 }
 
-pub fn x_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) {
+pub fn x_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
     if buffer[cursor.row].len() > cursor.col {
         buffer[cursor.row].remove(cursor.col);
     }
 }
+
 pub fn o_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) {
     cursor.row += 1;
     buffer.insert(cursor.row, vec![]);
@@ -89,6 +90,7 @@ pub fn o_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) 
     *mode = Mode::Insert;
 }
 
+#[allow(non_snake_case)]
 pub fn O_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) {
     if cursor.row > 0 {
         buffer.insert(cursor.row, vec![]);
@@ -108,6 +110,7 @@ pub fn dd_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode
         cursor.col = 0;
     }
 }
+
 pub fn dw_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
     let mut next_char = if cursor.col + 1 != buffer[cursor.row].len() {
         buffer[cursor.row][cursor.col + 1]
@@ -126,5 +129,8 @@ pub fn dw_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode
             break;
         }
         next_char = buffer[cursor.row][cursor.col];
+    }
+    if cursor.col != buffer[cursor.row].len() {
+        buffer[cursor.row].remove(cursor.col);
     }
 }
