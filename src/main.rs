@@ -62,15 +62,14 @@ fn main() -> std::io::Result<()> {
     let mut cursor = Cursor { row: 0, col: 0 };
 
     let commands = vec![
-        Cmd::new("w", w_cmd),
-        Cmd::new("b", b_cmd),
-        Cmd::new("$", dollar_cmd),
-        Cmd::new("_", underscore_cmd),
-        Cmd::new("x", x_cmd),
-        Cmd::new("o", o_cmd),
-        Cmd::new("O", O_cmd),
-        Cmd::new("dd", dd_cmd),
-        Cmd::new("dw", dw_cmd),
+        Cmd::leaf('w', w_cmd),
+        Cmd::leaf('b', b_cmd),
+        Cmd::leaf('$', dollar_cmd),
+        Cmd::leaf('_', underscore_cmd),
+        Cmd::leaf('x', x_cmd),
+        Cmd::leaf('o', o_cmd),
+        Cmd::leaf('O', O_cmd),
+        Cmd::branch('d', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
     ];
 
     let mut mode = Mode::Normal;
@@ -94,19 +93,30 @@ fn main() -> std::io::Result<()> {
                     count *= 10;
                     count += c;
                 }
+                // (KeyCode::Char(c), Mode::Normal) => {
+                //     chained.push(c);
+                //     let mut matched_list = commands.iter().filter(|cmd| chained == cmd.chain);
+                //     if let Some(matched) = matched_list.next() {
+                //         assert!(matched_list.next().is_none());
+                //         for _ in 0..count {
+                //             (matched.callback)(&mut buffer, &mut cursor, &mut mode);
+                //         }
+                //         count = 1;
+                //         chained = vec![];
+                //     }
+                // }
+
                 (KeyCode::Char(c), Mode::Normal) => {
                     chained.push(c);
-                    let mut matched_list = commands.iter().filter(|cmd| chained == cmd.chain);
-                    if let Some(matched) = matched_list.next() {
-                        assert!(matched_list.next().is_none());
-                        for _ in 0..count {
-                            (matched.callback)(&mut buffer, &mut cursor, &mut mode);
+
+                    let mut found = false;
+                    let mut array: &Vec<Cmd> = &commands;
+                    loop {
+                        for cmd in array {
+                            cmd.character == chained.
                         }
-                        count = 1;
-                        chained = vec![];
                     }
                 }
-
                 (KeyCode::Esc, Mode::Insert) => {
                     mode = Mode::Normal;
                     execute!(stdout, DisableBlinking)?;
@@ -129,10 +139,9 @@ fn main() -> std::io::Result<()> {
                     cursor.col += 1;
                 }
                 (KeyCode::Enter, Mode::Insert) => {
-                    let end = if buffer[cursor.row].len() > 0 {
-                        buffer[cursor.row].split_off(cursor.col)
-                    } else {
-                        vec![]
+                    let end = match buffer[cursor.row].len() > 0 {
+                        true => buffer[cursor.row].split_off(cursor.col),
+                        false => vec![],
                     };
 
                     buffer.push(end);

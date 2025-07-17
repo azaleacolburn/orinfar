@@ -1,23 +1,34 @@
 use crate::{Cursor, Mode};
 
 pub struct Command {
-    pub chain: Vec<char>,
+    pub character: char,
     pub callback: fn(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) -> (),
+    pub children: Vec<Command>,
 }
 
 impl Command {
-    pub fn new(
-        chain: &str,
+    pub fn branch(character: char, children: impl Into<Vec<Command>>) -> Self {
+        Command {
+            character,
+            callback: wait,
+            children: children.into(),
+        }
+    }
+    pub fn leaf(
+        character: char,
         callback: fn(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) -> (),
     ) -> Self {
         Command {
-            chain: chain.chars().collect(),
+            character,
             callback,
+            children: Vec::new(),
         }
     }
 }
 
 // Callbacks
+//
+pub fn wait(_buffer: &mut Vec<Vec<char>>, _cursor: &mut Cursor, _mode: &mut Mode) {}
 pub fn w_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
     let mut next_char = if cursor.col + 1 <= buffer[cursor.row].len() {
         buffer[cursor.row][cursor.col + 1]
