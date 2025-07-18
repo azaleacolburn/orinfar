@@ -105,15 +105,28 @@ fn main() -> std::io::Result<()> {
                 //         chained = vec![];
                 //     }
                 // }
-
                 (KeyCode::Char(c), Mode::Normal) => {
                     chained.push(c);
 
-                    let mut found = false;
                     let mut array: &Vec<Cmd> = &commands;
+                    let mut depth = 0;
                     loop {
-                        for cmd in array {
-                            cmd.character == chained.
+                        match array.iter().find(|cmd| cmd.character == chained[depth]) {
+                            Some(cmd) => {
+                                if cmd.children.len() == 0 {
+                                    (cmd.callback)(&mut buffer, &mut cursor, &mut mode);
+                                    chained = vec![];
+                                    break;
+                                } else {
+                                    array = &cmd.children;
+                                    depth += 1;
+                                    if depth == chained.len() {
+                                        break;
+                                    }
+                                    continue;
+                                }
+                            }
+                            None => break,
                         }
                     }
                 }
