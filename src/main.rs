@@ -4,16 +4,11 @@ use std::io::{stdout, Write};
 use commands::Command as Cmd;
 
 use crossterm::{
-    cursor::{
-        DisableBlinking, MoveDown, MoveTo,
-        MoveToColumn,
-    },
+    cursor::{DisableBlinking, MoveDown, MoveTo, MoveToColumn},
     event::{read, Event, KeyCode},
     execute,
     style::{Color, Print, ResetColor, SetForegroundColor},
-    terminal::{
-        disable_raw_mode, enable_raw_mode, size, Clear, ClearType, ScrollUp, SetSize,
-    },
+    terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType, ScrollUp, SetSize},
 };
 
 use crate::commands::{
