@@ -1,27 +1,23 @@
 mod commands;
-use std::{
-    io::{stdout, Write},
-    process::Command,
-};
+use std::io::{stdout, Write};
 
 use commands::Command as Cmd;
 
 use crossterm::{
     cursor::{
-        self, position, DisableBlinking, EnableBlinking, MoveDown, MoveLeft, MoveRight, MoveTo,
-        MoveToColumn, MoveUp, RestorePosition, SavePosition,
+        DisableBlinking, MoveDown, MoveTo,
+        MoveToColumn,
     },
     event::{read, Event, KeyCode},
     execute,
-    style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
+    style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{
-        disable_raw_mode, enable_raw_mode, size, Clear, ClearType, ScrollDown, ScrollUp, SetSize,
+        disable_raw_mode, enable_raw_mode, size, Clear, ClearType, ScrollUp, SetSize,
     },
-    ExecutableCommand,
 };
 
 use crate::commands::{
-    b_cmd, dd_cmd, dollar_cmd, dw_cmd, o_cmd, underscore_cmd, w_cmd, x_cmd, O_cmd,
+    a_cmd, b_cmd, dd_cmd, dollar_cmd, dw_cmd, i_cmd, o_cmd, underscore_cmd, w_cmd, x_cmd, O_cmd,
 };
 
 #[derive(Clone, Debug)]
@@ -34,56 +30,53 @@ struct Cursor {
 enum Mode {
     Normal,
     Insert,
-    Visual,
+    _Visual,
 }
 
 fn main() -> std::io::Result<()> {
+    let mut stdout = stdout();
     let (cols, rows) = size()?;
-    let (cursor_cols, cursor_rows) = position()?;
     execute!(
-        stdout(),
+        stdout,
         SetSize(cols, rows),
         Clear(ClearType::All),
         ScrollUp(rows),
         SetForegroundColor(Color::Blue),
-        // SetBackgroundColor(Color::DarkGrey),
     )?;
 
     // Fill entire screen with spaces with the background color
     for row in 0..rows {
-        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+        execute!(stdout, MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
     }
-    execute!(stdout(), MoveTo(0, 0))?;
-
+    execute!(stdout, MoveTo(0, 0))?;
     enable_raw_mode()?;
-    let mut stdout = stdout();
 
     let mut buffer: Vec<Vec<char>> = vec![vec![]];
     let mut cursor = Cursor { row: 0, col: 0 };
 
     let commands = vec![
+        // Mode Shifting
+        Cmd::leaf('i', i_cmd),
+        Cmd::leaf('a', a_cmd),
+        Cmd::leaf('o', o_cmd),
+        Cmd::leaf('O', O_cmd),
+        // Movement
         Cmd::leaf('w', w_cmd),
         Cmd::leaf('b', b_cmd),
         Cmd::leaf('$', dollar_cmd),
         Cmd::leaf('_', underscore_cmd),
+        // Editing
         Cmd::leaf('x', x_cmd),
-        Cmd::leaf('o', o_cmd),
-        Cmd::leaf('O', O_cmd),
         Cmd::branch('d', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
     ];
 
     let mut mode = Mode::Normal;
-
     let mut count: u16 = 1;
     let mut chained: Vec<char> = vec![];
 
     loop {
         if let Event::Key(event) = read()? {
             match (event.code, mode.clone()) {
-                (KeyCode::Char(c), Mode::Normal) if c == 'i' => {
-                    mode = Mode::Insert;
-                    execute!(stdout, EnableBlinking)?;
-                }
                 (KeyCode::Char(c), Mode::Normal) if c == 'q' => break,
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
                     let c = c.to_digit(10).unwrap() as u16;
@@ -93,23 +86,12 @@ fn main() -> std::io::Result<()> {
                     count *= 10;
                     count += c;
                 }
-                // (KeyCode::Char(c), Mode::Normal) => {
-                //     chained.push(c);
-                //     let mut matched_list = commands.iter().filter(|cmd| chained == cmd.chain);
-                //     if let Some(matched) = matched_list.next() {
-                //         assert!(matched_list.next().is_none());
-                //         for _ in 0..count {
-                //             (matched.callback)(&mut buffer, &mut cursor, &mut mode);
-                //         }
-                //         count = 1;
-                //         chained = vec![];
-                //     }
-                // }
+
                 (KeyCode::Char(c), Mode::Normal) => {
                     chained.push(c);
-
                     let mut array: &Vec<Cmd> = &commands;
                     let mut depth = 0;
+
                     loop {
                         match array.iter().find(|cmd| cmd.character == chained[depth]) {
                             Some(cmd) => {
@@ -130,8 +112,12 @@ fn main() -> std::io::Result<()> {
                         }
                     }
                 }
+
                 (KeyCode::Esc, Mode::Insert) => {
                     mode = Mode::Normal;
+                    if cursor.col != 0 {
+                        cursor.col -= 1;
+                    }
                     execute!(stdout, DisableBlinking)?;
                     count = 1;
                 }
@@ -202,8 +188,8 @@ fn main() -> std::io::Result<()> {
         }
     }
 
-    execute!(stdout, SetSize(cols, rows), ResetColor)?;
     disable_raw_mode()?;
+    execute!(stdout, SetSize(cols, rows), ResetColor)?;
 
     Ok(())
 }
