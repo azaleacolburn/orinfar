@@ -1,3 +1,7 @@
+use std::io::stdout;
+
+use crossterm::{cursor::EnableBlinking, execute};
+
 use crate::{Cursor, Mode};
 
 pub struct Command {
@@ -29,6 +33,18 @@ impl Command {
 // Callbacks
 //
 pub fn wait(_buffer: &mut Vec<Vec<char>>, _cursor: &mut Cursor, _mode: &mut Mode) {}
+pub fn i_cmd(_buffer: &mut Vec<Vec<char>>, _cursor: &mut Cursor, mode: &mut Mode) {
+    *mode = Mode::Insert;
+    execute!(stdout(), EnableBlinking).unwrap();
+}
+pub fn a_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) {
+    *mode = Mode::Insert;
+    if cursor.col < buffer[cursor.row].len() {
+        cursor.col += 1;
+    }
+    execute!(stdout(), EnableBlinking).unwrap();
+}
+
 pub fn w_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
     let mut next_char = if cursor.col + 1 <= buffer[cursor.row].len() {
         buffer[cursor.row][cursor.col + 1]
