@@ -92,16 +92,36 @@ pub fn b_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode)
         // Functionally aborts the callback
         buffer[cursor.row][cursor.col]
     };
-    while next_char.is_alphanumeric() {
+    if next_char.is_alphanumeric() {
+        while next_char.is_alphanumeric() {
+            if cursor.col != 0 {
+                cursor.col -= 1;
+            } else if cursor.row != 0 {
+                cursor.row -= 1;
+                cursor.col = buffer[cursor.row].len();
+            } else {
+                break;
+            }
+            next_char = buffer[cursor.row][cursor.col];
+        }
         if cursor.col != 0 {
             cursor.col -= 1;
         } else if cursor.row != 0 {
             cursor.row -= 1;
             cursor.col = buffer[cursor.row].len();
-        } else {
-            break;
         }
-        next_char = buffer[cursor.row][cursor.col];
+    } else {
+        while next_char.is_whitespace() {
+            if cursor.col != 0 {
+                cursor.col -= 1;
+            } else if cursor.row != 0 {
+                cursor.row -= 1;
+                cursor.col = buffer[cursor.row].len();
+            } else {
+                break;
+            }
+            next_char = buffer[cursor.row][cursor.col];
+        }
     }
 }
 
