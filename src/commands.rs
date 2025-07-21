@@ -51,9 +51,19 @@ pub fn w_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode)
     } else if cursor.row + 1 != buffer.len() {
         buffer[cursor.row + 1][0]
     } else {
-        // Functionally aborts the callback
         return;
     };
+    while next_char.is_whitespace() {
+        if cursor.col + 1 != buffer[cursor.row].len() {
+            cursor.col += 1;
+        } else if cursor.row + 1 != buffer.len() {
+            cursor.row += 1;
+            cursor.col = 0;
+        } else {
+            break;
+        }
+        next_char = buffer[cursor.row][cursor.col];
+    }
     while next_char.is_alphanumeric() {
         if cursor.col + 1 != buffer[cursor.row].len() {
             cursor.col += 1;
@@ -65,8 +75,11 @@ pub fn w_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode)
         }
         next_char = buffer[cursor.row][cursor.col];
     }
-    if cursor.col != buffer[cursor.row].len() {
+    if cursor.col + 1 != buffer[cursor.row].len() {
         cursor.col += 1;
+    } else if cursor.row + 1 != buffer.len() {
+        cursor.row += 1;
+        cursor.col = 0;
     }
 }
 
