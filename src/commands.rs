@@ -89,8 +89,7 @@ pub fn b_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode)
     } else if cursor.row != 0 {
         buffer[cursor.row - 1][buffer[cursor.row - 1].len()]
     } else {
-        // Functionally aborts the callback
-        buffer[cursor.row][cursor.col]
+        return;
     };
     if next_char.is_alphanumeric() {
         while next_char.is_alphanumeric() {
@@ -177,8 +176,7 @@ pub fn dw_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode
     } else if cursor.row + 1 != buffer.len() {
         buffer[cursor.row + 1][0]
     } else {
-        // Functionally aborts the callback
-        buffer[cursor.row][cursor.col]
+        return;
     };
     while next_char.is_alphanumeric() {
         if buffer[cursor.row].len() == 0 {
