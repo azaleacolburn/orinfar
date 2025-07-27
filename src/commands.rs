@@ -1,8 +1,15 @@
+use crate::{Cursor, Mode};
+use crossterm::{cursor::EnableBlinking, execute};
 use std::io::stdout;
 
-use crossterm::{cursor::EnableBlinking, execute};
-
-use crate::{Cursor, Mode};
+macro_rules! unwrap_or_return {
+    ( $e:expr ) => {
+        match $e {
+            Some(x) => x,
+            None => return,
+        }
+    };
+}
 
 pub struct Command {
     pub character: char,
@@ -46,51 +53,66 @@ pub fn a_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) 
 }
 
 pub fn w_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
-    let mut next_char = if cursor.col + 1 <= buffer[cursor.row].len() {
-        buffer[cursor.row][cursor.col + 1]
-    } else if cursor.row + 1 != buffer.len() {
-        buffer[cursor.row + 1][0]
+    let mut c = buffer[cursor.row][cursor.col]; // = unwrap_or_return!(get_next_char(buffer, cursor));
+
+    if !c.is_alphanumeric() {
+        while !c.is_alphanumeric() {
+            if cursor.col < buffer[cursor.row].len() {
+                cursor.col += 1;
+            } else if cursor.row < buffer.len() {
+                cursor.row += 1;
+                cursor.col = 0;
+            } else {
+                break;
+            }
+            c = buffer[cursor.row][cursor.col];
+        }
     } else {
-        return;
-    };
-    while next_char.is_whitespace() {
-        if cursor.col + 1 != buffer[cursor.row].len() {
-            cursor.col += 1;
-        } else if cursor.row + 1 != buffer.len() {
-            cursor.row += 1;
-            cursor.col = 0;
-        } else {
-            break;
+        while c.is_alphanumeric() {
+            if cursor.col + 1 != buffer[cursor.row].len() {
+                cursor.col += 1;
+            } else if cursor.row + 1 != buffer.len() {
+                cursor.row += 1;
+                cursor.col = 0;
+            } else {
+                break;
+            }
+            c = buffer[cursor.row][cursor.col];
         }
-        next_char = buffer[cursor.row][cursor.col];
-    }
-    while next_char.is_alphanumeric() {
-        if cursor.col + 1 != buffer[cursor.row].len() {
-            cursor.col += 1;
-        } else if cursor.row + 1 != buffer.len() {
-            cursor.row += 1;
-            cursor.col = 0;
-        } else {
-            break;
+        while c.is_whitespace() {
+            if cursor.col + 1 != buffer[cursor.row].len() {
+                cursor.col += 1;
+            } else if cursor.row + 1 != buffer.len() {
+                cursor.row += 1;
+                cursor.col = 0;
+            } else {
+                break;
+            }
+            c = buffer[cursor.row][cursor.col];
         }
-        next_char = buffer[cursor.row][cursor.col];
     }
-    if cursor.col + 1 != buffer[cursor.row].len() {
-        cursor.col += 1;
-    } else if cursor.row + 1 != buffer.len() {
-        cursor.row += 1;
-        cursor.col = 0;
+
+    // if cursor.col + 1 != buffer[cursor.row].len() {
+    //     cursor.col += 1;
+    // } else if cursor.row + 1 != buffer.len() {
+    //     cursor.row += 1;
+    //     cursor.col = 0;
+    // }
+}
+
+fn last_next_char(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor) -> Option<char> {
+    if cursor.col != 0 {
+        Some(buffer[cursor.row][cursor.col - 1])
+    } else if cursor.row != 0 {
+        Some(buffer[cursor.row - 1][buffer[cursor.row - 1].len()])
+    } else {
+        None
     }
 }
 
 pub fn b_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
-    let mut next_char = if cursor.col != 0 {
-        buffer[cursor.row][cursor.col - 1]
-    } else if cursor.row != 0 {
-        buffer[cursor.row - 1][buffer[cursor.row - 1].len()]
-    } else {
-        return;
-    };
+    let mut next_char = unwrap_or_return!(last_next_char(buffer, cursor));
+
     if next_char.is_alphanumeric() {
         while next_char.is_alphanumeric() {
             if cursor.col != 0 {
@@ -101,14 +123,14 @@ pub fn b_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode)
             } else {
                 break;
             }
-            next_char = buffer[cursor.row][cursor.col];
+            next_char = unwrap_or_return!(last_next_char(buffer, cursor));
         }
-        if cursor.col != 0 {
-            cursor.col -= 1;
-        } else if cursor.row != 0 {
-            cursor.row -= 1;
-            cursor.col = buffer[cursor.row].len();
-        }
+        // if cursor.col != 0 {
+        //     cursor.col -= 1;
+        // } else if cursor.row != 0 {
+        //     cursor.row -= 1;
+        //     cursor.col = buffer[cursor.row].len();
+        // }
     } else {
         while next_char.is_whitespace() {
             if cursor.col != 0 {
