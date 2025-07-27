@@ -91,63 +91,51 @@ pub fn w_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode)
             c = buffer[cursor.row][cursor.col];
         }
     }
-
-    // if cursor.col + 1 != buffer[cursor.row].len() {
-    //     cursor.col += 1;
-    // } else if cursor.row + 1 != buffer.len() {
-    //     cursor.row += 1;
-    //     cursor.col = 0;
-    // }
-}
-
-fn last_next_char(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor) -> Option<char> {
-    if cursor.col != 0 {
-        Some(buffer[cursor.row][cursor.col - 1])
-    } else if cursor.row != 0 {
-        Some(buffer[cursor.row - 1][buffer[cursor.row - 1].len()])
-    } else {
-        None
-    }
 }
 
 pub fn b_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
-    let mut next_char = unwrap_or_return!(last_next_char(buffer, cursor));
+    let mut c = buffer[cursor.row][cursor.col];
 
-    if next_char.is_alphanumeric() {
-        while next_char.is_alphanumeric() {
-            if cursor.col != 0 {
+    if !c.is_alphanumeric() {
+        while !c.is_alphanumeric() {
+            if cursor.col > 0 {
                 cursor.col -= 1;
-            } else if cursor.row != 0 {
+            } else if cursor.row > 0 {
                 cursor.row -= 1;
-                cursor.col = buffer[cursor.row].len();
+                cursor.col = buffer[cursor.row].len() - 1;
             } else {
                 break;
             }
-            next_char = unwrap_or_return!(last_next_char(buffer, cursor));
+            c = buffer[cursor.row][cursor.col];
         }
-        // if cursor.col != 0 {
-        //     cursor.col -= 1;
-        // } else if cursor.row != 0 {
-        //     cursor.row -= 1;
-        //     cursor.col = buffer[cursor.row].len();
-        // }
     } else {
-        while next_char.is_whitespace() {
-            if cursor.col != 0 {
+        while c.is_alphanumeric() {
+            if cursor.col > 0 {
                 cursor.col -= 1;
-            } else if cursor.row != 0 {
+            } else if cursor.row > 0 {
                 cursor.row -= 1;
-                cursor.col = buffer[cursor.row].len();
+                cursor.col = buffer[cursor.row].len() - 1;
             } else {
                 break;
             }
-            next_char = buffer[cursor.row][cursor.col];
+            c = buffer[cursor.row][cursor.col];
+        }
+        while c.is_whitespace() {
+            if cursor.col > 0 {
+                cursor.col -= 1;
+            } else if cursor.row > 0 {
+                cursor.row -= 1;
+                cursor.col = buffer[cursor.row].len() - 1;
+            } else {
+                break;
+            }
+            c = buffer[cursor.row][cursor.col];
         }
     }
 }
 
 pub fn dollar_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
-    cursor.col = buffer[cursor.row].len()
+    cursor.col = buffer[cursor.row].len() - 1
 }
 
 pub fn underscore_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
