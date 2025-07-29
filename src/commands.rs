@@ -1,5 +1,12 @@
-use crate::{Cursor, Mode};
-use crossterm::{cursor::EnableBlinking, execute};
+use crate::{
+    register::{RegisterHandler, Registers},
+    Cursor, Mode,
+};
+use crossterm::{
+    cursor::EnableBlinking,
+    event::{read, Event, KeyCode},
+    execute,
+};
 use std::io::{stdout, BufRead};
 
 macro_rules! unwrap_or_return {
@@ -13,7 +20,12 @@ macro_rules! unwrap_or_return {
 
 pub struct Command {
     pub character: char,
-    pub callback: fn(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) -> (),
+    pub callback: fn(
+        buffer: &mut Vec<Vec<char>>,
+        cursor: &mut Cursor,
+        register_handler: &mut RegisterHandler,
+        mode: &mut Mode,
+    ) -> (),
     pub children: Vec<Command>,
 }
 
@@ -27,7 +39,12 @@ impl Command {
     }
     pub fn leaf(
         character: char,
-        callback: fn(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) -> (),
+        callback: fn(
+            buffer: &mut Vec<Vec<char>>,
+            cursor: &mut Cursor,
+            register_handler: &mut RegisterHandler,
+            mode: &mut Mode,
+        ) -> (),
     ) -> Self {
         Command {
             character,
@@ -39,12 +56,28 @@ impl Command {
 
 // Callbacks
 //
-pub fn wait(_buffer: &mut Vec<Vec<char>>, _cursor: &mut Cursor, _mode: &mut Mode) {}
-pub fn i_cmd(_buffer: &mut Vec<Vec<char>>, _cursor: &mut Cursor, mode: &mut Mode) {
+pub fn wait(
+    _buffer: &mut Vec<Vec<char>>,
+    _cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+) {
+}
+pub fn i_cmd(
+    _buffer: &mut Vec<Vec<char>>,
+    _cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    mode: &mut Mode,
+) {
     *mode = Mode::Insert;
     execute!(stdout(), EnableBlinking).unwrap();
 }
-pub fn a_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) {
+pub fn a_cmd(
+    buffer: &mut Vec<Vec<char>>,
+    cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    mode: &mut Mode,
+) {
     *mode = Mode::Insert;
     if cursor.col < buffer[cursor.row].len() {
         cursor.col += 1;
@@ -52,7 +85,12 @@ pub fn a_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) 
     execute!(stdout(), EnableBlinking).unwrap();
 }
 
-pub fn w_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
+pub fn w_cmd(
+    buffer: &mut Vec<Vec<char>>,
+    cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+) {
     if buffer[cursor.row].len() == 0 {
         return;
     }
@@ -96,7 +134,12 @@ pub fn w_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode)
     }
 }
 
-pub fn b_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
+pub fn b_cmd(
+    buffer: &mut Vec<Vec<char>>,
+    cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+) {
     if buffer[cursor.row].len() == 0 {
         return;
     }
@@ -150,7 +193,12 @@ fn get_next_char(buffer: &Vec<Vec<char>>, cursor: &Cursor) -> Option<char> {
     }
 }
 
-pub fn e_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
+pub fn e_cmd(
+    buffer: &mut Vec<Vec<char>>,
+    cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+) {
     let mut next_char = unwrap_or_return!(get_next_char(buffer, cursor)); // buffer[cursor.row][cursor.col]; // = unwrap_or_return!(get_next_char(buffer, cursor));
 
     if !next_char.is_alphanumeric() {
@@ -191,11 +239,21 @@ pub fn e_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode)
     }
 }
 
-pub fn dollar_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
+pub fn dollar_cmd(
+    buffer: &mut Vec<Vec<char>>,
+    cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+) {
     cursor.col = buffer[cursor.row].len() - 1
 }
 
-pub fn underscore_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
+pub fn underscore_cmd(
+    buffer: &mut Vec<Vec<char>>,
+    cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+) {
     let first = buffer[cursor.row]
         .iter()
         .position(|c| !c.is_whitespace())
@@ -203,13 +261,23 @@ pub fn underscore_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &
     cursor.col = first
 }
 
-pub fn x_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
+pub fn x_cmd(
+    buffer: &mut Vec<Vec<char>>,
+    cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+) {
     if buffer[cursor.row].len() > cursor.col {
         buffer[cursor.row].remove(cursor.col);
     }
 }
 
-pub fn o_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) {
+pub fn o_cmd(
+    buffer: &mut Vec<Vec<char>>,
+    cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    mode: &mut Mode,
+) {
     cursor.row += 1;
     buffer.insert(cursor.row, vec![]);
     cursor.col = 0;
@@ -217,7 +285,12 @@ pub fn o_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) 
 }
 
 #[allow(non_snake_case)]
-pub fn O_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) {
+pub fn O_cmd(
+    buffer: &mut Vec<Vec<char>>,
+    cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    mode: &mut Mode,
+) {
     if cursor.row > 0 {
         buffer.insert(cursor.row, vec![]);
         cursor.col = 0;
@@ -225,7 +298,12 @@ pub fn O_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) 
     }
 }
 
-pub fn dd_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
+pub fn dd_cmd(
+    buffer: &mut Vec<Vec<char>>,
+    cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+) {
     if buffer.len() > 1 {
         buffer.remove(cursor.row);
         if cursor.row == buffer.len() {
@@ -237,7 +315,12 @@ pub fn dd_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode
     }
 }
 
-pub fn dw_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
+pub fn dw_cmd(
+    buffer: &mut Vec<Vec<char>>,
+    cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+) {
     let mut next_char = if cursor.col + 1 != buffer[cursor.row].len() {
         buffer[cursor.row][cursor.col + 1]
     } else if cursor.row + 1 != buffer.len() {
@@ -257,5 +340,17 @@ pub fn dw_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode
     }
     if cursor.col != buffer[cursor.row].len() {
         buffer[cursor.row].remove(cursor.col);
+    }
+}
+
+pub fn double_quote_cmd(
+    _buffer: &mut Vec<Vec<char>>,
+    _cursor: &mut Cursor,
+    register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+) {
+    if let Event::Key(event) = read().unwrap() {
+        register_handler.init_reg(event.code, "");
+        register_handler.current_register = event.code.to_string();
     }
 }
