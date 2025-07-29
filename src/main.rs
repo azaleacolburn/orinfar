@@ -12,7 +12,8 @@ use crossterm::{
 };
 
 use crate::commands::{
-    a_cmd, b_cmd, dd_cmd, dollar_cmd, dw_cmd, i_cmd, o_cmd, underscore_cmd, w_cmd, x_cmd, O_cmd,
+    a_cmd, b_cmd, dd_cmd, dollar_cmd, dw_cmd, e_cmd, i_cmd, o_cmd, underscore_cmd, w_cmd, x_cmd,
+    O_cmd,
 };
 
 #[derive(Clone, Debug)]
@@ -58,6 +59,7 @@ fn main() -> std::io::Result<()> {
         // Movement
         Cmd::leaf('w', w_cmd),
         Cmd::leaf('b', b_cmd),
+        Cmd::leaf('e', e_cmd),
         Cmd::leaf('$', dollar_cmd),
         Cmd::leaf('_', underscore_cmd),
         // Editing
@@ -183,8 +185,8 @@ fn main() -> std::io::Result<()> {
         }
     }
 
-    disable_raw_mode()?;
     execute!(stdout, SetSize(cols, rows), ResetColor)?;
+    disable_raw_mode()?;
 
     Ok(())
 }
