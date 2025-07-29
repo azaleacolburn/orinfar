@@ -17,7 +17,7 @@ use crossterm::{
 
 use crate::{
     commands::{
-        a_cmd, b_cmd, dd_cmd, dollar_cmd, double_quote_cmd, dw_cmd, e_cmd, i_cmd, o_cmd,
+        a_cmd, b_cmd, dd_cmd, dollar_cmd, double_quote_cmd, dw_cmd, e_cmd, i_cmd, o_cmd, p_cmd,
         underscore_cmd, w_cmd, x_cmd, O_cmd,
     },
     register::RegisterHandler,
@@ -76,6 +76,7 @@ fn main() -> std::io::Result<()> {
         Cmd::branch('d', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
         Cmd::branch('y', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
         // Registers
+        Cmd::leaf('p', p_cmd),
         Cmd::leaf('"', double_quote_cmd),
     ];
 
@@ -122,6 +123,7 @@ fn main() -> std::io::Result<()> {
                             }
                         }
                     }
+                    register_handler.reset_current_register();
                 }
 
                 (KeyCode::Esc, Mode::Insert) => {
