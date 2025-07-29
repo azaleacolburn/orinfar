@@ -1,5 +1,9 @@
 mod commands;
-use std::io::{stdout, Write};
+mod register;
+use std::{
+    collections::HashMap,
+    io::{stdout, Write},
+};
 
 use commands::Command as Cmd;
 
@@ -11,9 +15,12 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType, ScrollUp, SetSize},
 };
 
-use crate::commands::{
-    a_cmd, b_cmd, dd_cmd, dollar_cmd, dw_cmd, e_cmd, i_cmd, o_cmd, underscore_cmd, w_cmd, x_cmd,
-    O_cmd,
+use crate::{
+    commands::{
+        a_cmd, b_cmd, dd_cmd, dollar_cmd, double_quote_cmd, dw_cmd, e_cmd, i_cmd, o_cmd,
+        underscore_cmd, w_cmd, x_cmd, O_cmd,
+    },
+    register::RegisterHandler,
 };
 
 #[derive(Clone, Debug)]
@@ -47,6 +54,8 @@ fn main() -> std::io::Result<()> {
     execute!(stdout, MoveTo(0, 0))?;
     enable_raw_mode()?;
 
+    let mut register_handler = RegisterHandler::new();
+
     let mut buffer: Vec<Vec<char>> = vec![vec![]];
     let mut cursor = Cursor { row: 0, col: 0 };
 
@@ -65,6 +74,9 @@ fn main() -> std::io::Result<()> {
         // Editing
         Cmd::leaf('x', x_cmd),
         Cmd::branch('d', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
+        Cmd::branch('y', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
+        // Registers
+        Cmd::leaf('"', double_quote_cmd),
     ];
 
     let mut mode = Mode::Normal;
@@ -94,7 +106,12 @@ fn main() -> std::io::Result<()> {
                         .find(|cmd| cmd.character == chained[depth])
                     {
                         if cmd.children.len() == 0 {
-                            (cmd.callback)(&mut buffer, &mut cursor, &mut mode);
+                            (cmd.callback)(
+                                &mut buffer,
+                                &mut cursor,
+                                &mut register_handler,
+                                &mut mode,
+                            );
                             chained = vec![];
                             break;
                         } else {
