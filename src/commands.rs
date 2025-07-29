@@ -1,6 +1,6 @@
 use crate::{Cursor, Mode};
 use crossterm::{cursor::EnableBlinking, execute};
-use std::io::stdout;
+use std::io::{stdout, BufRead};
 
 macro_rules! unwrap_or_return {
     ( $e:expr ) => {
@@ -53,6 +53,9 @@ pub fn a_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, mode: &mut Mode) 
 }
 
 pub fn w_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
+    if buffer[cursor.row].len() == 0 {
+        return;
+    }
     let mut c = buffer[cursor.row][cursor.col]; // = unwrap_or_return!(get_next_char(buffer, cursor));
 
     if !c.is_alphanumeric() {
@@ -94,6 +97,9 @@ pub fn w_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode)
 }
 
 pub fn b_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
+    if buffer[cursor.row].len() == 0 {
+        return;
+    }
     let mut c = buffer[cursor.row][cursor.col];
 
     if !c.is_alphanumeric() {
@@ -130,6 +136,57 @@ pub fn b_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode)
                 break;
             }
             c = buffer[cursor.row][cursor.col];
+        }
+    }
+}
+
+fn get_next_char(buffer: &Vec<Vec<char>>, cursor: &Cursor) -> Option<char> {
+    if cursor.col + 1 < buffer[cursor.row].len() {
+        Some(buffer[cursor.row][cursor.col + 1])
+    } else if cursor.row + 1 < buffer.len() {
+        Some(buffer[cursor.row + 1][0])
+    } else {
+        None
+    }
+}
+
+pub fn e_cmd(buffer: &mut Vec<Vec<char>>, cursor: &mut Cursor, _mode: &mut Mode) {
+    let mut next_char = unwrap_or_return!(get_next_char(buffer, cursor)); // buffer[cursor.row][cursor.col]; // = unwrap_or_return!(get_next_char(buffer, cursor));
+
+    if !next_char.is_alphanumeric() {
+        while !next_char.is_alphanumeric() {
+            if cursor.col < buffer[cursor.row].len() {
+                cursor.col += 1;
+            } else if cursor.row < buffer.len() {
+                cursor.row += 1;
+                cursor.col = 0;
+            } else {
+                break;
+            }
+            next_char = unwrap_or_return!(get_next_char(buffer, cursor));
+        }
+        while next_char.is_alphanumeric() {
+            if cursor.col + 1 != buffer[cursor.row].len() {
+                cursor.col += 1;
+            } else if cursor.row + 1 != buffer.len() {
+                cursor.row += 1;
+                cursor.col = 0;
+            } else {
+                break;
+            }
+            next_char = unwrap_or_return!(get_next_char(buffer, cursor));
+        }
+    } else {
+        while next_char.is_alphanumeric() {
+            if cursor.col + 1 != buffer[cursor.row].len() {
+                cursor.col += 1;
+            } else if cursor.row + 1 != buffer.len() {
+                cursor.row += 1;
+                cursor.col = 0;
+            } else {
+                break;
+            }
+            next_char = unwrap_or_return!(get_next_char(buffer, cursor));
         }
     }
 }
