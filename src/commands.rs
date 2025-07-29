@@ -301,15 +301,17 @@ pub fn O_cmd(
 pub fn dd_cmd(
     buffer: &mut Vec<Vec<char>>,
     cursor: &mut Cursor,
-    _register_handler: &mut RegisterHandler,
+    register_handler: &mut RegisterHandler,
     _mode: &mut Mode,
 ) {
     if buffer.len() > 1 {
-        buffer.remove(cursor.row);
+        let line = buffer.remove(cursor.row);
+        register_handler.set_reg(line);
         if cursor.row == buffer.len() {
             cursor.row -= 1;
         }
     } else {
+        register_handler.set_reg(buffer[0].clone());
         buffer[0] = vec![];
         cursor.col = 0;
     }
@@ -321,26 +323,58 @@ pub fn dw_cmd(
     _register_handler: &mut RegisterHandler,
     _mode: &mut Mode,
 ) {
-    let mut next_char = if cursor.col + 1 != buffer[cursor.row].len() {
-        buffer[cursor.row][cursor.col + 1]
-    } else if cursor.row + 1 != buffer.len() {
-        buffer[cursor.row + 1][0]
-    } else {
+    if buffer[cursor.row].len() == 0 {
         return;
-    };
-    while next_char.is_alphanumeric() {
-        if buffer[cursor.row].len() == 0 {
-            buffer[cursor.row].remove(cursor.col);
-        } else if cursor.col + 1 != buffer[cursor.row].len() {
-            buffer[cursor.row].remove(cursor.col);
-        } else {
-            break;
+    }
+    let mut c = buffer[cursor.row][cursor.col]; // = unwrap_or_return!(get_next_char(buffer, cursor));
+
+    if !c.is_alphanumeric() {
+        while !c.is_alphanumeric() {
+            if cursor.col < buffer[cursor.row].len() {
+                buffer[cursor.row].remove(cursor.col);
+            } else if cursor.row < buffer.len() {
+                buffer.remove(cursor.row);
+                cursor.col = 0;
+            } else {
+                break;
+            }
+            c = buffer[cursor.row][cursor.col];
         }
-        next_char = buffer[cursor.row][cursor.col];
+    } else {
+        while c.is_alphanumeric() {
+            if cursor.col + 1 != buffer[cursor.row].len() {
+                buffer[cursor.row].remove(cursor.col);
+            } else if cursor.row + 1 != buffer.len() {
+                buffer.remove(cursor.row);
+                cursor.col = 0;
+            } else {
+                break;
+            }
+            c = buffer[cursor.row][cursor.col];
+        }
+        while c.is_whitespace() {
+            if cursor.col + 1 != buffer[cursor.row].len() {
+                buffer[cursor.row].remove(cursor.col);
+            } else if cursor.row + 1 != buffer.len() {
+                buffer.remove(cursor.row);
+                cursor.col = 0;
+            } else {
+                break;
+            }
+            c = buffer[cursor.row][cursor.col];
+        }
     }
-    if cursor.col != buffer[cursor.row].len() {
-        buffer[cursor.row].remove(cursor.col);
-    }
+}
+
+pub fn p_cmd(
+    buffer: &mut Vec<Vec<char>>,
+    cursor: &mut Cursor,
+    register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+) {
+    register_handler.get_reg().iter().for_each(|c| {
+        buffer[cursor.row].insert(cursor.col, *c);
+    });
 }
 
 pub fn double_quote_cmd(
@@ -350,7 +384,7 @@ pub fn double_quote_cmd(
     _mode: &mut Mode,
 ) {
     if let Event::Key(event) = read().unwrap() {
-        register_handler.init_reg(event.code, "");
+        register_handler.init_reg(event.code, Vec::default());
         register_handler.current_register = event.code.to_string();
     }
 }
