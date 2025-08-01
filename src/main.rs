@@ -162,26 +162,26 @@ fn main() -> std::io::Result<()> {
                 }
 
                 (KeyCode::Left, _) => {
-                    if cursor.col > 0 {
+                    if cursor.col > 1 {
                         cursor.col -= 1;
                     }
                 }
                 (KeyCode::Right, _) => {
-                    if cursor.col < buffer[cursor.row].len() {
+                    if cursor.col + 1 < buffer[cursor.row].len() {
                         cursor.col += 1;
                     }
                 }
                 (KeyCode::Up, _) => {
-                    if cursor.row > 0 {
+                    if cursor.row > 1 {
                         cursor.row -= 1;
                         // The cursor can exist one character beyond the last in the buffer
-                        cursor.col = usize::min(cursor.col, buffer[cursor.row].len())
+                        cursor.col = usize::min(cursor.col, buffer[cursor.row].len() - 1)
                     }
                 }
                 (KeyCode::Down, _) => {
                     if cursor.row < buffer.len() - 1 {
                         cursor.row += 1;
-                        cursor.col = usize::min(cursor.col, buffer[cursor.row].len())
+                        cursor.col = usize::min(cursor.col, buffer[cursor.row].len() - 1)
                     }
                 }
                 _ => continue,
