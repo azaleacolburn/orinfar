@@ -85,6 +85,8 @@ pub fn a_cmd(
     execute!(stdout(), EnableBlinking).unwrap();
 }
 
+// TODO newlines aren't actually represented, so the w command system doesn't exactly work as
+// expected
 pub fn w_cmd(
     buffer: &mut Vec<Vec<char>>,
     cursor: &mut Cursor,
@@ -115,15 +117,16 @@ pub fn w_cmd(
             } else if cursor.row + 1 != buffer.len() {
                 cursor.row += 1;
                 cursor.col = 0;
+                break;
             } else {
                 break;
             }
             c = buffer[cursor.row][cursor.col];
         }
         while c.is_whitespace() {
-            if cursor.col + 1 != buffer[cursor.row].len() {
+            if cursor.col + 1 < buffer[cursor.row].len() {
                 cursor.col += 1;
-            } else if cursor.row + 1 != buffer.len() {
+            } else if cursor.row + 1 < buffer.len() {
                 cursor.row += 1;
                 cursor.col = 0;
             } else {
@@ -164,6 +167,7 @@ pub fn b_cmd(
             } else if cursor.row > 0 {
                 cursor.row -= 1;
                 cursor.col = buffer[cursor.row].len() - 1;
+                break;
             } else {
                 break;
             }
@@ -214,11 +218,8 @@ pub fn e_cmd(
             next_char = unwrap_or_return!(get_next_char(buffer, cursor));
         }
         while next_char.is_alphanumeric() {
-            if cursor.col + 1 != buffer[cursor.row].len() {
+            if cursor.col + 1 < buffer[cursor.row].len() {
                 cursor.col += 1;
-            } else if cursor.row + 1 != buffer.len() {
-                cursor.row += 1;
-                cursor.col = 0;
             } else {
                 break;
             }
@@ -226,9 +227,9 @@ pub fn e_cmd(
         }
     } else {
         while next_char.is_alphanumeric() {
-            if cursor.col + 1 != buffer[cursor.row].len() {
+            if cursor.col + 1 < buffer[cursor.row].len() {
                 cursor.col += 1;
-            } else if cursor.row + 1 != buffer.len() {
+            } else if cursor.row + 1 < buffer.len() {
                 cursor.row += 1;
                 cursor.col = 0;
             } else {
