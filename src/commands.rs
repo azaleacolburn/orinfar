@@ -389,3 +389,13 @@ pub fn double_quote_cmd(
         register_handler.current_register = event.code.to_string();
     }
 }
+
+// pub fn colon_w_cmd(
+//
+//     buffer: &mut Vec<Vec<char>>,
+//     _cursor: &mut Cursor,
+//     register_handler: &mut RegisterHandler,
+//     _mode: &mut Mode,
+// ) {
+//
+// }
