@@ -270,6 +270,9 @@ pub fn x_cmd(
 ) {
     if buffer[cursor.row].len() > cursor.col {
         buffer[cursor.row].remove(cursor.col);
+        if buffer[cursor.row].len() == cursor.col && cursor.col != 0 {
+            cursor.col -= 1;
+        }
     }
 }
 
