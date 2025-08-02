@@ -373,8 +373,10 @@ pub fn p_cmd(
     register_handler: &mut RegisterHandler,
     _mode: &mut Mode,
 ) {
+    let mut i = cursor.col;
     register_handler.get_reg().iter().for_each(|c| {
-        buffer[cursor.row].insert(cursor.col, *c);
+        buffer[cursor.row].insert(i, *c);
+        i += 1;
     });
 }
 
