@@ -65,18 +65,30 @@ fn main() -> std::io::Result<()> {
     let mut cursor = Cursor { row: 0, col: 0 };
 
     let cli = Cli::parse();
-    let path = PathBuf::from(cli.file_name);
-    if path.is_dir() {
-        // TODO netrw
-        return Ok(());
-    } else if path.is_file() {
-        let contents = std::fs::read_to_string(path.clone())?;
-        contents
-            .split('\n')
-            .for_each(|line| buffer.push(line.chars().collect::<Vec<char>>()));
-    } else {
-        buffer.push(vec![]);
-    }
+    // TODO This is a bad way of handling things, refactor later
+    let path = match cli.file_name {
+        Some(path) => {
+            let path = PathBuf::from(path);
+
+            if path.is_dir() {
+                // TODO netrw
+                return Ok(());
+            } else if path.is_file() {
+                let contents = std::fs::read_to_string(path.clone())?;
+                contents
+                    .split('\n')
+                    .for_each(|line| buffer.push(line.chars().collect::<Vec<char>>()));
+            } else {
+                buffer.push(vec![]);
+            }
+
+            Some(path)
+        }
+        None => {
+            buffer.push(vec![]);
+            None
+        }
+    };
 
     let commands = vec![
         // Mode Shifting
@@ -119,17 +131,21 @@ fn main() -> std::io::Result<()> {
                 (KeyCode::Char(c), Mode::Normal) if c == ':' => {
                     if let Event::Key(event) = read()? {
                         if event.code == KeyCode::Char('w') {
-                            std::fs::write(
-                                &path,
-                                buffer
-                                    .iter()
-                                    .map(|line| {
-                                        let mut c: String = line.iter().collect();
-                                        c.push('\n');
-                                        c
-                                    })
-                                    .collect::<String>(),
-                            )?;
+                            if let Some(path) = path {
+                                std::fs::write(
+                                    &path,
+                                    buffer
+                                        .iter()
+                                        .map(|line| {
+                                            let mut c: String = line.iter().collect();
+                                            c.push('\n');
+                                            c
+                                        })
+                                        .collect::<String>(),
+                                )?;
+                            } else {
+                                // TODO Cursorline system for error handling
+                            }
                             break;
                         }
                     }
