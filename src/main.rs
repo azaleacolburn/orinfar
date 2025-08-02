@@ -42,23 +42,6 @@ enum Mode {
 }
 
 fn main() -> std::io::Result<()> {
-    let mut stdout = stdout();
-    let (cols, rows) = size()?;
-    execute!(
-        stdout,
-        SetSize(cols, rows),
-        Clear(ClearType::All),
-        ScrollUp(rows),
-        SetForegroundColor(Color::Blue),
-    )?;
-
-    // Fill entire screen with spaces with the background color
-    for row in 0..rows {
-        execute!(stdout, MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
-    }
-    execute!(stdout, MoveTo(0, 0))?;
-    enable_raw_mode()?;
-
     let mut register_handler = RegisterHandler::new();
 
     let mut buffer: Vec<Vec<char>> = vec![];
@@ -89,6 +72,23 @@ fn main() -> std::io::Result<()> {
             None
         }
     };
+
+    let mut stdout = stdout();
+    let (cols, rows) = size()?;
+    execute!(
+        stdout,
+        SetSize(cols, rows),
+        Clear(ClearType::All),
+        ScrollUp(rows),
+        SetForegroundColor(Color::Blue),
+    )?;
+
+    // Fill entire screen with spaces with the background color
+    for row in 0..rows {
+        execute!(stdout, MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+    }
+    execute!(stdout, MoveTo(0, 0))?;
+    enable_raw_mode()?;
 
     let commands = vec![
         // Mode Shifting
