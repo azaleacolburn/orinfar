@@ -1,10 +1,14 @@
+mod cli;
 mod commands;
 mod register;
 use std::{
     collections::HashMap,
     io::{stdout, Write},
+    iter::once,
+    path::{Path, PathBuf},
 };
 
+use clap::Parser;
 use commands::Command as Cmd;
 
 use crossterm::{
@@ -16,6 +20,7 @@ use crossterm::{
 };
 
 use crate::{
+    cli::Cli,
     commands::{
         a_cmd, b_cmd, dd_cmd, dollar_cmd, double_quote_cmd, dw_cmd, e_cmd, i_cmd, o_cmd, p_cmd,
         underscore_cmd, w_cmd, x_cmd, O_cmd,
@@ -56,8 +61,22 @@ fn main() -> std::io::Result<()> {
 
     let mut register_handler = RegisterHandler::new();
 
-    let mut buffer: Vec<Vec<char>> = vec![vec![]];
+    let mut buffer: Vec<Vec<char>> = vec![];
     let mut cursor = Cursor { row: 0, col: 0 };
+
+    let cli = Cli::parse();
+    let path = PathBuf::from(cli.file_name);
+    if path.is_dir() {
+        // TODO netrw
+        return Ok(());
+    } else if path.is_file() {
+        let contents = std::fs::read_to_string(path.clone())?;
+        contents
+            .split('\n')
+            .for_each(|line| buffer.push(line.chars().collect::<Vec<char>>()));
+    } else {
+        buffer.push(vec![]);
+    }
 
     let commands = vec![
         // Mode Shifting
@@ -75,6 +94,7 @@ fn main() -> std::io::Result<()> {
         Cmd::leaf('x', x_cmd),
         Cmd::branch('d', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
         Cmd::branch('y', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
+        // Cmd::branch(':', [Cmd::leaf('w', colon_w_cmd)]),
         // Registers
         Cmd::leaf('p', p_cmd),
         Cmd::leaf('"', double_quote_cmd),
@@ -95,6 +115,32 @@ fn main() -> std::io::Result<()> {
                     }
                     count *= 10;
                     count += c;
+                }
+                (KeyCode::Char(c), Mode::Normal) if c == ':' => {
+                    if let Event::Key(event) = read()? {
+                        if event.code == KeyCode::Char('w') {
+                            std::fs::write(
+                                &path,
+                                buffer
+                                    .iter()
+                                    .map(|line| {
+                                        let mut c: String = line.iter().collect();
+                                        c.push('\n');
+                                        c
+                                    })
+                                    .collect::<String>(),
+                            )?;
+                            break;
+                        }
+                    }
+                    let end = match buffer[cursor.row].len() > 0 {
+                        true => buffer[cursor.row].split_off(cursor.col),
+                        false => vec![],
+                    };
+
+                    buffer.push(end);
+                    cursor.col = 0;
+                    cursor.row += 1;
                 }
 
                 (KeyCode::Char(c), Mode::Normal) => {
