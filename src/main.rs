@@ -52,7 +52,7 @@ fn cleanup() -> std::io::Result<()> {
 }
 
 fn main() -> std::io::Result<()> {
-    panic_hook::set_cleanup_hook(&cleanup);
+    panic_hook::add_panic_hook(&cleanup);
 
     let mut stdout = stdout();
     let (cols, rows) = size()?;
@@ -144,20 +144,23 @@ fn main() -> std::io::Result<()> {
                 (KeyCode::Char(c), Mode::Normal) if c == ':' => {
                     if let Event::Key(event) = read()? {
                         if event.code == KeyCode::Char('w') {
-                            if let Some(path) = path {
-                                std::fs::write(
-                                    &path,
-                                    buffer
-                                        .iter()
-                                        .map(|line| {
-                                            let mut c: String = line.iter().collect();
-                                            c.push('\n');
-                                            c
-                                        })
-                                        .collect::<String>(),
-                                )?;
-                            } else {
-                                // TODO Cursorline system for error handling
+                            match path {
+                                Some(path) => {
+                                    std::fs::write(
+                                        &path,
+                                        buffer
+                                            .iter()
+                                            .map(|line| {
+                                                let mut c: String = line.iter().collect();
+                                                c.push('\n');
+                                                c
+                                            })
+                                            .collect::<String>(),
+                                    )?;
+                                }
+                                None => {
+                                    // TODO Cursorline system for error handling
+                                }
                             }
                             break;
                         }
@@ -276,8 +279,7 @@ fn main() -> std::io::Result<()> {
         }
     }
 
-    execute!(stdout, SetSize(cols, rows), ResetColor)?;
-    disable_raw_mode()?;
+    cleanup();
 
     Ok(())
 }

@@ -1,8 +1,9 @@
-use std::panic::{self, take_hook};
+use std::panic::{self};
 
-pub fn set_cleanup_hook<T: Fn() -> std::io::Result<()> + Send + Sync>(cleanup: &'static T) {
+pub fn add_panic_hook<F: Fn() -> std::io::Result<()> + Send + Sync>(cleanup: &'static F) {
     panic::update_hook(|old_hook, info| {
         cleanup().unwrap();
+
         old_hook(info);
     });
 }
