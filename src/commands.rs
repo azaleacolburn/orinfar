@@ -383,6 +383,15 @@ pub fn p_cmd(
     });
 }
 
+pub fn crash(
+    _buffer: &mut Vec<Vec<char>>,
+    _cursor: &mut Cursor,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+) {
+    panic!("Intentionally Crashed")
+}
+
 pub fn double_quote_cmd(
     _buffer: &mut Vec<Vec<char>>,
     _cursor: &mut Cursor,

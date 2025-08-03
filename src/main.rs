@@ -1,5 +1,8 @@
+#![feature(panic_update_hook)]
+
 mod cli;
 mod commands;
+mod panic_hook;
 mod register;
 use std::{
     collections::HashMap,
@@ -22,8 +25,8 @@ use crossterm::{
 use crate::{
     cli::Cli,
     commands::{
-        a_cmd, b_cmd, dd_cmd, dollar_cmd, double_quote_cmd, dw_cmd, e_cmd, i_cmd, o_cmd, p_cmd,
-        underscore_cmd, w_cmd, x_cmd, O_cmd,
+        a_cmd, b_cmd, crash, dd_cmd, dollar_cmd, double_quote_cmd, dw_cmd, e_cmd, i_cmd, o_cmd,
+        p_cmd, underscore_cmd, w_cmd, x_cmd, O_cmd,
     },
     register::RegisterHandler,
 };
@@ -41,9 +44,20 @@ enum Mode {
     _Visual,
 }
 
-fn main() -> std::io::Result<()> {
-    let mut register_handler = RegisterHandler::new();
+fn cleanup() -> std::io::Result<()> {
+    execute!(stdout(), ResetColor)?;
+    disable_raw_mode()?;
 
+    Ok(())
+}
+
+fn main() -> std::io::Result<()> {
+    panic_hook::set_cleanup_hook(&cleanup);
+
+    let mut stdout = stdout();
+    let (cols, rows) = size()?;
+
+    let mut register_handler = RegisterHandler::new();
     let mut buffer: Vec<Vec<char>> = vec![];
     let mut cursor = Cursor { row: 0, col: 0 };
 
@@ -73,8 +87,6 @@ fn main() -> std::io::Result<()> {
         }
     };
 
-    let mut stdout = stdout();
-    let (cols, rows) = size()?;
     execute!(
         stdout,
         SetSize(cols, rows),
@@ -109,6 +121,7 @@ fn main() -> std::io::Result<()> {
         // Cmd::branch(':', [Cmd::leaf('w', colon_w_cmd)]),
         // Registers
         Cmd::leaf('p', p_cmd),
+        Cmd::leaf('c', crash),
         Cmd::leaf('"', double_quote_cmd),
     ];
 

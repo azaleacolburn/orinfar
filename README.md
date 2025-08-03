@@ -19,6 +19,8 @@ a text editor for witches
 
 I'll specify and revise this list when I get around to specific things and I have a better understanding of where I want to take this project
 
-- [ ] Basic Vi commands (w, b, o, d, etc)
+- [x] Basic Vi commands (w, b, o, d, etc)
 - [ ] Additionally Vi features (a robust register system, marks, etc)
 - [ ] Lsp support, syntax highlighting, etc
+
+# Buglist
