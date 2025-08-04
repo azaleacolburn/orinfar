@@ -130,7 +130,7 @@ fn main() -> std::io::Result<()> {
     loop {
         if let Event::Key(event) = read()? {
             match (event.code, mode.clone()) {
-                (KeyCode::Char(c), Mode::Normal) if c == 'q' => break,
+                (KeyCode::Char('q'), Mode::Normal) => break,
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
                     let c = c.to_digit(10).unwrap() as u16;
                     if count == 1 {
@@ -139,7 +139,7 @@ fn main() -> std::io::Result<()> {
                     count *= 10;
                     count += c;
                 }
-                (KeyCode::Char(c), Mode::Normal) if c == ':' => {
+                (KeyCode::Char(':'), Mode::Normal) => {
                     if let Event::Key(event) = read()? {
                         if event.code == KeyCode::Char('w') {
                             match path {
@@ -163,7 +163,7 @@ fn main() -> std::io::Result<()> {
                             break;
                         }
                     }
-                    let end = match buffer[cursor.row].len() > 0 {
+                    let end = match !buffer[cursor.row].is_empty() {
                         true => buffer[cursor.row].split_off(cursor.col),
                         false => vec![],
                     };
@@ -182,7 +182,7 @@ fn main() -> std::io::Result<()> {
                         .iter()
                         .find(|cmd| cmd.character == chained[depth])
                     {
-                        if cmd.children.len() == 0 {
+                        if cmd.children.is_empty() {
                             (cmd.callback)(
                                 &mut buffer,
                                 &mut cursor,
@@ -227,7 +227,7 @@ fn main() -> std::io::Result<()> {
                     cursor.col += 1;
                 }
                 (KeyCode::Enter, Mode::Insert) => {
-                    let end = match buffer[cursor.row].len() > 0 {
+                    let end = match !buffer[cursor.row].is_empty() {
                         true => buffer[cursor.row].split_off(cursor.col),
                         false => vec![],
                     };

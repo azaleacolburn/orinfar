@@ -92,7 +92,7 @@ pub fn w_cmd(
     _register_handler: &mut RegisterHandler,
     _mode: &mut Mode,
 ) {
-    if buffer[cursor.row].len() == 0 {
+    if buffer[cursor.row].is_empty() {
         return;
     }
     let mut c = buffer[cursor.row][cursor.col]; // = unwrap_or_return!(get_next_char(buffer, cursor));
@@ -142,7 +142,7 @@ pub fn b_cmd(
     _register_handler: &mut RegisterHandler,
     _mode: &mut Mode,
 ) {
-    if buffer[cursor.row].len() == 0 {
+    if buffer[cursor.row].is_empty() {
         return;
     }
     let mut c = buffer[cursor.row][cursor.col];
@@ -326,7 +326,7 @@ pub fn dw_cmd(
     _register_handler: &mut RegisterHandler,
     _mode: &mut Mode,
 ) {
-    if buffer[cursor.row].len() == 0 {
+    if buffer[cursor.row].is_empty() {
         return;
     }
     let mut c = buffer[cursor.row][cursor.col]; // = unwrap_or_return!(get_next_char(buffer, cursor));
