@@ -1,13 +1,10 @@
-use crate::{
-    register::{RegisterHandler, Registers},
-    Cursor, Mode,
-};
+use crate::{register::RegisterHandler, Cursor, Mode};
 use crossterm::{
     cursor::EnableBlinking,
-    event::{read, Event, KeyCode},
+    event::{read, Event},
     execute,
 };
-use std::io::{stdout, BufRead};
+use std::io::stdout;
 
 macro_rules! unwrap_or_return {
     ( $e:expr ) => {
@@ -25,7 +22,7 @@ pub struct Command {
         cursor: &mut Cursor,
         register_handler: &mut RegisterHandler,
         mode: &mut Mode,
-    ) -> (),
+    ),
     pub children: Vec<Command>,
 }
 
@@ -63,6 +60,7 @@ pub fn wait(
     _mode: &mut Mode,
 ) {
 }
+
 pub fn i_cmd(
     _buffer: &mut Vec<Vec<char>>,
     _cursor: &mut Cursor,
@@ -72,6 +70,7 @@ pub fn i_cmd(
     *mode = Mode::Insert;
     execute!(stdout(), EnableBlinking).unwrap();
 }
+
 pub fn a_cmd(
     buffer: &mut Vec<Vec<char>>,
     cursor: &mut Cursor,

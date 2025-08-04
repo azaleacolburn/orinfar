@@ -5,10 +5,8 @@ mod commands;
 mod panic_hook;
 mod register;
 use std::{
-    collections::HashMap,
     io::{stdout, Write},
-    iter::once,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use clap::Parser;
@@ -279,7 +277,7 @@ fn main() -> std::io::Result<()> {
         }
     }
 
-    cleanup();
+    cleanup()?;
 
     Ok(())
 }

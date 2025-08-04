@@ -24,6 +24,7 @@ impl RegisterHandler {
     pub fn set_reg(&mut self, value: RegContents) {
         self.registers.insert(self.current_register.clone(), value);
     }
+
     pub fn get_reg(&mut self) -> RegContents {
         self.registers
             .get(&self.current_register)
