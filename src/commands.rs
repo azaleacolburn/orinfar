@@ -335,9 +335,9 @@ pub fn dw_cmd(
         while !c.is_alphanumeric() {
             if cursor.col < buffer[cursor.row].len() {
                 buffer[cursor.row].remove(cursor.col);
-            } else if cursor.row < buffer.len() {
-                buffer.remove(cursor.row);
-                cursor.col = 0;
+                if buffer[cursor.row].is_empty() {
+                    break;
+                }
             } else {
                 break;
             }
@@ -345,22 +345,22 @@ pub fn dw_cmd(
         }
     } else {
         while c.is_alphanumeric() {
-            if cursor.col + 1 != buffer[cursor.row].len() {
+            if cursor.col < buffer[cursor.row].len() {
                 buffer[cursor.row].remove(cursor.col);
-            } else if cursor.row + 1 != buffer.len() {
-                buffer.remove(cursor.row);
-                cursor.col = 0;
+                if buffer[cursor.row].is_empty() {
+                    break;
+                }
             } else {
                 break;
             }
             c = buffer[cursor.row][cursor.col];
         }
         while c.is_whitespace() {
-            if cursor.col + 1 != buffer[cursor.row].len() {
+            if cursor.col < buffer[cursor.row].len() {
                 buffer[cursor.row].remove(cursor.col);
-            } else if cursor.row + 1 != buffer.len() {
-                buffer.remove(cursor.row);
-                cursor.col = 0;
+                if buffer[cursor.row].is_empty() {
+                    break;
+                }
             } else {
                 break;
             }
