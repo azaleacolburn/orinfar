@@ -1,10 +1,12 @@
 #![feature(panic_update_hook)]
 
+mod buffer;
 mod cli;
 mod commands;
 mod panic_hook;
 mod register;
 use std::{
+    collections::HashMap,
     io::{stdout, Write},
     path::PathBuf,
 };
@@ -12,6 +14,7 @@ use std::{
 use clap::Parser;
 use commands::Command as Cmd;
 
+use anyhow::Result;
 use crossterm::{
     cursor::{DisableBlinking, MoveDown, MoveTo, MoveToColumn},
     event::{read, Event, KeyCode},
@@ -21,6 +24,7 @@ use crossterm::{
 };
 
 use crate::{
+    buffer::Buffer,
     cli::Cli,
     commands::{
         a_cmd, b_cmd, crash, dd_cmd, dollar_cmd, double_quote_cmd, dw_cmd, e_cmd, i_cmd, o_cmd,
@@ -28,6 +32,8 @@ use crate::{
     },
     register::RegisterHandler,
 };
+
+pub fn flush_buffer() {}
 
 #[derive(Clone, Debug)]
 struct Cursor {
@@ -42,22 +48,22 @@ enum Mode {
     _Visual,
 }
 
-fn cleanup() -> std::io::Result<()> {
+fn cleanup() -> Result<()> {
     execute!(stdout(), ResetColor)?;
     disable_raw_mode()?;
 
     Ok(())
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<()> {
     panic_hook::add_panic_hook(&cleanup);
 
     let mut stdout = stdout();
     let (cols, rows) = size()?;
 
     let mut register_handler = RegisterHandler::new();
-    let mut buffer: Vec<Vec<char>> = vec![];
-    let mut cursor = Cursor { row: 0, col: 0 };
+    let mut _marks: HashMap<char, (usize, usize)> = HashMap::new();
+    let mut buffer: Buffer = Buffer::new();
 
     let cli = Cli::parse();
     // TODO This is a bad way of handling things, refactor later
@@ -72,15 +78,15 @@ fn main() -> std::io::Result<()> {
                 let contents = std::fs::read_to_string(path.clone())?;
                 contents
                     .split('\n')
-                    .for_each(|line| buffer.push(line.chars().collect::<Vec<char>>()));
+                    .for_each(|line| buffer.push_line(line.chars().collect::<Vec<char>>()));
             } else {
-                buffer.push(vec![]);
+                buffer.push_line(vec![]);
             }
 
             Some(path)
         }
         None => {
-            buffer.push(vec![]);
+            buffer.push_line(vec![]);
             None
         }
     };
@@ -94,6 +100,10 @@ fn main() -> std::io::Result<()> {
     )?;
 
     // Fill entire screen with spaces with the background color
+    for row in 0..rows {
+        execute!(stdout, MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+    }
+    execute!(stdout, MoveTo(0, 0))?;
     for row in 0..rows {
         execute!(stdout, MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
     }
@@ -143,19 +153,7 @@ fn main() -> std::io::Result<()> {
                     if let Event::Key(event) = read()? {
                         if event.code == KeyCode::Char('w') {
                             match path {
-                                Some(path) => {
-                                    std::fs::write(
-                                        &path,
-                                        buffer
-                                            .iter()
-                                            .map(|line| {
-                                                let mut c: String = line.iter().collect();
-                                                c.push('\n');
-                                                c
-                                            })
-                                            .collect::<String>(),
-                                    )?;
-                                }
+                                Some(path) => std::fs::write(&path, buffer.to_string())?,
                                 None => {
                                     // TODO Cursorline system for error handling
                                 }
@@ -163,7 +161,7 @@ fn main() -> std::io::Result<()> {
                             break;
                         }
                     }
-                    let end = match !buffer[cursor.row].is_empty() {
+                    let end = match buffer.is_empty_line() {
                         true => buffer[cursor.row].split_off(cursor.col),
                         false => vec![],
                     };
