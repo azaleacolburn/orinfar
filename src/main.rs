@@ -161,14 +161,10 @@ fn main() -> Result<()> {
                             break;
                         }
                     }
-                    let end = match buffer.is_empty_line() {
-                        true => buffer[cursor.row].split_off(cursor.col),
-                        false => vec![],
-                    };
-
-                    buffer.push(end);
-                    cursor.col = 0;
-                    cursor.row += 1;
+                    let end = buffer.get_line_end();
+                    buffer.push_line(end);
+                    buffer.buffer.set_col(0);
+                    buffer.buffer.next_row();
                 }
 
                 (KeyCode::Char(c), Mode::Normal) => {
@@ -181,12 +177,7 @@ fn main() -> Result<()> {
                         .find(|cmd| cmd.character == chained[depth])
                     {
                         if cmd.children.is_empty() {
-                            (cmd.callback)(
-                                &mut buffer,
-                                &mut cursor,
-                                &mut register_handler,
-                                &mut mode,
-                            );
+                            (cmd.callback)(&mut buffer, &mut register_handler, &mut mode);
                             chained = vec![];
                             break;
                         } else {
@@ -202,60 +193,66 @@ fn main() -> Result<()> {
 
                 (KeyCode::Esc, Mode::Insert) => {
                     mode = Mode::Normal;
-                    if cursor.col != 0 {
-                        cursor.col -= 1;
+                    if buffer.col() != 0 {
+                        buffer.prev_col();
                     }
                     execute!(stdout, DisableBlinking)?;
                     count = 1;
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
-                    if cursor.col > 0 {
-                        buffer[cursor.row].remove(cursor.col - 1);
-                        cursor.col -= 1;
-                    } else if cursor.row != 0 {
-                        let mut old_line = buffer[cursor.row].clone();
-                        buffer[cursor.row - 1].append(&mut old_line);
-                        buffer.remove(cursor.row);
-                        cursor.row -= 1;
-                        cursor.col = buffer[cursor.row].len()
+                    if buffer.col() > 0 {
+                        buffer.buff[buffer.row()].remove(buffer.col() - 1);
+                        buffer.prev_col();
+                    } else if buffer.row() != 0 {
+                        let mut old_line = buffer.buff[buffer.row()].clone();
+                        buffer.buff[buffer.row() - 1].append(&mut old_line);
+                        buffer.remove(buffer.row());
+                        buffer.prev_row();
+                        buffer.set_col(buffer.buff[buffer.row()].len());
                     }
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
-                    buffer[cursor.row].insert(cursor.col, c);
-                    cursor.col += 1;
+                    buffer.buff[buffer.row()].insert(buffer.col(), c);
+                    buffer.next_col();
                 }
                 (KeyCode::Enter, Mode::Insert) => {
-                    let end = match !buffer[cursor.row].is_empty() {
-                        true => buffer[cursor.row].split_off(cursor.col),
+                    let end = match !buffer.buff[buffer.row()].is_empty() {
+                        true => buffer.buff[buffer.row()].split_off(buffer.col()),
                         false => vec![],
                     };
 
                     buffer.push(end);
-                    cursor.col = 0;
-                    cursor.row += 1;
+                    buffer.set_col(0);
+                    buffer.next_row();
                 }
 
                 (KeyCode::Left, _) => {
-                    if cursor.col > 1 {
-                        cursor.col -= 1;
+                    if buffer.col() > 1 {
+                        buffer.prev_col();
                     }
                 }
                 (KeyCode::Right, _) => {
-                    if cursor.col + 1 < buffer[cursor.row].len() {
-                        cursor.col += 1;
+                    if buffer.col() + 1 < buffer.buff[buffer.row()].len() {
+                        buffer.next_col();
                     }
                 }
                 (KeyCode::Up, _) => {
-                    if cursor.row > 1 {
-                        cursor.row -= 1;
+                    if buffer.row() > 1 {
+                        buffer.prev_row();
                         // The cursor can exist one character beyond the last in the buffer
-                        cursor.col = usize::min(cursor.col, buffer[cursor.row].len() - 1)
+                        buffer.set_col(usize::min(
+                            buffer.col(),
+                            buffer.buff[buffer.row()].len() - 1,
+                        ))
                     }
                 }
                 (KeyCode::Down, _) => {
-                    if cursor.row < buffer.len() - 1 {
-                        cursor.row += 1;
-                        cursor.col = usize::min(cursor.col, buffer[cursor.row].len() - 1)
+                    if buffer.row() < buffer.len() - 1 {
+                        buffer.next_row();
+                        buffer.set_col(usize::min(
+                            buffer.col(),
+                            buffer.buff[buffer.row()].len() - 1,
+                        ))
                     }
                 }
                 _ => continue,
@@ -270,7 +267,7 @@ fn main() -> Result<()> {
                     MoveToColumn(0),
                 )?;
             }
-            execute!(stdout, MoveTo(cursor.col as u16, cursor.row as u16))?;
+            execute!(stdout, MoveTo(buffer.col() as u16, buffer.row() as u16))?;
             stdout.flush()?;
         }
     }

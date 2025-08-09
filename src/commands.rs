@@ -1,4 +1,4 @@
-use crate::{register::RegisterHandler, Cursor, Mode};
+use crate::{buffer::Buffer, register::RegisterHandler, Cursor, Mode};
 use crossterm::{
     cursor::EnableBlinking,
     event::{read, Event},
@@ -17,12 +17,7 @@ macro_rules! unwrap_or_return {
 
 pub struct Command {
     pub character: char,
-    pub callback: fn(
-        buffer: &mut Vec<Vec<char>>,
-        cursor: &mut Cursor,
-        register_handler: &mut RegisterHandler,
-        mode: &mut Mode,
-    ),
+    pub callback: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
     pub children: Vec<Command>,
 }
 
@@ -37,8 +32,7 @@ impl Command {
     pub fn leaf(
         character: char,
         callback: fn(
-            buffer: &mut Vec<Vec<char>>,
-            cursor: &mut Cursor,
+            buffer: &mut Buffer,
             register_handler: &mut RegisterHandler,
             mode: &mut Mode,
         ) -> (),
@@ -53,347 +47,262 @@ impl Command {
 
 // Callbacks
 //
-pub fn wait(
-    _buffer: &mut Vec<Vec<char>>,
-    _cursor: &mut Cursor,
-    _register_handler: &mut RegisterHandler,
-    _mode: &mut Mode,
-) {
-}
+pub fn wait(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {}
 
-pub fn i_cmd(
-    _buffer: &mut Vec<Vec<char>>,
-    _cursor: &mut Cursor,
-    _register_handler: &mut RegisterHandler,
-    mode: &mut Mode,
-) {
+pub fn i_cmd(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
     *mode = Mode::Insert;
     execute!(stdout(), EnableBlinking).unwrap();
 }
 
-pub fn a_cmd(
-    buffer: &mut Vec<Vec<char>>,
-    cursor: &mut Cursor,
-    _register_handler: &mut RegisterHandler,
-    mode: &mut Mode,
-) {
+pub fn a_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
     *mode = Mode::Insert;
-    if cursor.col < buffer[cursor.row].len() {
-        cursor.col += 1;
-    }
+    buffer.next_col();
     execute!(stdout(), EnableBlinking).unwrap();
 }
 
 // TODO newlines aren't actually represented, so the w command system doesn't exactly work as
 // expected
-pub fn w_cmd(
-    buffer: &mut Vec<Vec<char>>,
-    cursor: &mut Cursor,
-    _register_handler: &mut RegisterHandler,
-    _mode: &mut Mode,
-) {
-    if buffer[cursor.row].is_empty() {
+pub fn w_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+    if buffer.is_empty_line() {
         return;
     }
-    let mut c = buffer[cursor.row][cursor.col]; // = unwrap_or_return!(get_next_char(buffer, cursor));
+    let mut c = buffer.get_curr_char(); // = unwrap_or_return!(get_next_char(buffer, buffer.cursor));
 
     if !c.is_alphanumeric() {
         while !c.is_alphanumeric() {
-            if cursor.col < buffer[cursor.row].len() {
-                cursor.col += 1;
-            } else if cursor.row < buffer.len() {
-                cursor.row += 1;
-                cursor.col = 0;
+            if buffer.cursor.col < buffer.buff[buffer.cursor.row].len() {
+                buffer.cursor.col += 1;
+            } else if buffer.cursor.row < buffer.buff.len() {
+                buffer.cursor.row += 1;
+                buffer.cursor.col = 0;
             } else {
                 break;
             }
-            c = buffer[cursor.row][cursor.col];
+            c = buffer.get_curr_char();
         }
     } else {
         while c.is_alphanumeric() {
-            if cursor.col + 1 != buffer[cursor.row].len() {
-                cursor.col += 1;
-            } else if cursor.row + 1 != buffer.len() {
-                cursor.row += 1;
-                cursor.col = 0;
+            if buffer.cursor.col + 1 != buffer.buff[buffer.cursor.row].len() {
+                buffer.cursor.col += 1;
+            } else if buffer.cursor.row + 1 != buffer.buff.len() {
+                buffer.cursor.row += 1;
+                buffer.cursor.col = 0;
                 break;
             } else {
                 break;
             }
-            c = buffer[cursor.row][cursor.col];
+            c = buffer.get_curr_char();
         }
         while c.is_whitespace() {
-            if cursor.col + 1 < buffer[cursor.row].len() {
-                cursor.col += 1;
-            } else if cursor.row + 1 < buffer.len() {
-                cursor.row += 1;
-                cursor.col = 0;
+            if buffer.cursor.col + 1 < buffer.buff[buffer.cursor.row].len() {
+                buffer.cursor.col += 1;
+            } else if buffer.cursor.row + 1 < buffer.buff.len() {
+                buffer.cursor.row += 1;
+                buffer.cursor.col = 0;
             } else {
                 break;
             }
-            c = buffer[cursor.row][cursor.col];
+            c = buffer.get_curr_char();
         }
     }
 }
 
-pub fn b_cmd(
-    buffer: &mut Vec<Vec<char>>,
-    cursor: &mut Cursor,
-    _register_handler: &mut RegisterHandler,
-    _mode: &mut Mode,
-) {
-    if buffer[cursor.row].is_empty() {
+pub fn b_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+    if buffer.buff[buffer.cursor.row].is_empty() {
         return;
     }
-    let mut c = buffer[cursor.row][cursor.col];
+    let mut c = buffer.get_curr_char();
 
     if !c.is_alphanumeric() {
         while !c.is_alphanumeric() {
-            if cursor.col > 0 {
-                cursor.col -= 1;
-            } else if cursor.row > 0 {
-                cursor.row -= 1;
-                cursor.col = buffer[cursor.row].len() - 1;
+            if buffer.cursor.col > 0 {
+                buffer.cursor.col -= 1;
+            } else if buffer.cursor.row > 0 {
+                buffer.cursor.row -= 1;
+                buffer.cursor.col = buffer.buff[buffer.cursor.row].len() - 1;
             } else {
                 break;
             }
-            c = buffer[cursor.row][cursor.col];
+            c = buffer.get_curr_char();
         }
     } else {
         while c.is_alphanumeric() {
-            if cursor.col > 0 {
-                cursor.col -= 1;
-            } else if cursor.row > 0 {
-                cursor.row -= 1;
-                cursor.col = buffer[cursor.row].len() - 1;
+            if buffer.cursor.col > 0 {
+                buffer.cursor.col -= 1;
+            } else if buffer.cursor.row > 0 {
+                buffer.cursor.row -= 1;
+                buffer.cursor.col = buffer.buff[buffer.cursor.row].len() - 1;
                 break;
             } else {
                 break;
             }
-            c = buffer[cursor.row][cursor.col];
+            c = buffer.get_curr_char();
         }
         while c.is_whitespace() {
-            if cursor.col > 0 {
-                cursor.col -= 1;
-            } else if cursor.row > 0 {
-                cursor.row -= 1;
-                cursor.col = buffer[cursor.row].len() - 1;
+            if buffer.cursor.col > 0 {
+                buffer.cursor.col -= 1;
+            } else if buffer.cursor.row > 0 {
+                buffer.cursor.row -= 1;
+                buffer.cursor.col = buffer.buff[buffer.cursor.row].len() - 1;
             } else {
                 break;
             }
-            c = buffer[cursor.row][cursor.col];
+            c = buffer.get_curr_char();
         }
     }
 }
 
-fn get_next_char(buffer: &Vec<Vec<char>>, cursor: &Cursor) -> Option<char> {
-    if cursor.col + 1 < buffer[cursor.row].len() {
-        Some(buffer[cursor.row][cursor.col + 1])
-    } else if cursor.row + 1 < buffer.len() {
-        Some(buffer[cursor.row + 1][0])
-    } else {
-        None
-    }
-}
-
-pub fn e_cmd(
-    buffer: &mut Vec<Vec<char>>,
-    cursor: &mut Cursor,
-    _register_handler: &mut RegisterHandler,
-    _mode: &mut Mode,
-) {
-    let mut next_char = unwrap_or_return!(get_next_char(buffer, cursor)); // buffer[cursor.row][cursor.col]; // = unwrap_or_return!(get_next_char(buffer, cursor));
+pub fn e_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+    let mut next_char = unwrap_or_return!(buffer.get_next_char()); // buffer.buff[buffer.cursor.row][buffer.cursor.col]; // = unwrap_or_return!(get_next_char(buffer, buffer.cursor));
 
     if !next_char.is_alphanumeric() {
         while !next_char.is_alphanumeric() {
-            if cursor.col < buffer[cursor.row].len() {
-                cursor.col += 1;
-            } else if cursor.row < buffer.len() {
-                cursor.row += 1;
-                cursor.col = 0;
+            if buffer.cursor.col < buffer.buff[buffer.cursor.row].len() {
+                buffer.cursor.col += 1;
+            } else if buffer.cursor.row < buffer.len() {
+                buffer.cursor.row += 1;
+                buffer.cursor.col = 0;
             } else {
                 break;
             }
-            next_char = unwrap_or_return!(get_next_char(buffer, cursor));
+            next_char = unwrap_or_return!(buffer.get_next_char());
         }
         while next_char.is_alphanumeric() {
-            if cursor.col + 1 < buffer[cursor.row].len() {
-                cursor.col += 1;
+            if buffer.cursor.col + 1 < buffer.buff[buffer.cursor.row].len() {
+                buffer.cursor.col += 1;
             } else {
                 break;
             }
-            next_char = unwrap_or_return!(get_next_char(buffer, cursor));
+            next_char = unwrap_or_return!(buffer.get_next_char());
         }
     } else {
         while next_char.is_alphanumeric() {
-            if cursor.col + 1 < buffer[cursor.row].len() {
-                cursor.col += 1;
-            } else if cursor.row + 1 < buffer.len() {
-                cursor.row += 1;
-                cursor.col = 0;
+            if buffer.cursor.col + 1 < buffer.buff[buffer.cursor.row].len() {
+                buffer.cursor.col += 1;
+            } else if buffer.cursor.row + 1 < buffer.len() {
+                buffer.cursor.row += 1;
+                buffer.cursor.col = 0;
             } else {
                 break;
             }
-            next_char = unwrap_or_return!(get_next_char(buffer, cursor));
+            next_char = unwrap_or_return!(buffer.get_next_char());
         }
     }
 }
 
-pub fn dollar_cmd(
-    buffer: &mut Vec<Vec<char>>,
-    cursor: &mut Cursor,
-    _register_handler: &mut RegisterHandler,
-    _mode: &mut Mode,
-) {
-    cursor.col = buffer[cursor.row].len() - 1
+pub fn dollar_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+    buffer.cursor.col = buffer.buff[buffer.cursor.row].len() - 1
 }
 
 pub fn underscore_cmd(
-    buffer: &mut Vec<Vec<char>>,
-    cursor: &mut Cursor,
+    buffer: &mut Buffer,
     _register_handler: &mut RegisterHandler,
     _mode: &mut Mode,
 ) {
-    let first = buffer[cursor.row]
+    let first = buffer.buff[buffer.cursor.row]
         .iter()
         .position(|c| !c.is_whitespace())
-        .unwrap_or(cursor.col);
-    cursor.col = first
+        .unwrap_or(buffer.cursor.col);
+    buffer.cursor.col = first
 }
 
-pub fn x_cmd(
-    buffer: &mut Vec<Vec<char>>,
-    cursor: &mut Cursor,
-    _register_handler: &mut RegisterHandler,
-    _mode: &mut Mode,
-) {
-    if buffer[cursor.row].len() > cursor.col {
-        buffer[cursor.row].remove(cursor.col);
-        if buffer[cursor.row].len() == cursor.col && cursor.col != 0 {
-            cursor.col -= 1;
+pub fn x_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+    if buffer.buff[buffer.cursor.row].len() > buffer.cursor.col {
+        buffer.remove_char(buffer.cursor.col);
+        if buffer.buff[buffer.cursor.row].len() == buffer.cursor.col && buffer.cursor.col != 0 {
+            buffer.cursor.col -= 1;
         }
     }
 }
 
-pub fn o_cmd(
-    buffer: &mut Vec<Vec<char>>,
-    cursor: &mut Cursor,
-    _register_handler: &mut RegisterHandler,
-    mode: &mut Mode,
-) {
-    cursor.row += 1;
-    buffer.insert(cursor.row, vec![]);
-    cursor.col = 0;
+pub fn o_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
+    buffer.cursor.row += 1;
+    buffer.insert_line(buffer.cursor.row, vec![]);
+    buffer.cursor.col = 0;
     *mode = Mode::Insert;
 }
 
 #[allow(non_snake_case)]
-pub fn O_cmd(
-    buffer: &mut Vec<Vec<char>>,
-    cursor: &mut Cursor,
-    _register_handler: &mut RegisterHandler,
-    mode: &mut Mode,
-) {
-    if cursor.row > 0 {
-        buffer.insert(cursor.row, vec![]);
-        cursor.col = 0;
+pub fn O_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
+    if buffer.cursor.row > 0 {
+        buffer.insert_line(buffer.cursor.row, vec![]);
+        buffer.cursor.col = 0;
         *mode = Mode::Insert;
     }
 }
 
-pub fn dd_cmd(
-    buffer: &mut Vec<Vec<char>>,
-    cursor: &mut Cursor,
-    register_handler: &mut RegisterHandler,
-    _mode: &mut Mode,
-) {
+pub fn dd_cmd(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
     if buffer.len() > 1 {
-        let line = buffer.remove(cursor.row);
+        let line = buffer.remove_line(buffer.cursor.row);
         register_handler.set_reg(line);
-        if cursor.row == buffer.len() {
-            cursor.row -= 1;
+        if buffer.cursor.row == buffer.len() {
+            buffer.cursor.row -= 1;
         }
     } else {
-        register_handler.set_reg(buffer[0].clone());
-        buffer[0] = vec![];
-        cursor.col = 0;
+        register_handler.set_reg(buffer.buff[0].clone());
+        buffer.buff[0] = vec![];
+        buffer.cursor.col = 0;
     }
 }
 
-pub fn dw_cmd(
-    buffer: &mut Vec<Vec<char>>,
-    cursor: &mut Cursor,
-    _register_handler: &mut RegisterHandler,
-    _mode: &mut Mode,
-) {
-    if buffer[cursor.row].is_empty() {
+pub fn dw_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+    if buffer.buff[buffer.cursor.row].is_empty() {
         return;
     }
-    let mut c = buffer[cursor.row][cursor.col]; // = unwrap_or_return!(get_next_char(buffer, cursor));
+    let mut c = buffer.buff[buffer.cursor.row][buffer.cursor.col]; // = unwrap_or_return!(get_next_char(buffer, buffer.cursor));
 
     if !c.is_alphanumeric() {
         while !c.is_alphanumeric() {
-            if cursor.col < buffer[cursor.row].len() {
-                buffer[cursor.row].remove(cursor.col);
-                if buffer[cursor.row].is_empty() {
+            if buffer.cursor.col < buffer.buff[buffer.cursor.row].len() {
+                buffer.remove_char(buffer.cursor.col);
+                if buffer.buff[buffer.cursor.row].is_empty() {
                     break;
                 }
             } else {
                 break;
             }
-            c = buffer[cursor.row][cursor.col];
+            c = buffer.buff[buffer.cursor.row][buffer.cursor.col];
         }
     } else {
         while c.is_alphanumeric() {
-            if cursor.col < buffer[cursor.row].len() {
-                buffer[cursor.row].remove(cursor.col);
-                if buffer[cursor.row].is_empty() {
+            if buffer.cursor.col < buffer.buff[buffer.cursor.row].len() {
+                buffer.remove_char(buffer.cursor.col);
+                if buffer.buff[buffer.cursor.row].is_empty() {
                     break;
                 }
             } else {
                 break;
             }
-            c = buffer[cursor.row][cursor.col];
+            c = buffer.buff[buffer.cursor.row][buffer.cursor.col];
         }
         while c.is_whitespace() {
-            if cursor.col < buffer[cursor.row].len() {
-                buffer[cursor.row].remove(cursor.col);
-                if buffer[cursor.row].is_empty() {
+            if buffer.cursor.col < buffer.buff[buffer.cursor.row].len() {
+                buffer.remove_char(buffer.cursor.col);
+                if buffer.buff[buffer.cursor.row].is_empty() {
                     break;
                 }
             } else {
                 break;
             }
-            c = buffer[cursor.row][cursor.col];
+            c = buffer.buff[buffer.cursor.row][buffer.cursor.col];
         }
     }
 }
 
-pub fn p_cmd(
-    buffer: &mut Vec<Vec<char>>,
-    cursor: &mut Cursor,
-    register_handler: &mut RegisterHandler,
-    _mode: &mut Mode,
-) {
-    let mut i = cursor.col;
+pub fn p_cmd(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+    let mut i = buffer.cursor.col;
     register_handler.get_reg().iter().for_each(|c| {
-        buffer[cursor.row].insert(i, *c);
+        buffer.buff[buffer.cursor.row].insert(i, *c);
         i += 1;
     });
 }
 
-pub fn crash(
-    _buffer: &mut Vec<Vec<char>>,
-    _cursor: &mut Cursor,
-    _register_handler: &mut RegisterHandler,
-    _mode: &mut Mode,
-) {
+pub fn crash(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
     panic!("Intentionally Crashed")
 }
 
 pub fn double_quote_cmd(
-    _buffer: &mut Vec<Vec<char>>,
-    _cursor: &mut Cursor,
+    _buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
     _mode: &mut Mode,
 ) {
@@ -406,7 +315,7 @@ pub fn double_quote_cmd(
 // pub fn colon_w_cmd(
 //
 //     buffer: &mut Vec<Vec<char>>,
-//     _cursor: &mut Cursor,
+//     _buffer.cursor: &mut Cursor,
 //     register_handler: &mut RegisterHandler,
 //     _mode: &mut Mode,
 // ) {
