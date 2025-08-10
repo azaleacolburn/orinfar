@@ -79,16 +79,10 @@ fn main() -> Result<()> {
                 contents
                     .split('\n')
                     .for_each(|line| buffer.push_line(line.chars().collect::<Vec<char>>()));
-            } else {
-                buffer.push_line(vec![]);
             }
-
             Some(path)
         }
-        None => {
-            buffer.push_line(vec![]);
-            None
-        }
+        None => None,
     };
 
     execute!(
@@ -246,7 +240,9 @@ fn main() -> Result<()> {
                     }
                 }
                 (KeyCode::Down, _) => {
-                    if buffer.row() < buffer.len() - 1 {
+                    println!("{}, {}", buffer.row(), buffer.len());
+                    println!("{:?}", buffer.buff);
+                    if buffer.row() + 1 < buffer.len() {
                         buffer.next_row();
                         buffer.set_col(usize::min(
                             buffer.col(),
