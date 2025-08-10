@@ -1,5 +1,8 @@
 use anyhow::Result;
-use std::io::{stdout, Write};
+use std::{
+    fmt::Display,
+    io::{stdout, Write},
+};
 
 use crossterm::{
     cursor::{MoveDown, MoveTo, MoveToColumn},
@@ -154,15 +157,18 @@ impl Buffer {
     }
 }
 
-impl ToString for Buffer {
-    fn to_string(&self) -> String {
-        self.buff
-            .iter()
-            .map(|line| {
-                let mut c: String = line.iter().collect();
-                c.push('\n');
-                c
-            })
-            .collect::<String>()
+impl Display for Buffer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(
+            &self
+                .buff
+                .iter()
+                .map(|line| {
+                    let mut c: String = line.iter().collect();
+                    c.push('\n');
+                    c
+                })
+                .collect::<String>(),
+        )
     }
 }
