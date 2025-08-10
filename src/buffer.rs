@@ -82,8 +82,12 @@ impl Buffer {
         self.cursor.row += 1;
     }
 
-    pub fn set_col(&mut self) {
-        self.cursor
+    pub fn set_col(&mut self, value: usize) {
+        self.cursor.col = value;
+    }
+
+    pub fn set_row(&mut self, value: usize) {
+        self.cursor.row = value;
     }
 
     pub fn next_col(&mut self) {
@@ -143,6 +147,10 @@ impl Buffer {
 
     pub fn len(&self) -> usize {
         self.buff.len()
+    }
+
+    pub fn insert_char_at_cursor(&mut self, c: char) {
+        self.buff[self.cursor.row].insert(self.cursor.col, c);
     }
 }
 

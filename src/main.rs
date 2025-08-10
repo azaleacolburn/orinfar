@@ -163,8 +163,8 @@ fn main() -> Result<()> {
                     }
                     let end = buffer.get_line_end();
                     buffer.push_line(end);
-                    buffer.buffer.set_col(0);
-                    buffer.buffer.next_row();
+                    buffer.set_col(0);
+                    buffer.next_row();
                 }
 
                 (KeyCode::Char(c), Mode::Normal) => {
@@ -200,28 +200,27 @@ fn main() -> Result<()> {
                     count = 1;
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
+                    let row = buffer.row();
+                    let col = buffer.col();
                     if buffer.col() > 0 {
-                        buffer.buff[buffer.row()].remove(buffer.col() - 1);
+                        buffer.remove_char(col - 1);
                         buffer.prev_col();
                     } else if buffer.row() != 0 {
                         let mut old_line = buffer.buff[buffer.row()].clone();
-                        buffer.buff[buffer.row() - 1].append(&mut old_line);
-                        buffer.remove(buffer.row());
+                        buffer.buff[row - 1].append(&mut old_line);
+                        buffer.remove_line(row);
                         buffer.prev_row();
                         buffer.set_col(buffer.buff[buffer.row()].len());
                     }
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
-                    buffer.buff[buffer.row()].insert(buffer.col(), c);
+                    buffer.insert_char_at_cursor(c);
                     buffer.next_col();
                 }
                 (KeyCode::Enter, Mode::Insert) => {
-                    let end = match !buffer.buff[buffer.row()].is_empty() {
-                        true => buffer.buff[buffer.row()].split_off(buffer.col()),
-                        false => vec![],
-                    };
+                    let end = buffer.get_line_end();
 
-                    buffer.push(end);
+                    buffer.push_line(end);
                     buffer.set_col(0);
                     buffer.next_row();
                 }
@@ -259,7 +258,7 @@ fn main() -> Result<()> {
             };
 
             execute!(stdout, MoveTo(0, 0), Clear(ClearType::All),)?;
-            for row in buffer.iter() {
+            for row in buffer.buff.iter() {
                 execute!(
                     stdout,
                     Print(row.clone().into_iter().collect::<String>()),
