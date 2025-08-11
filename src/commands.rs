@@ -60,6 +60,50 @@ pub fn a_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode:
     execute!(stdout(), EnableBlinking).unwrap();
 }
 
+enum MoveType {
+    Next,
+    Prev,
+}
+
+impl Into<i8> for MoveType {
+    fn into(self) -> usize {
+        match self {
+            Self::Next => 1,
+            Self::Prev => -1,
+        }
+    }
+}
+
+fn move_char(buffer: &mut Buffer, direction: impl Into<i8>) {}
+
+macro_rules! next_char {
+    ($buffer:expr, $c:expr) => {
+        if $buffer.cursor.col < $buffer.buff[$buffer.cursor.row].len() {
+            $buffer.cursor.col += 1;
+        } else if $buffer.cursor.row < $buffer.buff.len() {
+            $buffer.cursor.row += 1;
+            $buffer.cursor.col = 0;
+        } else {
+            break;
+        }
+        $c = $buffer.get_curr_char();
+    };
+}
+
+macro_rules! prev_char {
+    ($buffer:expr, $c:expr) => {
+        if $buffer.cursor.col > 0 {
+            $buffer.cursor.col -= 1;
+        } else if $buffer.cursor.row > 0 {
+            $buffer.cursor.row -= 1;
+            $buffer.cursor.col = $buffer.buff[$buffer.cursor.row].len() - 1;
+        } else {
+            break;
+        }
+        $c = $buffer.get_curr_char();
+    };
+}
+
 // TODO newlines aren't actually represented, so the w command system doesn't exactly work as
 // expected
 pub fn w_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
@@ -70,39 +114,14 @@ pub fn w_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode
 
     if !c.is_alphanumeric() {
         while !c.is_alphanumeric() {
-            if buffer.cursor.col < buffer.buff[buffer.cursor.row].len() {
-                buffer.cursor.col += 1;
-            } else if buffer.cursor.row < buffer.buff.len() {
-                buffer.cursor.row += 1;
-                buffer.cursor.col = 0;
-            } else {
-                break;
-            }
-            c = buffer.get_curr_char();
+            next_char!(buffer, c);
         }
     } else {
         while c.is_alphanumeric() {
-            if buffer.cursor.col + 1 != buffer.buff[buffer.cursor.row].len() {
-                buffer.cursor.col += 1;
-            } else if buffer.cursor.row + 1 != buffer.buff.len() {
-                buffer.cursor.row += 1;
-                buffer.cursor.col = 0;
-                break;
-            } else {
-                break;
-            }
-            c = buffer.get_curr_char();
+            next_char!(buffer, c);
         }
         while c.is_whitespace() {
-            if buffer.cursor.col + 1 < buffer.buff[buffer.cursor.row].len() {
-                buffer.cursor.col += 1;
-            } else if buffer.cursor.row + 1 < buffer.buff.len() {
-                buffer.cursor.row += 1;
-                buffer.cursor.col = 0;
-            } else {
-                break;
-            }
-            c = buffer.get_curr_char();
+            next_char!(buffer, c);
         }
     }
 }
@@ -115,39 +134,14 @@ pub fn b_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode
 
     if !c.is_alphanumeric() {
         while !c.is_alphanumeric() {
-            if buffer.cursor.col > 0 {
-                buffer.cursor.col -= 1;
-            } else if buffer.cursor.row > 0 {
-                buffer.cursor.row -= 1;
-                buffer.cursor.col = buffer.buff[buffer.cursor.row].len() - 1;
-            } else {
-                break;
-            }
-            c = buffer.get_curr_char();
+            prev_char!(buffer, c);
         }
     } else {
         while c.is_alphanumeric() {
-            if buffer.cursor.col > 0 {
-                buffer.cursor.col -= 1;
-            } else if buffer.cursor.row > 0 {
-                buffer.cursor.row -= 1;
-                buffer.cursor.col = buffer.buff[buffer.cursor.row].len() - 1;
-                break;
-            } else {
-                break;
-            }
-            c = buffer.get_curr_char();
+            prev_char!(buffer, c);
         }
         while c.is_whitespace() {
-            if buffer.cursor.col > 0 {
-                buffer.cursor.col -= 1;
-            } else if buffer.cursor.row > 0 {
-                buffer.cursor.row -= 1;
-                buffer.cursor.col = buffer.buff[buffer.cursor.row].len() - 1;
-            } else {
-                break;
-            }
-            c = buffer.get_curr_char();
+            prev_char!(buffer, c);
         }
     }
 }
@@ -157,15 +151,7 @@ pub fn e_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode
 
     if !next_char.is_alphanumeric() {
         while !next_char.is_alphanumeric() {
-            if buffer.cursor.col < buffer.buff[buffer.cursor.row].len() {
-                buffer.cursor.col += 1;
-            } else if buffer.cursor.row < buffer.len() {
-                buffer.cursor.row += 1;
-                buffer.cursor.col = 0;
-            } else {
-                break;
-            }
-            next_char = unwrap_or_return!(buffer.get_next_char());
+            next_char!(buffer, next_char);
         }
         while next_char.is_alphanumeric() {
             if buffer.cursor.col + 1 < buffer.buff[buffer.cursor.row].len() {
@@ -177,15 +163,7 @@ pub fn e_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode
         }
     } else {
         while next_char.is_alphanumeric() {
-            if buffer.cursor.col + 1 < buffer.buff[buffer.cursor.row].len() {
-                buffer.cursor.col += 1;
-            } else if buffer.cursor.row + 1 < buffer.len() {
-                buffer.cursor.row += 1;
-                buffer.cursor.col = 0;
-            } else {
-                break;
-            }
-            next_char = unwrap_or_return!(buffer.get_next_char());
+            next_char!(buffer, next_char);
         }
     }
 }

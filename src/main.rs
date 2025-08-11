@@ -240,8 +240,6 @@ fn main() -> Result<()> {
                     }
                 }
                 (KeyCode::Down, _) => {
-                    println!("{}, {}", buffer.row(), buffer.len());
-                    println!("{:?}", buffer.buff);
                     if buffer.row() + 1 < buffer.len() {
                         buffer.next_row();
                         buffer.set_col(usize::min(
