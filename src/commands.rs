@@ -60,27 +60,11 @@ pub fn a_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode:
     execute!(stdout(), EnableBlinking).unwrap();
 }
 
-enum MoveType {
-    Next,
-    Prev,
-}
-
-impl Into<i8> for MoveType {
-    fn into(self) -> usize {
-        match self {
-            Self::Next => 1,
-            Self::Prev => -1,
-        }
-    }
-}
-
-fn move_char(buffer: &mut Buffer, direction: impl Into<i8>) {}
-
 macro_rules! next_char {
-    ($buffer:expr, $c:expr) => {
-        if $buffer.cursor.col < $buffer.buff[$buffer.cursor.row].len() {
+    ($buffer:ident, $c:ident) => {
+        if $buffer.cursor.col + 1 < $buffer.buff[$buffer.cursor.row].len() {
             $buffer.cursor.col += 1;
-        } else if $buffer.cursor.row < $buffer.buff.len() {
+        } else if $buffer.cursor.row + 1 < $buffer.buff.len() {
             $buffer.cursor.row += 1;
             $buffer.cursor.col = 0;
         } else {
@@ -110,7 +94,7 @@ pub fn w_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode
     if buffer.is_empty_line() {
         return;
     }
-    let mut c = buffer.get_curr_char(); // = unwrap_or_return!(get_next_char(buffer, buffer.cursor));
+    let mut c = buffer.get_curr_char();
 
     if !c.is_alphanumeric() {
         while !c.is_alphanumeric() {
@@ -147,23 +131,24 @@ pub fn b_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode
 }
 
 pub fn e_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
-    let mut next_char = unwrap_or_return!(buffer.get_next_char()); // buffer.buff[buffer.cursor.row][buffer.cursor.col]; // = unwrap_or_return!(get_next_char(buffer, buffer.cursor));
+    let mut next_char = unwrap_or_return!(buffer.get_next_char());
 
     if !next_char.is_alphanumeric() {
         while !next_char.is_alphanumeric() {
-            next_char!(buffer, next_char);
+            next_char = unwrap_or_return!(buffer.next_char());
         }
         while next_char.is_alphanumeric() {
+            // Next char without wrapping lines, since newlines aren't counted
             if buffer.cursor.col + 1 < buffer.buff[buffer.cursor.row].len() {
                 buffer.cursor.col += 1;
             } else {
                 break;
             }
-            next_char = unwrap_or_return!(buffer.get_next_char());
+            next_char = buffer.get_curr_char();
         }
     } else {
         while next_char.is_alphanumeric() {
-            next_char!(buffer, next_char);
+            next_char = unwrap_or_return!(buffer.next_char());
         }
     }
 }
@@ -227,7 +212,7 @@ pub fn dw_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mod
     if buffer.buff[buffer.cursor.row].is_empty() {
         return;
     }
-    let mut c = buffer.buff[buffer.cursor.row][buffer.cursor.col]; // = unwrap_or_return!(get_next_char(buffer, buffer.cursor));
+    let mut c = buffer.buff[buffer.cursor.row][buffer.cursor.col];
 
     if !c.is_alphanumeric() {
         while !c.is_alphanumeric() {

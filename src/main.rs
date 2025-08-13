@@ -220,17 +220,13 @@ fn main() -> Result<()> {
                 }
 
                 (KeyCode::Left, _) => {
-                    if buffer.col() > 1 {
-                        buffer.prev_col();
-                    }
+                    buffer.prev_col();
                 }
                 (KeyCode::Right, _) => {
-                    if buffer.col() + 1 < buffer.buff[buffer.row()].len() {
-                        buffer.next_col();
-                    }
+                    buffer.next_col();
                 }
                 (KeyCode::Up, _) => {
-                    if buffer.row() > 1 {
+                    if buffer.row() > 0 {
                         buffer.prev_row();
                         // The cursor can exist one character beyond the last in the buffer
                         buffer.set_col(usize::min(
@@ -242,30 +238,15 @@ fn main() -> Result<()> {
                 (KeyCode::Down, _) => {
                     if buffer.row() + 1 < buffer.len() {
                         buffer.next_row();
-                        buffer.set_col(usize::min(
-                            buffer.col(),
-                            buffer.buff[buffer.row()].len() - 1,
-                        ))
+                        buffer.end_of_row();
                     }
                 }
                 _ => continue,
             };
 
-            execute!(stdout, MoveTo(0, 0), Clear(ClearType::All),)?;
-            for row in buffer.buff.iter() {
-                execute!(
-                    stdout,
-                    Print(row.clone().into_iter().collect::<String>()),
-                    MoveDown(1),
-                    MoveToColumn(0),
-                )?;
-            }
-            execute!(stdout, MoveTo(buffer.col() as u16, buffer.row() as u16))?;
-            stdout.flush()?;
+            buffer.flush()?;
         }
     }
 
-    cleanup()?;
-
-    Ok(())
+    cleanup()
 }

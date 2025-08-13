@@ -72,7 +72,31 @@ impl Buffer {
     }
 
     pub fn get_next_char(&self) -> Option<char> {
-        if self.is_last_row() || self.is_last_col() {
+        if self.is_last_row() && self.is_last_col() {
+            return None;
+        }
+
+        let (row, col) = if self.cursor.col + 1 < self.buff[self.cursor.row].len() {
+            (self.cursor.row, self.cursor.col + 1)
+        } else if self.cursor.row + 1 < self.buff.len() {
+            (self.cursor.row + 1, 0)
+        } else {
+            return None;
+        };
+
+        Some(self.buff[row][col])
+    }
+
+    pub fn next_char(&mut self) -> Option<char> {
+        if self.is_last_row() && self.is_last_col() {
+            return None;
+        }
+        if self.cursor.col + 1 < self.buff[self.cursor.row].len() {
+            self.cursor.col += 1;
+        } else if self.cursor.row + 1 < self.buff.len() {
+            self.cursor.row += 1;
+            self.cursor.col = 0;
+        } else {
             return None;
         }
         Some(self.buff[self.cursor.row][self.cursor.col])
@@ -121,12 +145,19 @@ impl Buffer {
         self.cursor.row -= 1;
     }
 
+    pub fn end_of_row(&mut self) {
+        let (col, row) = (self.col(), self.row());
+
+        let end_of_row = usize::min(col + 1, self.buff[row].len()) - 1;
+        self.set_col(end_of_row);
+    }
+
     pub fn push_line(&mut self, line: Vec<char>) {
         self.buff.push(line);
     }
 
     pub fn is_empty_line(&self) -> bool {
-        !self.buff[self.cursor.row].is_empty()
+        self.buff[self.cursor.row].is_empty()
     }
 
     pub fn get_line_end(&mut self) -> Vec<char> {
@@ -144,8 +175,12 @@ impl Buffer {
         self.buff.remove(index)
     }
 
-    pub fn remove_char(&mut self, index: usize) -> char {
-        self.buff[self.cursor.row].remove(index)
+    pub fn remove_char(&mut self, index: usize) {
+        let row = &mut self.buff[self.cursor.row];
+
+        if index < row.len() {
+            row.remove(index);
+        }
     }
 
     pub fn len(&self) -> usize {
