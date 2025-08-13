@@ -15,6 +15,15 @@ macro_rules! unwrap_or_return {
     };
 }
 
+macro_rules! unwrap_or_break {
+    ( $e:expr ) => {
+        match $e {
+            Some(x) => x,
+            None => break,
+        }
+    };
+}
+
 pub struct Command {
     pub character: char,
     pub callback: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
@@ -135,7 +144,7 @@ pub fn e_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode
 
     if !next_char.is_alphanumeric() {
         while !next_char.is_alphanumeric() {
-            next_char = unwrap_or_return!(buffer.next_char());
+            next_char = unwrap_or_break!(buffer.next_char());
         }
         while next_char.is_alphanumeric() {
             // Next char without wrapping lines, since newlines aren't counted
@@ -148,7 +157,8 @@ pub fn e_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode
         }
     } else {
         while next_char.is_alphanumeric() {
-            next_char = unwrap_or_return!(buffer.next_char());
+            buffer.next_char();
+            next_char = unwrap_or_break!(buffer.get_next_char());
         }
     }
 }
