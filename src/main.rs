@@ -1,5 +1,9 @@
 #![feature(panic_update_hook)]
 
+// Needs to be defined first
+#[macro_use]
+mod utility;
+
 mod buffer;
 mod cli;
 mod commands;
@@ -24,11 +28,9 @@ use crossterm::{
 use crate::{
     buffer::Buffer,
     cli::Cli,
-    commands::{
-        a_cmd, b_cmd, crash, dd_cmd, dollar_cmd, double_quote_cmd, dw_cmd, e_cmd, i_cmd, o_cmd,
-        p_cmd, underscore_cmd, w_cmd, x_cmd, O_cmd,
-    },
-    operator::{delete, Operation, Operator},
+    commands::{a_cmd, crash, dd_cmd, double_quote_cmd, dw_cmd, i_cmd, o_cmd, p_cmd, x_cmd, O_cmd},
+    motion::{back, beginning_of_line, end_of_line, end_of_word, word, Motion},
+    operator::{delete, yank, Operation, Operator},
     register::RegisterHandler,
 };
 
@@ -64,10 +66,15 @@ fn main() -> Result<()> {
     let mut _marks: HashMap<char, (usize, usize)> = HashMap::new();
     let mut buffer: Buffer = Buffer::new();
 
-    let operators: &[Operator] = &[Operator::new("d", delete)];
-    let motions: &[Motion] = &[];
-
-    let mut operation: Operation = {};
+    let operators: &[Operator] = &[Operator::new("d", delete), Operator::new("y", yank)];
+    let motions: &[Motion] = &[
+        Motion::new("w", word),
+        Motion::new("b", back),
+        Motion::new("e", end_of_word),
+        Motion::new("$", end_of_line),
+        Motion::new("_", beginning_of_line),
+    ];
+    // let mut operation: Operation = {};
 
     let cli = Cli::parse();
     // TODO This is a bad way of handling things, refactor later
@@ -108,28 +115,28 @@ fn main() -> Result<()> {
     execute!(stdout, MoveTo(0, 0))?;
     enable_raw_mode()?;
 
-    let commands = vec![
-        // Mode Shifting
-        Cmd::leaf('i', i_cmd),
-        Cmd::leaf('a', a_cmd),
-        Cmd::leaf('o', o_cmd),
-        Cmd::leaf('O', O_cmd),
-        // Movement
-        Cmd::leaf('w', w_cmd),
-        Cmd::leaf('b', b_cmd),
-        Cmd::leaf('e', e_cmd),
-        Cmd::leaf('$', dollar_cmd),
-        Cmd::leaf('_', underscore_cmd),
-        // Editing
-        Cmd::leaf('x', x_cmd),
-        Cmd::branch('d', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
-        Cmd::branch('y', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
-        // Cmd::branch(':', [Cmd::leaf('w', colon_w_cmd)]),
-        // Registers
-        Cmd::leaf('p', p_cmd),
-        Cmd::leaf('c', crash),
-        Cmd::leaf('"', double_quote_cmd),
-    ];
+    // let commands = vec![
+    //     // Mode Shifting
+    //     Cmd::leaf('i', i_cmd),
+    //     Cmd::leaf('a', a_cmd),
+    //     Cmd::leaf('o', o_cmd),
+    //     Cmd::leaf('O', O_cmd),
+    //     // Movement
+    //     Cmd::leaf('w', w_cmd),
+    //     Cmd::leaf('b', b_cmd),
+    //     Cmd::leaf('e', e_cmd),
+    //     Cmd::leaf('$', dollar_cmd),
+    //     Cmd::leaf('_', underscore_cmd),
+    //     // Editing
+    //     Cmd::leaf('x', x_cmd),
+    //     Cmd::branch('d', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
+    //     Cmd::branch('y', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
+    //     // Cmd::branch(':', [Cmd::leaf('w', colon_w_cmd)]),
+    //     // Registers
+    //     Cmd::leaf('p', p_cmd),
+    //     Cmd::leaf('c', crash),
+    //     Cmd::leaf('"', double_quote_cmd),
+    // ];
 
     let mut mode = Mode::Normal;
     let mut count: u16 = 1;
@@ -167,26 +174,31 @@ fn main() -> Result<()> {
 
                 (KeyCode::Char(c), Mode::Normal) => {
                     chained.push(c);
-                    let mut current_commands: &Vec<Cmd> = &commands;
-                    let mut depth = 0;
+                    
+                    
+                    if co.map() chained
+                    
 
-                    while let Some(cmd) = current_commands
-                        .iter()
-                        .find(|cmd| cmd.character == chained[depth])
-                    {
-                        if cmd.children.is_empty() {
-                            (cmd.callback)(&mut buffer, &mut register_handler, &mut mode);
-                            chained = vec![];
-                            break;
-                        } else {
-                            current_commands = &cmd.children;
-                            depth += 1;
-                            if depth == chained.len() {
-                                break;
-                            }
-                        }
-                    }
-                    register_handler.reset_current_register();
+                    //     let mut current_commands: &Vec<Cmd> = &commands;
+                    //     let mut depth = 0;
+                    //
+                    //     while let Some(cmd) = current_commands
+                    //         .iter()
+                    //         .find(|cmd| cmd.character == chained[depth])
+                    //     {
+                    //         if cmd.children.is_empty() {
+                    //             (cmd.callback)(&mut buffer, &mut register_handler, &mut mode);
+                    //             chained = vec![];
+                    //             break;
+                    //         } else {
+                    //             current_commands = &cmd.children;
+                    //             depth += 1;
+                    //             if depth == chained.len() {
+                    //                 break;
+                    //             }
+                    //         }
+                    //     }
+                    //     register_handler.reset_current_register();
                 }
 
                 (KeyCode::Esc, Mode::Insert) => {

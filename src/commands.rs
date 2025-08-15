@@ -6,24 +6,6 @@ use crossterm::{
 };
 use std::io::stdout;
 
-macro_rules! unwrap_or_return {
-    ( $e:expr ) => {
-        match $e {
-            Some(x) => x,
-            None => return,
-        }
-    };
-}
-
-macro_rules! unwrap_or_break {
-    ( $e:expr ) => {
-        match $e {
-            Some(x) => x,
-            None => break,
-        }
-    };
-}
-
 pub struct Command {
     pub character: char,
     pub callback: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
@@ -67,102 +49,6 @@ pub fn a_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode:
     *mode = Mode::Insert;
     buffer.next_col();
     execute!(stdout(), EnableBlinking).unwrap();
-}
-
-macro_rules! next_char {
-    ($buffer:ident, $c:ident) => {
-        if $buffer.cursor.col + 1 < $buffer.buff[$buffer.cursor.row].len() {
-            $buffer.cursor.col += 1;
-        } else if $buffer.cursor.row + 1 < $buffer.buff.len() {
-            $buffer.cursor.row += 1;
-            $buffer.cursor.col = 0;
-        } else {
-            break;
-        }
-        $c = $buffer.get_curr_char();
-    };
-}
-
-// TODO newlines aren't actually represented, so the w command system doesn't exactly work as
-// expected
-pub fn w_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
-    if buffer.is_empty_line() {
-        return;
-    }
-    let mut c = buffer.get_curr_char();
-
-    if !c.is_alphanumeric() {
-        while !c.is_alphanumeric() {
-            next_char!(buffer, c);
-        }
-    } else {
-        while c.is_alphanumeric() {
-            next_char!(buffer, c);
-        }
-        while c.is_whitespace() {
-            next_char!(buffer, c);
-        }
-    }
-}
-
-pub fn b_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
-    if buffer.buff[buffer.cursor.row].is_empty() {
-        return;
-    }
-    let mut c = buffer.get_curr_char();
-
-    if !c.is_alphanumeric() {
-        while !c.is_alphanumeric() {
-            c = unwrap_or_break!(buffer.prev_char());
-        }
-    } else {
-        while c.is_alphanumeric() {
-            c = unwrap_or_break!(buffer.prev_char());
-        }
-        while c.is_whitespace() {
-            c = unwrap_or_break!(buffer.prev_char());
-        }
-    }
-}
-
-pub fn e_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
-    let mut next_char = unwrap_or_return!(buffer.get_next_char());
-
-    if !next_char.is_alphanumeric() {
-        while !next_char.is_alphanumeric() {
-            next_char = unwrap_or_break!(buffer.next_char());
-        }
-        while next_char.is_alphanumeric() {
-            // Next char without wrapping lines, since newlines aren't counted
-            if buffer.cursor.col + 1 < buffer.buff[buffer.cursor.row].len() {
-                buffer.cursor.col += 1;
-            } else {
-                break;
-            }
-            next_char = buffer.get_curr_char();
-        }
-    } else {
-        while next_char.is_alphanumeric() {
-            buffer.next_char();
-            next_char = unwrap_or_break!(buffer.get_next_char());
-        }
-    }
-}
-
-pub fn dollar_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
-    buffer.cursor.col = buffer.buff[buffer.cursor.row].len() - 1
-}
-
-pub fn underscore_cmd(
-    buffer: &mut Buffer,
-    _register_handler: &mut RegisterHandler,
-    _mode: &mut Mode,
-) {
-    let first = buffer.buff[buffer.cursor.row]
-        .iter()
-        .position(|c| !c.is_whitespace())
-        .unwrap_or(buffer.cursor.col);
-    buffer.cursor.col = first
 }
 
 pub fn x_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {

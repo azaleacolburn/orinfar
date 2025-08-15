@@ -1,16 +1,16 @@
-use crate::{buffer::Buffer, register::RegisterHandler, Cursor, Mode};
+use crate::{buffer::Buffer, motion::Motion, register::RegisterHandler, Cursor, Mode};
 
 pub struct Operator {
-    name: Vec<char>,
+    pub name: Vec<char>,
     command:
-        fn(start: Cursor, buffer: &mut Buffer, registers: &mut RegisterHandler, mode: &mut Mode),
+        fn(motion: &Motion, buffer: &mut Buffer, registers: &mut RegisterHandler, mode: &mut Mode),
 }
 
 impl Operator {
     pub fn new(
         name: &str,
         command: fn(
-            start: Cursor,
+            motion: &Motion,
             buffer: &mut Buffer,
             registers: &mut RegisterHandler,
             mode: &mut Mode,
@@ -21,16 +21,27 @@ impl Operator {
             command,
         }
     }
+
+    pub fn execute(self) {
+        (self.command)
+    }
 }
 
 pub fn delete(
-    start: Cursor,
+    motion: &Motion,
     buffer: &mut Buffer,
     registers: &mut RegisterHandler,
     mode: &mut Mode,
 ) {
 }
 
+pub fn yank(
+    motion: &Motion,
+    buffer: &mut Buffer,
+    registers: &mut RegisterHandler,
+    mode: &mut Mode,
+) {
+}
 pub struct Operation<'a> {
     operator: &'a Operator,
     start: Cursor,
