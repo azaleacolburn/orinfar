@@ -3,6 +3,8 @@
 mod buffer;
 mod cli;
 mod commands;
+mod motion;
+mod operator;
 mod panic_hook;
 mod register;
 use std::{collections::HashMap, io::stdout, path::PathBuf};
@@ -26,6 +28,7 @@ use crate::{
         a_cmd, b_cmd, crash, dd_cmd, dollar_cmd, double_quote_cmd, dw_cmd, e_cmd, i_cmd, o_cmd,
         p_cmd, underscore_cmd, w_cmd, x_cmd, O_cmd,
     },
+    operator::{delete, Operation, Operator},
     register::RegisterHandler,
 };
 
@@ -60,6 +63,11 @@ fn main() -> Result<()> {
     let mut register_handler = RegisterHandler::new();
     let mut _marks: HashMap<char, (usize, usize)> = HashMap::new();
     let mut buffer: Buffer = Buffer::new();
+
+    let operators: &[Operator] = &[Operator::new("d", delete)];
+    let motions: &[Motion] = &[];
+
+    let mut operation: Operation = {};
 
     let cli = Cli::parse();
     // TODO This is a bad way of handling things, refactor later

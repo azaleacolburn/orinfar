@@ -14,6 +14,7 @@ use crossterm::{
 use crate::Cursor;
 
 // The cursor is always guaranteed to be within the bounds of the buffer
+#[derive(Debug, Clone)]
 pub struct Buffer {
     pub buff: Vec<Vec<char>>,
     pub cursor: Cursor,
