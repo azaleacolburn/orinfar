@@ -5,18 +5,14 @@ mod cli;
 mod commands;
 mod panic_hook;
 mod register;
-use std::{
-    collections::HashMap,
-    io::{stdout, Write},
-    path::PathBuf,
-};
+use std::{collections::HashMap, io::stdout, path::PathBuf};
 
 use clap::Parser;
 use commands::Command as Cmd;
 
 use anyhow::Result;
 use crossterm::{
-    cursor::{DisableBlinking, MoveDown, MoveTo, MoveToColumn},
+    cursor::{DisableBlinking, MoveTo},
     event::{read, Event, KeyCode},
     execute,
     style::{Color, Print, ResetColor, SetForegroundColor},

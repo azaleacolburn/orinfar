@@ -102,6 +102,21 @@ impl Buffer {
         Some(self.buff[self.cursor.row][self.cursor.col])
     }
 
+    pub fn prev_char(&mut self) -> Option<char> {
+        if self.is_last_row() && self.is_last_col() {
+            return None;
+        }
+        if self.cursor.col > 0 {
+            self.cursor.col -= 1;
+        } else if self.cursor.row > 0 {
+            self.cursor.row -= 1;
+            self.cursor.col = 0;
+        } else {
+            return None;
+        }
+        Some(self.buff[self.cursor.row][self.cursor.col])
+    }
+
     pub fn next_line(&mut self) {
         if self.buff.len() == self.cursor.row + 1 {
             return;

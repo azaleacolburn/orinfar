@@ -1,4 +1,4 @@
-use crate::{buffer::Buffer, register::RegisterHandler, Cursor, Mode};
+use crate::{buffer::Buffer, register::RegisterHandler, Mode};
 use crossterm::{
     cursor::EnableBlinking,
     event::{read, Event},
@@ -83,20 +83,6 @@ macro_rules! next_char {
     };
 }
 
-macro_rules! prev_char {
-    ($buffer:expr, $c:expr) => {
-        if $buffer.cursor.col > 0 {
-            $buffer.cursor.col -= 1;
-        } else if $buffer.cursor.row > 0 {
-            $buffer.cursor.row -= 1;
-            $buffer.cursor.col = $buffer.buff[$buffer.cursor.row].len() - 1;
-        } else {
-            break;
-        }
-        $c = $buffer.get_curr_char();
-    };
-}
-
 // TODO newlines aren't actually represented, so the w command system doesn't exactly work as
 // expected
 pub fn w_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
@@ -127,14 +113,14 @@ pub fn b_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode
 
     if !c.is_alphanumeric() {
         while !c.is_alphanumeric() {
-            prev_char!(buffer, c);
+            c = unwrap_or_break!(buffer.prev_char());
         }
     } else {
         while c.is_alphanumeric() {
-            prev_char!(buffer, c);
+            c = unwrap_or_break!(buffer.prev_char());
         }
         while c.is_whitespace() {
-            prev_char!(buffer, c);
+            c = unwrap_or_break!(buffer.prev_char());
         }
     }
 }
