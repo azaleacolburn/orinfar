@@ -74,7 +74,7 @@ fn main() -> Result<()> {
         Motion::new("$", end_of_line),
         Motion::new("_", beginning_of_line),
     ];
-    // let mut operation: Operation = {};
+    let mut operation: Option<&Operator> = None;
 
     let cli = Cli::parse();
     // TODO This is a bad way of handling things, refactor later
@@ -115,29 +115,6 @@ fn main() -> Result<()> {
     execute!(stdout, MoveTo(0, 0))?;
     enable_raw_mode()?;
 
-    // let commands = vec![
-    //     // Mode Shifting
-    //     Cmd::leaf('i', i_cmd),
-    //     Cmd::leaf('a', a_cmd),
-    //     Cmd::leaf('o', o_cmd),
-    //     Cmd::leaf('O', O_cmd),
-    //     // Movement
-    //     Cmd::leaf('w', w_cmd),
-    //     Cmd::leaf('b', b_cmd),
-    //     Cmd::leaf('e', e_cmd),
-    //     Cmd::leaf('$', dollar_cmd),
-    //     Cmd::leaf('_', underscore_cmd),
-    //     // Editing
-    //     Cmd::leaf('x', x_cmd),
-    //     Cmd::branch('d', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
-    //     Cmd::branch('y', [Cmd::leaf('d', dd_cmd), Cmd::leaf('w', dw_cmd)]),
-    //     // Cmd::branch(':', [Cmd::leaf('w', colon_w_cmd)]),
-    //     // Registers
-    //     Cmd::leaf('p', p_cmd),
-    //     Cmd::leaf('c', crash),
-    //     Cmd::leaf('"', double_quote_cmd),
-    // ];
-
     let mut mode = Mode::Normal;
     let mut count: u16 = 1;
     let mut chained: Vec<char> = vec![];
@@ -174,10 +151,32 @@ fn main() -> Result<()> {
 
                 (KeyCode::Char(c), Mode::Normal) => {
                     chained.push(c);
-                    
-                    
-                    if co.map() chained
-                    
+
+                    if let Some(operation) = operation {
+                        if let Some(motion) = motions.iter().find(|motion| motion.name[0] == c) {
+                            operation.execute(
+                                motion,
+                                &mut buffer,
+                                &mut register_handler,
+                                &mut mode,
+                            );
+
+                            continue;
+                        }
+                    }
+
+                    if chained.len() == 1 {
+                        if let Some(motion) = motions.iter().find(|motion| motion.name[0] == c) {
+                            motion.apply(&mut buffer);
+                        }
+                        continue;
+                    }
+
+                    if let Some(operator) =
+                        operators.iter().find(|operator| operator.name == chained)
+                    {
+                        operation = Some(&operator);
+                    }
 
                     //     let mut current_commands: &Vec<Cmd> = &commands;
                     //     let mut depth = 0;
