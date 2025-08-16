@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, slice::Iter};
 
 pub type RegId = String;
 pub type RegContents = Vec<char>;
@@ -23,6 +23,33 @@ impl RegisterHandler {
 
     pub fn set_reg(&mut self, value: RegContents) {
         self.registers.insert(self.current_register.clone(), value);
+    }
+
+    pub fn push_reg(&mut self, append_value: &[char]) {
+        match self.registers.get_mut(&self.current_register) {
+            Some(value) => {
+                value.reserve(append_value.len());
+                append_value.iter().for_each(|c| {
+                    value.push(*c);
+                });
+            }
+            None => {
+                self.registers
+                    .insert(self.current_register.clone(), append_value.to_vec());
+            }
+        }
+    }
+
+    pub fn push_char(&mut self, append_value: char) {
+        match self.registers.get_mut(&self.current_register) {
+            Some(value) => {
+                value.push(append_value);
+            }
+            None => {
+                self.registers
+                    .insert(self.current_register.clone(), vec![append_value]);
+            }
+        }
     }
 
     pub fn get_reg(&mut self) -> RegContents {

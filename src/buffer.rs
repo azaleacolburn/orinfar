@@ -209,6 +209,10 @@ impl Buffer {
     pub fn insert_char_at_cursor(&mut self, c: char) {
         self.buff[self.cursor.row].insert(self.cursor.col, c);
     }
+
+    pub fn delete_curr_char(&mut self) -> char {
+        self.buff[self.cursor.row].remove(self.cursor.col)
+    }
 }
 
 impl Display for Buffer {

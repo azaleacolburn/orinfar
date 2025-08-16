@@ -20,7 +20,7 @@ impl Motion {
 
     // Called when the motion is chained to an operator
     // Doesn't apply the motion to the buffer but returns where the motion would have gone
-    pub fn evaluate(&self, buffer: &mut Buffer) -> Cursor {
+    pub fn evaluate(&self, buffer: &Buffer) -> Cursor {
         let mut fake_buffer = buffer.clone();
         (self.command)(&mut fake_buffer);
 

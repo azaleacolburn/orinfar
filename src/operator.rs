@@ -3,7 +3,7 @@ use crate::{buffer::Buffer, motion::Motion, register::RegisterHandler, Cursor, M
 pub struct Operator {
     pub name: Vec<char>,
     command: fn(
-        motion: &Motion,
+        end: Cursor,
         buffer: &mut Buffer,
         register_handler: &mut RegisterHandler,
         mode: &mut Mode,
@@ -14,7 +14,7 @@ impl Operator {
     pub fn new(
         name: &str,
         command: fn(
-            motion: &Motion,
+            end: Cursor,
             buffer: &mut Buffer,
             register_handler: &mut RegisterHandler,
             mode: &mut Mode,
@@ -33,20 +33,31 @@ impl Operator {
         register_handler: &mut RegisterHandler,
         mode: &mut Mode,
     ) {
-        (self.command)(motion, buffer, register_handler, mode);
+        let end = motion.evaluate(buffer);
+        (self.command)(end, buffer, register_handler, mode);
     }
 }
 
 pub fn delete(
-    motion: &Motion,
+    end: Cursor,
     buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
-    mode: &mut Mode,
+    _mode: &mut Mode,
 ) {
+    // NOTE We can't actually know the distance between cursors
+    // without traversing the buffer since lines are of arbitrary length
+    let mut count: usize = 0;
+    while buffer.cursor != end {
+        register_handler.push_char(buffer.get_curr_char());
+        count += 1;
+    }
+    (0..count).into_iter().for_each(|_| {
+        buffer.delete_curr_char();
+    });
 }
 
 pub fn yank(
-    motion: &Motion,
+    end: Cursor,
     buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
