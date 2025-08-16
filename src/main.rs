@@ -26,21 +26,13 @@ use crossterm::{
 };
 
 use crate::{
-    buffer::Buffer,
+    buffer::{Buffer, Cursor},
     cli::Cli,
-    commands::{a_cmd, crash, dd_cmd, double_quote_cmd, dw_cmd, i_cmd, o_cmd, p_cmd, x_cmd, O_cmd},
+    commands::insert,
     motion::{back, beginning_of_line, end_of_line, end_of_word, word, Motion},
-    operator::{delete, yank, Operation, Operator},
+    operator::{delete, yank, Operator},
     register::RegisterHandler,
 };
-
-pub fn flush_buffer() {}
-
-#[derive(Clone, Debug)]
-struct Cursor {
-    row: usize,
-    col: usize,
-}
 
 #[derive(Clone, Debug)]
 enum Mode {
@@ -66,6 +58,7 @@ fn main() -> Result<()> {
     let mut _marks: HashMap<char, (usize, usize)> = HashMap::new();
     let mut buffer: Buffer = Buffer::new();
 
+    let commands: &[Cmd] = &[Cmd::new("i", insert)];
     let operators: &[Operator] = &[Operator::new("d", delete), Operator::new("y", yank)];
     let motions: &[Motion] = &[
         Motion::new("w", word),
@@ -152,7 +145,10 @@ fn main() -> Result<()> {
                 (KeyCode::Char(c), Mode::Normal) => {
                     chained.push(c);
 
-                    if let Some(operation) = operation {
+                    if let Some(command) = commands.iter().find(|motion| motion.name == chained) {
+                        command.execute(&mut buffer, &mut register_handler, &mut mode);
+                        chained.clear();
+                    } else if let Some(operation) = operation {
                         if let Some(motion) = motions.iter().find(|motion| motion.name[0] == c) {
                             operation.execute(
                                 motion,
@@ -160,44 +156,18 @@ fn main() -> Result<()> {
                                 &mut register_handler,
                                 &mut mode,
                             );
-
-                            continue;
+                            chained.clear();
                         }
-                    }
-
-                    if chained.len() == 1 {
+                    } else if chained.len() == 1 {
                         if let Some(motion) = motions.iter().find(|motion| motion.name[0] == c) {
                             motion.apply(&mut buffer);
+                            chained.clear();
                         }
-                        continue;
-                    }
-
-                    if let Some(operator) =
+                    } else if let Some(operator) =
                         operators.iter().find(|operator| operator.name == chained)
                     {
                         operation = Some(&operator);
                     }
-
-                    //     let mut current_commands: &Vec<Cmd> = &commands;
-                    //     let mut depth = 0;
-                    //
-                    //     while let Some(cmd) = current_commands
-                    //         .iter()
-                    //         .find(|cmd| cmd.character == chained[depth])
-                    //     {
-                    //         if cmd.children.is_empty() {
-                    //             (cmd.callback)(&mut buffer, &mut register_handler, &mut mode);
-                    //             chained = vec![];
-                    //             break;
-                    //         } else {
-                    //             current_commands = &cmd.children;
-                    //             depth += 1;
-                    //             if depth == chained.len() {
-                    //                 break;
-                    //             }
-                    //         }
-                    //     }
-                    //     register_handler.reset_current_register();
                 }
 
                 (KeyCode::Esc, Mode::Insert) => {

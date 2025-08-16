@@ -11,10 +11,13 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 
-use crate::Cursor;
-
+#[derive(Clone, Debug, PartialEq)]
+pub struct Cursor {
+    pub row: usize,
+    pub col: usize,
+}
 // The cursor is always guaranteed to be within the bounds of the buffer
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Buffer {
     pub buff: Vec<Vec<char>>,
     pub cursor: Cursor,
@@ -104,14 +107,14 @@ impl Buffer {
     }
 
     pub fn prev_char(&mut self) -> Option<char> {
-        if self.is_last_row() && self.is_last_col() {
+        if self.cursor.row == 0 && self.cursor.col == 0 {
             return None;
         }
         if self.cursor.col > 0 {
             self.cursor.col -= 1;
         } else if self.cursor.row > 0 {
             self.cursor.row -= 1;
-            self.cursor.col = 0;
+            self.cursor.col = self.buff[self.cursor.row].len() - 1;
         } else {
             return None;
         }

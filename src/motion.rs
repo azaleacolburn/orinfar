@@ -2,7 +2,6 @@ use crate::{buffer::Buffer, Cursor};
 
 pub struct Motion {
     pub name: Vec<char>,
-    // Can't modify buffer.buff but can modify buffer.cursor
     command: fn(buffer: &mut Buffer),
 }
 

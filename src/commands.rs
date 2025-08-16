@@ -7,51 +7,45 @@ use crossterm::{
 use std::io::stdout;
 
 pub struct Command {
-    pub character: char,
-    pub callback: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
-    pub children: Vec<Command>,
+    pub name: Vec<char>,
+    command: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
 }
 
 impl Command {
-    pub fn branch(character: char, children: impl Into<Vec<Command>>) -> Self {
-        Command {
-            character,
-            callback: wait,
-            children: children.into(),
-        }
-    }
-    pub fn leaf(
-        character: char,
-        callback: fn(
-            buffer: &mut Buffer,
-            register_handler: &mut RegisterHandler,
-            mode: &mut Mode,
-        ) -> (),
+    pub fn new(
+        name: &str,
+        command: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
     ) -> Self {
         Command {
-            character,
-            callback,
-            children: Vec::new(),
+            name: name.chars().collect(),
+            command,
         }
+    }
+
+    pub fn execute(
+        &self,
+        buffer: &mut Buffer,
+        register_handler: &mut RegisterHandler,
+        mode: &mut Mode,
+    ) {
+        (self.command)(buffer, register_handler, mode)
     }
 }
 
-// Callbacks
-//
 pub fn wait(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {}
 
-pub fn i_cmd(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
+pub fn insert(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
     *mode = Mode::Insert;
     execute!(stdout(), EnableBlinking).unwrap();
 }
 
-pub fn a_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
+pub fn append(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
     *mode = Mode::Insert;
     buffer.next_col();
     execute!(stdout(), EnableBlinking).unwrap();
 }
 
-pub fn x_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+pub fn cut(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
     if buffer.buff[buffer.cursor.row].len() > buffer.cursor.col {
         buffer.remove_char(buffer.cursor.col);
         if buffer.buff[buffer.cursor.row].len() == buffer.cursor.col && buffer.cursor.col != 0 {
@@ -89,51 +83,6 @@ pub fn dd_cmd(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode
         buffer.cursor.col = 0;
     }
 }
-
-pub fn dw_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
-    if buffer.buff[buffer.cursor.row].is_empty() {
-        return;
-    }
-    let mut c = buffer.buff[buffer.cursor.row][buffer.cursor.col];
-
-    if !c.is_alphanumeric() {
-        while !c.is_alphanumeric() {
-            if buffer.cursor.col < buffer.buff[buffer.cursor.row].len() {
-                buffer.remove_char(buffer.cursor.col);
-                if buffer.buff[buffer.cursor.row].is_empty() {
-                    break;
-                }
-            } else {
-                break;
-            }
-            c = buffer.buff[buffer.cursor.row][buffer.cursor.col];
-        }
-    } else {
-        while c.is_alphanumeric() {
-            if buffer.cursor.col < buffer.buff[buffer.cursor.row].len() {
-                buffer.remove_char(buffer.cursor.col);
-                if buffer.buff[buffer.cursor.row].is_empty() {
-                    break;
-                }
-            } else {
-                break;
-            }
-            c = buffer.buff[buffer.cursor.row][buffer.cursor.col];
-        }
-        while c.is_whitespace() {
-            if buffer.cursor.col < buffer.buff[buffer.cursor.row].len() {
-                buffer.remove_char(buffer.cursor.col);
-                if buffer.buff[buffer.cursor.row].is_empty() {
-                    break;
-                }
-            } else {
-                break;
-            }
-            c = buffer.buff[buffer.cursor.row][buffer.cursor.col];
-        }
-    }
-}
-
 pub fn p_cmd(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
     let mut i = buffer.cursor.col;
     register_handler.get_reg().iter().for_each(|c| {
