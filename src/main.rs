@@ -30,7 +30,7 @@ use crate::{
     cli::Cli,
     commands::{append, cut, insert, o_cmd, paste, O_cmd},
     motion::{back, beginning_of_line, end_of_line, end_of_word, word, Motion},
-    operator::{delete, yank, Operator},
+    operator::{change, delete, yank, Operator},
     register::RegisterHandler,
 };
 

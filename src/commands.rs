@@ -46,11 +46,13 @@ pub fn append(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode
 }
 
 pub fn cut(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
-    if buffer.buff[buffer.cursor.row].len() > buffer.cursor.col {
-        buffer.remove_char(buffer.cursor.col);
-        if buffer.buff[buffer.cursor.row].len() == buffer.cursor.col && buffer.cursor.col != 0 {
-            buffer.cursor.col -= 1;
-        }
+    if buffer.buff[buffer.cursor.row].len() <= buffer.cursor.col {
+        return;
+    }
+
+    buffer.remove_char(buffer.cursor.col);
+    if buffer.buff[buffer.cursor.row].len() == buffer.cursor.col && buffer.cursor.col != 0 {
+        buffer.cursor.col -= 1;
     }
 }
 
