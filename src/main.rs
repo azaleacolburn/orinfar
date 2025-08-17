@@ -11,19 +11,6 @@ mod motion;
 mod operator;
 mod panic_hook;
 mod register;
-use std::{collections::HashMap, io::stdout, path::PathBuf};
-
-use clap::Parser;
-use commands::Command as Cmd;
-
-use anyhow::Result;
-use crossterm::{
-    cursor::{DisableBlinking, MoveTo},
-    event::{read, Event, KeyCode},
-    execute,
-    style::{Color, Print, ResetColor, SetForegroundColor},
-    terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType, ScrollUp, SetSize},
-};
 
 use crate::{
     buffer::{Buffer, Cursor},
@@ -33,6 +20,17 @@ use crate::{
     operator::{change, delete, yank, Operator},
     register::RegisterHandler,
 };
+use anyhow::Result;
+use clap::Parser;
+use commands::Command as Cmd;
+use crossterm::{
+    cursor::{DisableBlinking, MoveTo},
+    event::{read, Event, KeyCode},
+    execute,
+    style::{Color, Print, ResetColor, SetForegroundColor},
+    terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType, ScrollUp, SetSize},
+};
+use std::{collections::HashMap, io::stdout, path::PathBuf};
 
 #[derive(Clone, Debug)]
 enum Mode {
@@ -79,6 +77,7 @@ fn main() -> Result<()> {
         Motion::new("_", beginning_of_line),
     ];
     let mut next_operation: Option<&Operator> = None;
+    let mut pending_motion: Option<&Motion> = None;
 
     let cli = Cli::parse();
     // TODO This is a bad way of handling things, refactor later
@@ -182,6 +181,8 @@ fn main() -> Result<()> {
                     {
                         next_operation = Some(&operator);
                     }
+
+                    if let Some(motion) = pending_motion
                 }
 
                 (KeyCode::Esc, Mode::Insert) => {
