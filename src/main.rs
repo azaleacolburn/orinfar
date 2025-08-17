@@ -67,7 +67,7 @@ fn main() -> Result<()> {
         Motion::new("$", end_of_line),
         Motion::new("_", beginning_of_line),
     ];
-    let mut operation: Option<&Operator> = None;
+    let mut next_operation: Option<&Operator> = None;
 
     let cli = Cli::parse();
     // TODO This is a bad way of handling things, refactor later
@@ -148,7 +148,7 @@ fn main() -> Result<()> {
                     if let Some(command) = commands.iter().find(|motion| motion.name == chained) {
                         command.execute(&mut buffer, &mut register_handler, &mut mode);
                         chained.clear();
-                    } else if let Some(operation) = operation {
+                    } else if let Some(operation) = next_operation {
                         if let Some(motion) = motions.iter().find(|motion| motion.name[0] == c) {
                             operation.execute(
                                 motion,
@@ -157,16 +157,19 @@ fn main() -> Result<()> {
                                 &mut mode,
                             );
                             chained.clear();
+                            next_operation = None;
                         }
                     } else if chained.len() == 1 {
                         if let Some(motion) = motions.iter().find(|motion| motion.name[0] == c) {
                             motion.apply(&mut buffer);
                             chained.clear();
                         }
-                    } else if let Some(operator) =
+                    }
+
+                    if let Some(operator) =
                         operators.iter().find(|operator| operator.name == chained)
                     {
-                        operation = Some(&operator);
+                        next_operation = Some(&operator);
                     }
                 }
 

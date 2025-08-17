@@ -46,7 +46,9 @@ pub fn delete(
 ) {
     // NOTE We can't actually know the distance between cursors
     // without traversing the buffer since lines are of arbitrary length
+    register_handler.set_reg(vec![]);
     let mut count: usize = 0;
+    // TODO Figure out how to edn the loop nicely
     while buffer.cursor != end {
         register_handler.push_char(buffer.get_curr_char());
         count += 1;
