@@ -49,11 +49,14 @@ pub fn delete(
     register_handler.set_reg(vec![]);
     let mut count: usize = 0;
     // TODO Figure out how to edn the loop nicely
+    let anchor_cursor = buffer.cursor.clone();
     while buffer.cursor != end {
         register_handler.push_char(buffer.get_curr_char());
+        buffer.next_char();
         count += 1;
     }
-    (0..count).into_iter().for_each(|_| {
+    buffer.cursor = anchor_cursor;
+    (0..=count).into_iter().for_each(|_| {
         buffer.delete_curr_char();
     });
 }
