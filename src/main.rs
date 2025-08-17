@@ -28,7 +28,7 @@ use crossterm::{
 use crate::{
     buffer::{Buffer, Cursor},
     cli::Cli,
-    commands::insert,
+    commands::{append, cut, insert, o_cmd, paste, O_cmd},
     motion::{back, beginning_of_line, end_of_line, end_of_word, word, Motion},
     operator::{delete, yank, Operator},
     register::RegisterHandler,
@@ -58,8 +58,19 @@ fn main() -> Result<()> {
     let mut _marks: HashMap<char, (usize, usize)> = HashMap::new();
     let mut buffer: Buffer = Buffer::new();
 
-    let commands: &[Cmd] = &[Cmd::new("i", insert)];
-    let operators: &[Operator] = &[Operator::new("d", delete), Operator::new("y", yank)];
+    let commands: &[Cmd] = &[
+        Cmd::new("i", insert),
+        Cmd::new("p", paste),
+        Cmd::new("a", append),
+        Cmd::new("o", o_cmd),
+        Cmd::new("O", O_cmd),
+        Cmd::new("x", cut),
+    ];
+    let operators: &[Operator] = &[
+        Operator::new("d", delete),
+        Operator::new("y", yank),
+        Operator::new("c", change),
+    ];
     let motions: &[Motion] = &[
         Motion::new("w", word),
         Motion::new("b", back),

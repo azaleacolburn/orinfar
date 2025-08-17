@@ -83,7 +83,7 @@ pub fn dd_cmd(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode
         buffer.cursor.col = 0;
     }
 }
-pub fn p_cmd(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+pub fn paste(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
     let mut i = buffer.cursor.col;
     register_handler.get_reg().iter().for_each(|c| {
         buffer.buff[buffer.cursor.row].insert(i, *c);
