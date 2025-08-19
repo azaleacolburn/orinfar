@@ -182,7 +182,7 @@ fn main() -> Result<()> {
                         next_operation = Some(&operator);
                     }
 
-                    if let Some(motion) = pending_motion
+                    if let Some(motion) = pending_motion {}
                 }
 
                 (KeyCode::Esc, Mode::Insert) => {
