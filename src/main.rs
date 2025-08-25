@@ -16,7 +16,7 @@ use crate::{
     buffer::{Buffer, Cursor},
     cli::Cli,
     commands::{append, cut, insert, o_cmd, paste, O_cmd},
-    motion::{back, beginning_of_line, end_of_line, end_of_word, word, Motion},
+    motion::{back, beginning_of_line, end_of_line, end_of_word, find, word, Motion},
     operator::{change, delete, yank, Operator},
     register::RegisterHandler,
 };
@@ -25,7 +25,7 @@ use clap::Parser;
 use commands::Command as Cmd;
 use crossterm::{
     cursor::{DisableBlinking, MoveTo},
-    event::{read, Event, KeyCode},
+    event::{read, Event, KeyCode, KeyEvent},
     execute,
     style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType, ScrollUp, SetSize},
@@ -57,27 +57,27 @@ fn main() -> Result<()> {
     let mut buffer: Buffer = Buffer::new();
 
     let commands: &[Cmd] = &[
-        Cmd::new("i", insert),
-        Cmd::new("p", paste),
-        Cmd::new("a", append),
-        Cmd::new("o", o_cmd),
-        Cmd::new("O", O_cmd),
-        Cmd::new("x", cut),
+        Cmd::new(&['i'], insert),
+        Cmd::new(&['p'], paste),
+        Cmd::new(&['a'], append),
+        Cmd::new(&['o'], o_cmd),
+        Cmd::new(&['O'], O_cmd),
+        Cmd::new(&['x'], cut),
     ];
     let operators: &[Operator] = &[
-        Operator::new("d", delete),
-        Operator::new("y", yank),
-        Operator::new("c", change),
+        Operator::new(&['d'], delete),
+        Operator::new(&['y'], yank),
+        Operator::new(&['c'], change),
     ];
     let motions: &[Motion] = &[
-        Motion::new("w", word),
-        Motion::new("b", back),
-        Motion::new("e", end_of_word),
-        Motion::new("$", end_of_line),
-        Motion::new("_", beginning_of_line),
+        Motion::conclusive(&['w'], word),
+        Motion::conclusive(&['b'], back),
+        Motion::conclusive(&['e'], end_of_word),
+        Motion::conclusive(&['$'], end_of_line),
+        Motion::conclusive(&['_'], beginning_of_line),
+        Motion::inconclusive(&['f'], find),
     ];
     let mut next_operation: Option<&Operator> = None;
-    let mut pending_motion: Option<&Motion> = None;
 
     let cli = Cli::parse();
     // TODO This is a bad way of handling things, refactor later
@@ -181,8 +181,6 @@ fn main() -> Result<()> {
                     {
                         next_operation = Some(&operator);
                     }
-
-                    if let Some(motion) = pending_motion {}
                 }
 
                 (KeyCode::Esc, Mode::Insert) => {
@@ -249,4 +247,37 @@ fn main() -> Result<()> {
     }
 
     cleanup()
+}
+
+pub fn on_next_input_buffer_only(
+    buffer: &mut Buffer,
+    closure: fn(KeyCode, &mut Buffer),
+) -> Result<()> {
+    loop {
+        if let Event::Key(event) = read()? {
+            closure(event.code, buffer);
+            break;
+        }
+    }
+
+    Ok(())
+}
+
+pub fn on_next_input(
+    buffer: &mut Buffer,
+    mode: &mut Mode,
+    register_handler: &mut RegisterHandler,
+    count: &mut usize,
+    chained: &mut Vec<char>,
+
+    closure: fn(KeyCode, &mut Buffer, &mut Mode, &mut RegisterHandler, &mut usize, &mut Vec<char>),
+) -> Result<()> {
+    loop {
+        if let Event::Key(event) = read()? {
+            closure(event.code, buffer, mode, register_handler, count, chained);
+            break;
+        }
+    }
+
+    Ok(())
 }

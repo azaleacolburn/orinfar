@@ -1,15 +1,27 @@
-use crate::{buffer::Buffer, Cursor};
+use crossterm::event::{KeyCode, KeyEvent};
 
-pub struct Motion {
-    pub name: Vec<char>,
+use crate::{buffer::Buffer, on_next_input_buffer_only, Cursor};
+
+pub struct Motion<'a> {
+    pub name: &'a [char],
     command: fn(buffer: &mut Buffer),
+    conclusive: bool,
 }
 
-impl Motion {
-    pub fn new(name: &str, command: fn(buffer: &mut Buffer)) -> Self {
+impl<'a> Motion<'a> {
+    pub fn conclusive(name: &'a [char], command: fn(buffer: &mut Buffer)) -> Self {
         Self {
-            name: name.chars().collect(),
+            name,
             command,
+            conclusive: true,
+        }
+    }
+
+    pub fn inconclusive(name: &'a [char], command: fn(buffer: &mut Buffer)) -> Self {
+        Self {
+            name,
+            command,
+            conclusive: false,
         }
     }
 
@@ -102,4 +114,16 @@ pub fn beginning_of_line(buffer: &mut Buffer) {
         .position(|c| !c.is_whitespace())
         .unwrap_or(buffer.cursor.col);
     buffer.cursor.col = first
+}
+
+pub fn find(buffer: &mut Buffer) {
+    fn find(key: KeyCode, buffer: &mut Buffer) {
+        if let KeyCode::Char(target) = key {
+            if let Some(position) = buffer.get_curr_line().iter().position(|c| *c == target) {
+                buffer.cursor.col = position;
+            }
+        }
+    }
+
+    on_next_input_buffer_only(buffer, find).unwrap();
 }

@@ -75,6 +75,10 @@ impl Buffer {
         self.buff[self.cursor.row][self.cursor.col]
     }
 
+    pub fn get_curr_line(&self) -> &[char] {
+        &self.buff[self.cursor.row]
+    }
+
     pub fn get_next_char(&self) -> Option<char> {
         if self.is_last_row() && self.is_last_col() {
             return None;

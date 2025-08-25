@@ -6,20 +6,17 @@ use crossterm::{
 };
 use std::io::stdout;
 
-pub struct Command {
-    pub name: Vec<char>,
+pub struct Command<'a> {
+    pub name: &'a [char],
     command: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
 }
 
-impl Command {
+impl<'a> Command<'a> {
     pub fn new(
-        name: &str,
+        name: &'a [char],
         command: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
     ) -> Self {
-        Command {
-            name: name.chars().collect(),
-            command,
-        }
+        Command { name, command }
     }
 
     pub fn execute(

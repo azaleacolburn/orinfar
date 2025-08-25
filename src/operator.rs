@@ -1,12 +1,7 @@
-use crate::{
-    buffer::{self, Buffer},
-    motion::Motion,
-    register::{self, RegisterHandler},
-    Cursor, Mode,
-};
+use crate::{buffer::Buffer, motion::Motion, register::RegisterHandler, Cursor, Mode};
 
-pub struct Operator {
-    pub name: Vec<char>,
+pub struct Operator<'a> {
+    pub name: &'a [char],
     command: fn(
         end: Cursor,
         buffer: &mut Buffer,
@@ -15,9 +10,9 @@ pub struct Operator {
     ),
 }
 
-impl Operator {
+impl<'a> Operator<'a> {
     pub fn new(
-        name: &str,
+        name: &'a [char],
         command: fn(
             end: Cursor,
             buffer: &mut Buffer,
@@ -25,10 +20,7 @@ impl Operator {
             mode: &mut Mode,
         ),
     ) -> Self {
-        Self {
-            name: name.chars().collect(),
-            command,
-        }
+        Self { name, command }
     }
 
     pub fn execute(
