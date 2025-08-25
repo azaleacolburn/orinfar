@@ -64,18 +64,26 @@ pub fn back(buffer: &mut Buffer) {
     if buffer.buff[buffer.cursor.row].is_empty() {
         return;
     }
-    let mut c = buffer.get_curr_char();
+    let mut prev_char = unwrap_or_return!(buffer.get_prev_char());
 
-    if !c.is_alphanumeric() {
-        while !c.is_alphanumeric() {
-            c = unwrap_or_break!(buffer.prev_char());
+    if !prev_char.is_alphanumeric() {
+        while !prev_char.is_alphanumeric() {
+            buffer.prev_char();
+            prev_char = unwrap_or_break!(buffer.get_prev_char());
+        }
+        while prev_char.is_alphanumeric() {
+            // Next char without wrapping lines, since newlines aren't counted
+            if buffer.cursor.col > 0 {
+                buffer.cursor.col -= 1;
+            } else {
+                break;
+            }
+            prev_char = unwrap_or_break!(buffer.get_prev_char());
         }
     } else {
-        while c.is_alphanumeric() {
-            c = unwrap_or_break!(buffer.prev_char());
-        }
-        while c.is_whitespace() {
-            c = unwrap_or_break!(buffer.prev_char());
+        while prev_char.is_alphanumeric() {
+            buffer.prev_char();
+            prev_char = unwrap_or_break!(buffer.get_prev_char());
         }
     }
 }

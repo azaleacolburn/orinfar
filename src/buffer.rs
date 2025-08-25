@@ -114,6 +114,7 @@ impl Buffer {
         if self.cursor.row == 0 && self.cursor.col == 0 {
             return None;
         }
+
         if self.cursor.col > 0 {
             self.cursor.col -= 1;
         } else if self.cursor.row > 0 {
@@ -123,6 +124,20 @@ impl Buffer {
             return None;
         }
         Some(self.buff[self.cursor.row][self.cursor.col])
+    }
+
+    pub fn get_prev_char(&mut self) -> Option<char> {
+        if self.cursor.row == 0 && self.cursor.col == 0 {
+            return None;
+        }
+
+        if self.cursor.col > 0 {
+            Some(self.buff[self.cursor.row][self.cursor.col - 1])
+        } else if self.cursor.row > 0 {
+            Some(self.buff[self.cursor.row - 1][self.buff[self.cursor.row].len() - 1])
+        } else {
+            None
+        }
     }
 
     pub fn next_line(&mut self) {
