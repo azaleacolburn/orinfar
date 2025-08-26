@@ -102,7 +102,7 @@ pub fn end_of_word(buffer: &mut Buffer) {
             } else {
                 break;
             }
-            next_char = buffer.get_curr_char();
+            next_char = unwrap_or_break!(buffer.get_next_char());
         }
     } else {
         while next_char.is_alphanumeric() {
