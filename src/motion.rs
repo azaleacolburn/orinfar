@@ -1,4 +1,4 @@
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::KeyCode;
 
 use crate::{buffer::Buffer, on_next_input_buffer_only, Cursor};
 
@@ -127,7 +127,12 @@ pub fn beginning_of_line(buffer: &mut Buffer) {
 pub fn find(buffer: &mut Buffer) {
     fn find(key: KeyCode, buffer: &mut Buffer) {
         if let KeyCode::Char(target) = key {
-            if let Some(position) = buffer.get_curr_line().iter().position(|c| *c == target) {
+            if let Some(position) = buffer
+                .get_curr_line()
+                .iter()
+                .skip(buffer.cursor.col)
+                .position(|c| *c == target)
+            {
                 buffer.cursor.col = position;
             }
         }

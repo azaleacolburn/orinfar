@@ -25,7 +25,7 @@ use clap::Parser;
 use commands::Command as Cmd;
 use crossterm::{
     cursor::{DisableBlinking, MoveTo},
-    event::{read, Event, KeyCode, KeyEvent},
+    event::{read, Event, KeyCode},
     execute,
     style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType, ScrollUp, SetSize},
