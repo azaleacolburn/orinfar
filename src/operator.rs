@@ -94,7 +94,7 @@ fn insert(
     *mode = Mode::Insert;
 }
 
-fn clear_reg(register_handler: &mut RegisterHandler, _buffer: &mut Buffer, mode: &mut Mode) {
+fn clear_reg(register_handler: &mut RegisterHandler, _buffer: &mut Buffer, _mode: &mut Mode) {
     register_handler.set_reg(Vec::new());
 }
 
@@ -108,7 +108,7 @@ pub fn delete(
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
 ) {
-    if buffer.is_empty_line() {
+    if buffer.get_curr_line().len() == buffer.cursor.col {
         return;
     }
     iterate_range(
@@ -132,7 +132,7 @@ pub fn yank(
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
 ) {
-    if buffer.is_empty_line() {
+    if buffer.get_curr_line().len() == buffer.cursor.col {
         return;
     }
     iterate_range(

@@ -41,7 +41,7 @@ impl<'a> Motion<'a> {
 }
 
 pub fn word(buffer: &mut Buffer) {
-    if buffer.is_empty_line() {
+    if buffer.get_curr_line().len() == buffer.cursor.col {
         return;
     }
     let mut c = buffer.get_curr_char();

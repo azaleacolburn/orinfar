@@ -208,6 +208,15 @@ fn main() -> Result<()> {
                     buffer.insert_char_at_cursor(c);
                     buffer.next_col();
                 }
+                (KeyCode::Tab, Mode::Insert) => {
+                    // NOTE
+                    // Iterates two separate times because we want the insertation batched and
+                    // the traversal to happen after
+                    buffer.insert_n_char(' ', 4);
+                    (0..4).into_iter().for_each(|_| {
+                        buffer.next_col();
+                    });
+                }
                 (KeyCode::Enter, Mode::Insert) => {
                     let end = buffer.get_line_end();
 

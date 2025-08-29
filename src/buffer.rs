@@ -240,6 +240,17 @@ impl Buffer {
         self.buff[self.cursor.row].insert(self.cursor.col, c);
     }
 
+    pub fn insert_chars_at_cursor(&mut self, chars: &[char]) {
+        self.buff[self.cursor.row].splice(self.cursor.col..self.cursor.col, chars.iter().cloned());
+    }
+
+    pub fn insert_n_char(&mut self, char: char, n: u8) {
+        self.buff[self.cursor.row].splice(
+            self.cursor.col..self.cursor.col,
+            (0..n).into_iter().map(|_| char),
+        );
+    }
+
     pub fn delete_curr_char(&mut self) -> char {
         self.buff[self.cursor.row].remove(self.cursor.col)
     }
