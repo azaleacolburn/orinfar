@@ -194,10 +194,11 @@ fn main() -> Result<()> {
                         buffer.prev_col();
                     } else if buffer.row() != 0 {
                         let mut old_line = buffer.buff[buffer.row()].clone();
+                        let old_line_len = old_line.len();
                         buffer.buff[row - 1].append(&mut old_line);
                         buffer.remove_line(row);
                         buffer.prev_row();
-                        buffer.set_col(buffer.buff[buffer.row()].len());
+                        buffer.set_col(buffer.buff[row - 1].len() - old_line_len);
                     }
                 }
                 (KeyCode::Char(c), Mode::Insert) => {

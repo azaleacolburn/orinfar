@@ -144,7 +144,7 @@ impl Buffer {
         if self.cursor.col > 0 {
             Some(self.buff[self.cursor.row][self.cursor.col - 1])
         } else if self.cursor.row > 0 {
-            Some(self.buff[self.cursor.row - 1][self.buff[self.cursor.row].len() - 1])
+            Some(self.buff[self.cursor.row - 1][self.buff[self.cursor.row - 1].len() - 1])
         } else {
             None
         }
