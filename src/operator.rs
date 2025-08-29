@@ -116,7 +116,7 @@ fn insert(
     _buffer: &mut Buffer,
     mode: &mut Mode,
 ) {
-    *mode = Mode::Insert;
+    mode.insert();
 }
 
 fn clear_reg(register_handler: &mut RegisterHandler, _buffer: &mut Buffer, _mode: &mut Mode) {

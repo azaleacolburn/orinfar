@@ -1,6 +1,6 @@
 use crate::{buffer::Buffer, register::RegisterHandler, Mode};
 use crossterm::{
-    cursor::{EnableBlinking, SetCursorStyle},
+    cursor::SetCursorStyle,
     event::{read, Event, KeyCode},
     execute,
 };
@@ -39,14 +39,12 @@ impl<'a> Command<'a> {
 pub fn noop(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {}
 
 pub fn insert(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
-    *mode = Mode::Insert;
-    execute!(stdout(), SetCursorStyle::BlinkingBar).unwrap();
+    mode.insert();
 }
 
 pub fn append(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
-    *mode = Mode::Insert;
     buffer.next_col();
-    execute!(stdout(), SetCursorStyle::BlinkingBar).unwrap();
+    mode.insert();
 }
 
 pub fn cut(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
@@ -60,19 +58,27 @@ pub fn cut(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: 
     }
 }
 
-pub fn o_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
+pub fn insert_new_line(
+    buffer: &mut Buffer,
+    _register_handler: &mut RegisterHandler,
+    mode: &mut Mode,
+) {
     buffer.cursor.row += 1;
     buffer.insert_line(buffer.cursor.row, vec![]);
     buffer.cursor.col = 0;
-    *mode = Mode::Insert;
+    mode.insert();
 }
 
 #[allow(non_snake_case)]
-pub fn O_cmd(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
+pub fn insert_new_line_above(
+    buffer: &mut Buffer,
+    _register_handler: &mut RegisterHandler,
+    mode: &mut Mode,
+) {
     if buffer.cursor.row > 0 {
         buffer.insert_line(buffer.cursor.row, vec![]);
         buffer.cursor.col = 0;
-        *mode = Mode::Insert;
+        mode.insert();
     }
 }
 

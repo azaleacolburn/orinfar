@@ -14,7 +14,7 @@ mod register;
 
 use crate::{
     buffer::{Buffer, Cursor},
-    commands::{append, cut, insert, o_cmd, paste, replace, O_cmd},
+    commands::{append, cut, insert, insert_new_line, insert_new_line_above, paste, replace},
     motion::{back, beginning_of_line, end_of_line, end_of_word, find, word, Motion},
     operator::{change, delete, yank, Operator},
     register::RegisterHandler,
@@ -35,6 +35,18 @@ enum Mode {
     Normal,
     Insert,
     _Visual,
+}
+
+impl Mode {
+    fn insert(&mut self) {
+        *self = Mode::Insert;
+        execute!(stdout(), SetCursorStyle::BlinkingBar).unwrap();
+    }
+
+    fn normal(&mut self) {
+        *self = Mode::Normal;
+        execute!(stdout(), SetCursorStyle::SteadyBlock).unwrap();
+    }
 }
 
 fn cleanup() -> Result<()> {
@@ -58,8 +70,8 @@ fn main() -> Result<()> {
         Cmd::new(&['i'], insert),
         Cmd::new(&['p'], paste),
         Cmd::new(&['a'], append),
-        Cmd::new(&['o'], o_cmd),
-        Cmd::new(&['O'], O_cmd),
+        Cmd::new(&['o'], insert_new_line),
+        Cmd::new(&['O'], insert_new_line_above),
         Cmd::new(&['x'], cut),
         Cmd::new(&['r'], replace),
     ];

@@ -97,7 +97,7 @@ impl Buffer {
         let (row, col) = if self.cursor.col + 1 < self.buff[self.cursor.row].len() {
             (self.cursor.row, self.cursor.col + 1)
         } else if self.cursor.row + 1 < self.buff.len() {
-            (self.cursor.row + 1, 0)
+            return Some('\n');
         } else {
             return None;
         };
@@ -111,9 +111,12 @@ impl Buffer {
         }
         if self.cursor.col + 1 < self.buff[self.cursor.row].len() {
             self.cursor.col += 1;
-        } else if self.cursor.row + 1 < self.buff.len() {
+        } else if self.cursor.col > self.buff[self.cursor.row].len() {
             self.cursor.row += 1;
             self.cursor.col = 0;
+        } else if self.cursor.row + 1 < self.buff.len() {
+            self.cursor.col += 1;
+            return Some('\n');
         } else {
             return None;
         }
@@ -144,7 +147,18 @@ impl Buffer {
         if self.cursor.col > 0 {
             Some(self.buff[self.cursor.row][self.cursor.col - 1])
         } else if self.cursor.row > 0 {
-            Some(self.buff[self.cursor.row - 1][self.buff[self.cursor.row - 1].len() - 1])
+            // Traverse up empty lines
+            let mut row = self.cursor.row - 1;
+            while row != 0 && self.buff[row].len() == 0 {
+                row -= 1;
+            }
+            if row == 0 && self.buff[row].len() == 0 {
+                None
+            } else {
+                self.cursor.row = row;
+                let row = &self.buff[row];
+                Some(row[row.len() - 1])
+            }
         } else {
             None
         }
