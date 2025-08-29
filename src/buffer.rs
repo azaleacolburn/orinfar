@@ -71,6 +71,16 @@ impl Buffer {
         self.buff.len() == self.cursor.row + 1
     }
 
+    // NOTE
+    // There isn't a guarantee of being able to index, since you could be on an empty line
+    // This is problematic and I don't exactly have a good way of fixing it at the moment
+    // Although I do have a few ideas including offsetting each line by one index and just having
+    // index 0 be a space or NULL smth
+    // I don't love this approach
+    // A full datastructure ovehaul is probably in order at some point
+    //
+    // For now we just have to be careful about calling get_curr_char
+    // In the future I might move the empty line check to this function
     pub fn get_curr_char(&self) -> char {
         self.buff[self.cursor.row][self.cursor.col]
     }
@@ -184,10 +194,11 @@ impl Buffer {
     }
 
     pub fn end_of_row(&mut self) {
-        let (col, row) = (self.col(), self.row());
-
-        let end_of_row = usize::min(col + 1, self.buff[row].len()) - 1;
-        self.set_col(end_of_row);
+        let len = self.get_curr_line().len();
+        if len == 0 {
+            return;
+        }
+        self.set_col(len - 1);
     }
 
     pub fn push_line(&mut self, line: Vec<char>) {

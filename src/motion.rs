@@ -113,7 +113,7 @@ pub fn end_of_word(buffer: &mut Buffer) {
 }
 
 pub fn end_of_line(buffer: &mut Buffer) {
-    buffer.cursor.col = buffer.buff[buffer.cursor.row].len() - 1
+    buffer.end_of_row();
 }
 
 pub fn beginning_of_line(buffer: &mut Buffer) {

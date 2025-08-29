@@ -29,7 +29,7 @@ impl<'a> Command<'a> {
     }
 }
 
-pub fn wait(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {}
+pub fn noop(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {}
 
 pub fn insert(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
     *mode = Mode::Insert;

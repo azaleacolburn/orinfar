@@ -108,6 +108,9 @@ pub fn delete(
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
 ) {
+    if buffer.is_empty_line() {
+        return;
+    }
     iterate_range(
         mode,
         register_handler,
@@ -129,6 +132,9 @@ pub fn yank(
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
 ) {
+    if buffer.is_empty_line() {
+        return;
+    }
     iterate_range(
         mode,
         register_handler,

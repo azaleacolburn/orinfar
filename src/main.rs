@@ -30,7 +30,7 @@ use crossterm::{
     style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType, ScrollUp, SetSize},
 };
-use std::{collections::HashMap, io::stdout, path::PathBuf};
+use std::{io::stdout, path::PathBuf};
 
 #[derive(Clone, Debug)]
 enum Mode {
@@ -53,7 +53,6 @@ fn main() -> Result<()> {
     let (cols, rows) = size()?;
 
     let mut register_handler = RegisterHandler::new();
-    let mut _marks: HashMap<char, (usize, usize)> = HashMap::new();
     let mut buffer: Buffer = Buffer::new();
 
     let commands: &[Cmd] = &[
@@ -226,11 +225,14 @@ fn main() -> Result<()> {
                 (KeyCode::Up, _) => {
                     if buffer.row() > 0 {
                         buffer.prev_row();
-                        // The cursor can exist one character beyond the last in the buffer
-                        buffer.set_col(usize::min(
-                            buffer.col(),
-                            buffer.buff[buffer.row()].len() - 1,
-                        ))
+
+                        let len = buffer.get_curr_line().len();
+                        let col = if len > 0 {
+                            usize::min(buffer.col() + 1, len - 1)
+                        } else {
+                            0
+                        };
+                        buffer.set_col(col)
                     }
                 }
                 (KeyCode::Down, _) => {
