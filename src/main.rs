@@ -5,8 +5,8 @@
 mod utility;
 
 mod buffer;
-mod cli;
 mod commands;
+mod io;
 mod motion;
 mod operator;
 mod panic_hook;
@@ -14,14 +14,12 @@ mod register;
 
 use crate::{
     buffer::{Buffer, Cursor},
-    cli::Cli,
     commands::{append, cut, insert, o_cmd, paste, O_cmd},
     motion::{back, beginning_of_line, end_of_line, end_of_word, find, word, Motion},
     operator::{change, delete, yank, Operator},
     register::RegisterHandler,
 };
-use anyhow::Result;
-use clap::Parser;
+use anyhow::{bail, Result};
 use commands::Command as Cmd;
 use crossterm::{
     cursor::{DisableBlinking, MoveTo},
@@ -51,6 +49,7 @@ fn main() -> Result<()> {
 
     let mut stdout = stdout();
     let (cols, rows) = size()?;
+    let _leader = ' ';
 
     let mut register_handler = RegisterHandler::new();
     let mut buffer: Buffer = Buffer::new();
@@ -78,25 +77,17 @@ fn main() -> Result<()> {
     ];
     let mut next_operation: Option<&Operator> = None;
 
-    let cli = Cli::parse();
-    // TODO This is a bad way of handling things, refactor later
-    let path = match cli.file_name {
-        Some(path) => {
-            let path = PathBuf::from(path);
+    // Used for not putting excluded chars in the chain
+    let command_chars = commands.iter().map(|cmd| cmd.name).flatten();
+    let operator_chars = operators.iter().map(|cmd| cmd.name).flatten();
+    let motion_chars = motions.iter().map(|cmd| cmd.name).flatten();
+    let all_normal_chars: Vec<char> = command_chars
+        .chain(operator_chars)
+        .chain(motion_chars)
+        .map(|n| *n)
+        .collect();
 
-            if path.is_dir() {
-                // TODO netrw
-                return Ok(());
-            } else if path.is_file() {
-                let contents = std::fs::read_to_string(path.clone())?;
-                contents
-                    .split('\n')
-                    .for_each(|line| buffer.push_line(line.chars().collect::<Vec<char>>()));
-            }
-            Some(path)
-        }
-        None => None,
-    };
+    let path = io::load_file(&mut buffer)?;
 
     execute!(
         stdout,
@@ -137,12 +128,12 @@ fn main() -> Result<()> {
                     if let Event::Key(event) = read()? {
                         if event.code == KeyCode::Char('w') {
                             match path {
-                                Some(path) => std::fs::write(&path, buffer.to_string())?,
-                                None => {
-                                    // TODO Cursorline system for error handling
+                                Some(path) => {
+                                    io::write(path, buffer)?;
+                                    break;
                                 }
+                                None => bail!("Cannot write buffer, no file opened."),
                             }
-                            break;
                         }
                     }
                     let end = buffer.get_line_end();
@@ -152,6 +143,9 @@ fn main() -> Result<()> {
                 }
 
                 (KeyCode::Char(c), Mode::Normal) => {
+                    if !all_normal_chars.contains(&c) {
+                        continue;
+                    };
                     chained.push(c);
 
                     if let Some(command) = commands.iter().find(|motion| motion.name == chained) {
@@ -167,6 +161,8 @@ fn main() -> Result<()> {
                             );
                             chained.clear();
                             next_operation = None;
+                        } else if c == operation.name[0] {
+                            operation.entire_line(&mut buffer, &mut register_handler, &mut mode);
                         }
                     } else if chained.len() == 1 {
                         if let Some(motion) = motions.iter().find(|motion| motion.name[0] == c) {

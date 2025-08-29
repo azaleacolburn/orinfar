@@ -1,4 +1,9 @@
-use crate::{buffer::Buffer, motion::Motion, register::RegisterHandler, Cursor, Mode};
+use crate::{
+    buffer::Buffer,
+    motion::{end_of_line, Motion},
+    register::RegisterHandler,
+    Cursor, Mode,
+};
 
 pub struct Operator<'a> {
     pub name: &'a [char],
@@ -32,6 +37,26 @@ impl<'a> Operator<'a> {
     ) {
         let end = motion.evaluate(buffer);
         (self.command)(end, buffer, register_handler, mode);
+    }
+
+    pub fn entire_line(
+        &self,
+        buffer: &mut Buffer,
+        register_handler: &mut RegisterHandler,
+        mode: &mut Mode,
+    ) {
+        let orig_col = buffer.cursor.col;
+        buffer.cursor.col = 0;
+        let end_of_line = Cursor {
+            row: buffer.row(),
+            col: buffer.get_end_of_row(),
+        };
+
+        (self.command)(end_of_line, buffer, register_handler, mode);
+        let len = buffer.get_curr_line().len();
+        if len > 0 {
+            buffer.cursor.col = usize::min(orig_col, len - 1);
+        }
     }
 }
 

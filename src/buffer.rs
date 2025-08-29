@@ -192,6 +192,13 @@ impl Buffer {
         }
         self.cursor.row -= 1;
     }
+    pub fn get_end_of_row(&self) -> usize {
+        let len = self.get_curr_line().len();
+        if len == 0 {
+            return 0;
+        }
+        return len - 1;
+    }
 
     pub fn end_of_row(&mut self) {
         let len = self.get_curr_line().len();
