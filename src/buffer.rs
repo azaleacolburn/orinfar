@@ -261,6 +261,10 @@ impl Buffer {
     pub fn delete_curr_char(&mut self) -> char {
         self.buff[self.cursor.row].remove(self.cursor.col)
     }
+
+    pub fn replace_curr_char(&mut self, c: char) {
+        self.buff[self.cursor.row][self.cursor.col] = c;
+    }
 }
 
 impl Display for Buffer {

@@ -5,24 +5,11 @@ use crate::{buffer::Buffer, on_next_input_buffer_only, Cursor};
 pub struct Motion<'a> {
     pub name: &'a [char],
     command: fn(buffer: &mut Buffer),
-    conclusive: bool,
 }
 
 impl<'a> Motion<'a> {
-    pub fn conclusive(name: &'a [char], command: fn(buffer: &mut Buffer)) -> Self {
-        Self {
-            name,
-            command,
-            conclusive: true,
-        }
-    }
-
-    pub fn inconclusive(name: &'a [char], command: fn(buffer: &mut Buffer)) -> Self {
-        Self {
-            name,
-            command,
-            conclusive: false,
-        }
+    pub fn new(name: &'a [char], command: fn(buffer: &mut Buffer)) -> Self {
+        Self { name, command }
     }
 
     // Called when the motion should be applied directly

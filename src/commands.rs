@@ -1,7 +1,7 @@
 use crate::{buffer::Buffer, register::RegisterHandler, Mode};
 use crossterm::{
-    cursor::EnableBlinking,
-    event::{read, Event},
+    cursor::{EnableBlinking, SetCursorStyle},
+    event::{read, Event, KeyCode},
     execute,
 };
 use std::io::stdout;
@@ -13,6 +13,13 @@ pub struct Command<'a> {
 
 impl<'a> Command<'a> {
     pub fn new(
+        name: &'a [char],
+        command: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
+    ) -> Self {
+        Command { name, command }
+    }
+
+    pub fn inconslusive(
         name: &'a [char],
         command: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
     ) -> Self {
@@ -33,13 +40,13 @@ pub fn noop(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode
 
 pub fn insert(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
     *mode = Mode::Insert;
-    execute!(stdout(), EnableBlinking).unwrap();
+    execute!(stdout(), SetCursorStyle::BlinkingBar).unwrap();
 }
 
 pub fn append(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
     *mode = Mode::Insert;
     buffer.next_col();
-    execute!(stdout(), EnableBlinking).unwrap();
+    execute!(stdout(), SetCursorStyle::BlinkingBar).unwrap();
 }
 
 pub fn cut(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
@@ -105,13 +112,12 @@ pub fn double_quote_cmd(
     }
 }
 
-// pub fn colon_w_cmd(
-//
-//     buffer: &mut Vec<Vec<char>>,
-//     _buffer.cursor: &mut Cursor,
-//     register_handler: &mut RegisterHandler,
-//     _mode: &mut Mode,
-// ) {
-//
-// }
-//
+pub fn replace(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+    execute!(stdout(), SetCursorStyle::SteadyUnderScore);
+    if let Event::Key(event) = read().unwrap() {
+        if let KeyCode::Char(c) = event.code {
+            buffer.replace_curr_char(c);
+        }
+    }
+    execute!(stdout(), SetCursorStyle::SteadyBlock);
+}

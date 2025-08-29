@@ -14,7 +14,7 @@ mod register;
 
 use crate::{
     buffer::{Buffer, Cursor},
-    commands::{append, cut, insert, o_cmd, paste, O_cmd},
+    commands::{append, cut, insert, o_cmd, paste, replace, O_cmd},
     motion::{back, beginning_of_line, end_of_line, end_of_word, find, word, Motion},
     operator::{change, delete, yank, Operator},
     register::RegisterHandler,
@@ -22,13 +22,13 @@ use crate::{
 use anyhow::{bail, Result};
 use commands::Command as Cmd;
 use crossterm::{
-    cursor::{DisableBlinking, MoveTo},
+    cursor::{DisableBlinking, MoveTo, SetCursorStyle},
     event::{read, Event, KeyCode},
     execute,
     style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType, ScrollUp, SetSize},
 };
-use std::{io::stdout, path::PathBuf};
+use std::io::stdout;
 
 #[derive(Clone, Debug)]
 enum Mode {
@@ -61,6 +61,7 @@ fn main() -> Result<()> {
         Cmd::new(&['o'], o_cmd),
         Cmd::new(&['O'], O_cmd),
         Cmd::new(&['x'], cut),
+        Cmd::new(&['r'], replace),
     ];
     let operators: &[Operator] = &[
         Operator::new(&['d'], delete),
@@ -68,12 +69,12 @@ fn main() -> Result<()> {
         Operator::new(&['c'], change),
     ];
     let motions: &[Motion] = &[
-        Motion::conclusive(&['w'], word),
-        Motion::conclusive(&['b'], back),
-        Motion::conclusive(&['e'], end_of_word),
-        Motion::conclusive(&['$'], end_of_line),
-        Motion::conclusive(&['_'], beginning_of_line),
-        Motion::inconclusive(&['f'], find),
+        Motion::new(&['w'], word),
+        Motion::new(&['b'], back),
+        Motion::new(&['e'], end_of_word),
+        Motion::new(&['$'], end_of_line),
+        Motion::new(&['_'], beginning_of_line),
+        Motion::new(&['f'], find),
     ];
     let mut next_operation: Option<&Operator> = None;
 
@@ -183,7 +184,7 @@ fn main() -> Result<()> {
                     if buffer.col() != 0 {
                         buffer.prev_col();
                     }
-                    execute!(stdout, DisableBlinking)?;
+                    execute!(stdout, SetCursorStyle::SteadyBlock)?;
                     count = 1;
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
