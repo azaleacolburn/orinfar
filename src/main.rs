@@ -87,8 +87,6 @@ fn main() -> Result<()> {
         .map(|n| *n)
         .collect();
 
-    let path = io::load_file(&mut buffer)?;
-
     execute!(
         stdout,
         SetSize(cols, rows),
@@ -107,6 +105,8 @@ fn main() -> Result<()> {
     }
     execute!(stdout, MoveTo(0, 0))?;
     enable_raw_mode()?;
+
+    let path = io::load_file(&mut buffer)?;
 
     let mut mode = Mode::Normal;
     let mut count: u16 = 1;

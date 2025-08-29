@@ -22,9 +22,11 @@ pub fn load_file(buffer: &mut Buffer) -> Result<Option<PathBuf>> {
                 bail!("Orinfar does not support directory navigation");
             } else if path.is_file() {
                 let contents = std::fs::read_to_string(path.clone())?;
+                buffer.buff = vec![];
                 contents
                     .split('\n')
                     .for_each(|line| buffer.push_line(line.chars().collect::<Vec<char>>()));
+                buffer.flush();
             }
             Some(path)
         }
