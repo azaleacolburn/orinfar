@@ -40,11 +40,9 @@ impl<'a> Operator<'a> {
         mode: &mut Mode,
     ) {
         let anchor = buffer.cursor;
-        buffer.cursor = (self.command)(buffer.cursor - 1, buffer, register_handler, mode);
-        let len = buffer.get_curr_line().len();
-        if len > 0 {
-            buffer.cursor.col = usize::min(orig_col, len - 1);
-        }
+        let orig_col = (self.command)(buffer.cursor - 1, buffer, register_handler, mode);
+        let len = buffer.get_curr_line().len_chars();
+        buffer.set_cursor(usize::min(orig_col, len - 1));
     }
 }
 
@@ -121,9 +119,6 @@ pub fn delete(
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
 ) {
-    if buffer.get_curr_line().len() == buffer.cursor.col {
-        return;
-    }
     iterate_range(
         mode,
         register_handler,
@@ -136,7 +131,7 @@ pub fn delete(
 }
 
 fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
-    register_handler.push_char(buffer.get_curr_char());
+    register_handler.push_reg(&buffer.get_curr_char().to_string());
     buffer.next_char();
 }
 pub fn yank(
@@ -145,9 +140,6 @@ pub fn yank(
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
 ) {
-    if buffer.get_curr_line().len() == buffer.cursor.col {
-        return;
-    }
     iterate_range(
         mode,
         register_handler,

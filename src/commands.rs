@@ -4,7 +4,6 @@ use crossterm::{
     event::{read, Event, KeyCode},
     execute,
 };
-use ropey::Rope;
 use std::io::stdout;
 
 pub struct Command<'a> {
@@ -44,8 +43,10 @@ pub fn insert(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mod
 }
 
 pub fn append(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
-    buffer.next_col();
-    mode.insert();
+    if buffer.cursor != buffer.rope.len_chars() {
+        buffer.cursor += 1;
+        mode.insert();
+    }
 }
 
 pub fn cut(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {

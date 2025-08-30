@@ -6,7 +6,7 @@ use std::{
 };
 
 use crossterm::{
-    cursor::{MoveDown, MoveTo, MoveToColumn},
+    cursor::MoveTo,
     execute,
     style::Print,
     terminal::{Clear, ClearType},
@@ -99,7 +99,7 @@ impl Buffer {
     }
 
     pub fn get_end_of_row(&self) -> usize {
-        let len = self.get_curr_line().len();
+        let len = self.get_curr_line().len_chars();
         if len == 0 {
             return 0;
         }
@@ -107,19 +107,29 @@ impl Buffer {
     }
 
     pub fn end_of_line(&mut self) {
-        let len = self.get_curr_line().len();
+        let len = self.get_curr_line().len_chars();
         if len == 0 {
             return;
         }
-        self.set_col(len - 1);
+        self.cursor += len - 1;
     }
 
     pub fn is_empty_line(&self) -> bool {
-        self.get_end_of_line() == self.beginning_of_line() + 1
+        self.get_end_of_line() == self.get_start_of_line() + 1
+    }
+
+    pub fn get_call(&self) -> usize {
+        let start_idx = self.get_start_of_line();
+        self.cursor - start_idx
+    }
+
+    pub fn set_col(&mut self, col: usize) {
+        let start_idx = self.get_start_of_line();
+        self.cursor = start_idx + col;
     }
 
     pub fn remove_curr_line(&mut self) {
-        let start_index = self.beginning_of_line();
+        let start_index = self.get_start_of_line();
         let end_index = self.get_end_of_line();
         self.rope.remove(start_index..=end_index);
     }
@@ -137,7 +147,7 @@ impl Buffer {
         self.rope.insert(self.cursor, &c.to_string());
     }
 
-    pub fn beginning_of_line(&self) -> usize {
+    pub fn get_start_of_line(&self) -> usize {
         self.rope.line_to_char(self.rope.char_to_line(self.cursor))
     }
 
@@ -150,16 +160,6 @@ impl Buffer {
 
 impl Display for Buffer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(
-            &self
-                .buff
-                .iter()
-                .map(|line| {
-                    let mut c: String = line.iter().collect();
-                    c.push('\n');
-                    c
-                })
-                .collect::<String>(),
-        )
+        f.write_str(&self.rope.to_string())
     }
 }
