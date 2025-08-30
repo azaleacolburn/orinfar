@@ -1,5 +1,5 @@
 use anyhow::Result;
-use ropey::Rope;
+use ropey::{Rope, RopeSlice};
 use std::{
     fmt::Display,
     io::{stdout, Write},
@@ -47,28 +47,21 @@ impl Buffer {
     }
 
     pub fn is_last_col(&self) -> bool {
-        self.buff[self.cursor.row].len() == self.cursor.col + 1
+        self.cursor + 1 >= self.rope.len_chars() || self.rope.char(self.cursor + 1) == '\n'
     }
     pub fn is_last_row(&self) -> bool {
-        self.buff.len() == self.cursor.row + 1
+        self.rope.char_to_line(self.cursor + 1) == self.rope.len_lines()
+    }
+    pub fn is_last_char(&self) -> bool {
+        self.cursor + 1 == self.rope.len_chars()
     }
 
-    // NOTE
-    // There isn't a guarantee of being able to index, since you could be on an empty line
-    // This is problematic and I don't exactly have a good way of fixing it at the moment
-    // Although I do have a few ideas including offsetting each line by one index and just having
-    // index 0 be a space or NULL smth
-    // I don't love this approach
-    // A full datastructure ovehaul is probably in order at some point
-    //
-    // For now we just have to be careful about calling get_curr_char
-    // In the future I might move the empty line check to this function
     pub fn get_curr_char(&self) -> char {
-        self.buff[self.cursor.row][self.cursor.col]
+        self.rope.char(self.cursor)
     }
 
-    pub fn get_curr_line(&self) -> &[char] {
-        &self.buff[self.cursor.row]
+    pub fn get_curr_line(&self) -> RopeSlice<'_> {
+        self.rope.line(self.rope.char_to_line(self.cursor))
     }
 
     pub fn get_next_char(&self) -> Option<char> {
@@ -103,13 +96,6 @@ impl Buffer {
             self.cursor -= 1;
             Some(self.rope.char(self.cursor))
         }
-    }
-
-    pub fn next_line(&mut self) {
-        if self.buff.len() == self.cursor.row + 1 {
-            return;
-        }
-        self.cursor.row += 1;
     }
 
     pub fn get_end_of_row(&self) -> usize {
