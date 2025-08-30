@@ -1,317 +1,169 @@
 use anyhow::Result;
+use ropey::{Rope, RopeSlice};
 use std::{
     fmt::Display,
     io::{stdout, Write},
 };
 
 use crossterm::{
-    cursor::{MoveDown, MoveTo, MoveToColumn},
+    cursor::MoveTo,
     execute,
     style::Print,
     terminal::{Clear, ClearType},
 };
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Cursor {
-    pub row: usize,
-    pub col: usize,
-}
 // The cursor is always guaranteed to be within the bounds of the buffer
 #[derive(Debug, Clone, PartialEq)]
 pub struct Buffer {
-    pub buff: Vec<Vec<char>>,
-    pub cursor: Cursor,
+    pub rope: Rope,
+    pub cursor: usize,
 }
 
 impl Buffer {
     pub fn new() -> Buffer {
         Buffer {
-            buff: vec![vec![]],
-            cursor: Cursor { col: 0, row: 0 },
+            rope: Rope::new(),
+            cursor: 0,
         }
-    }
-
-    pub fn col(&self) -> usize {
-        self.cursor.col
-    }
-
-    pub fn row(&self) -> usize {
-        self.cursor.row
     }
 
     pub fn flush(&self) -> Result<()> {
         let mut stdout = stdout();
 
         execute!(stdout, MoveTo(0, 0), Clear(ClearType::All))?;
-        for row in self.buff.iter() {
-            execute!(
-                stdout,
-                Print(row.clone().into_iter().collect::<String>()),
-                MoveDown(1),
-                MoveToColumn(0),
-            )?;
-        }
-        execute!(
-            stdout,
-            MoveTo(self.cursor.col as u16, self.cursor.row as u16)
-        )?;
+        execute!(stdout, Print(self.rope.to_string()),)?;
+        // TODO This might acturlly be non-trivial 3:
+        // execute!(
+        //     stdout,
+        //     MoveTo(self.cursor.col as u16, self.cursor.row as u16)
+        // )?;
         stdout.flush()?;
 
         Ok(())
     }
 
     pub fn clear(&mut self) {
-        self.buff = vec![vec![]]
+        self.rope.remove(0..);
     }
 
     pub fn is_last_col(&self) -> bool {
-        self.buff[self.cursor.row].len() == self.cursor.col + 1
+        self.cursor + 1 >= self.rope.len_chars() || self.rope.char(self.cursor + 1) == '\n'
     }
     pub fn is_last_row(&self) -> bool {
-        self.buff.len() == self.cursor.row + 1
+        self.rope.char_to_line(self.cursor + 1) == self.rope.len_lines()
+    }
+    pub fn is_last_char(&self) -> bool {
+        self.cursor + 1 == self.rope.len_chars()
     }
 
-    // NOTE
-    // There isn't a guarantee of being able to index, since you could be on an empty line
-    // This is problematic and I don't exactly have a good way of fixing it at the moment
-    // Although I do have a few ideas including offsetting each line by one index and just having
-    // index 0 be a space or NULL smth
-    // I don't love this approach
-    // A full datastructure ovehaul is probably in order at some point
-    //
-    // For now we just have to be careful about calling get_curr_char
-    // In the future I might move the empty line check to this function
     pub fn get_curr_char(&self) -> char {
-        self.buff[self.cursor.row][self.cursor.col]
+        self.rope.char(self.cursor)
     }
 
-    pub fn get_curr_line(&self) -> &[char] {
-        &self.buff[self.cursor.row]
+    pub fn get_curr_line(&self) -> RopeSlice<'_> {
+        self.rope.line(self.rope.char_to_line(self.cursor))
     }
 
     pub fn get_next_char(&self) -> Option<char> {
-        if self.is_last_row() && self.is_last_col() {
-            return None;
-        }
-
-        let (row, col) = if self.cursor.col + 1 < self.buff[self.cursor.row].len() {
-            (self.cursor.row, self.cursor.col + 1)
-        } else if self.cursor.row + 1 < self.buff.len() {
-            return Some('\n');
+        if self.cursor == 0 {
+            None
         } else {
-            return None;
-        };
-
-        Some(self.buff[row][col])
+            Some(self.rope.char(self.cursor + 1))
+        }
     }
 
     pub fn next_char(&mut self) -> Option<char> {
-        if self.cursor.col == usize::max_value() {
-            self.cursor.col = 0;
-        } else if self.is_last_row() && self.is_last_col() {
-            return None;
-        } else if self.cursor.col + 1 < self.buff[self.cursor.row].len() {
-            self.cursor.col += 1;
-        } else if self.cursor.row + 1 < self.buff.len() {
-            // Traverse emtpy lines
-            let mut row = self.cursor.row + 1;
-            while row < self.buff.len() && self.buff[row].len() == 0 {
-                row += 1;
-            }
-
-            if row == self.buff.len() - 1 && self.buff[row].len() == 0 {
-                return None;
-            } else {
-                self.cursor.row = row;
-                self.cursor.col = usize::max_value();
-                return Some('\n');
-            }
+        if self.cursor == 0 {
+            None
         } else {
-            return None;
+            self.cursor += 1;
+            Some(self.rope.char(self.cursor))
         }
-        Some(self.buff[self.cursor.row][self.cursor.col])
     }
 
     pub fn get_prev_char(&self) -> Option<char> {
-        if self.cursor.row == 0 && self.cursor.col == 0 {
-            return None;
-        }
-
-        if self.cursor.col > 0 {
-            Some(self.buff[self.cursor.row][self.cursor.col - 1])
-        } else if self.cursor.row > 0 {
-            // Traverse up empty lines
-            let mut row = self.cursor.row - 1;
-            while row != 0 && self.buff[row].len() == 0 {
-                row -= 1;
-            }
-            if row == 0 && self.buff[row].len() == 0 {
-                None
-            } else {
-                let row = &self.buff[row];
-                Some(row[row.len() - 1])
-            }
-        } else {
+        if self.cursor == 0 {
             None
+        } else {
+            Some(self.rope.char(self.cursor - 1))
         }
     }
 
     pub fn prev_char(&mut self) -> Option<char> {
-        if self.cursor.col == usize::max_value() {
-            self.cursor.col = self.buff[self.cursor.row].len() - 1;
-        } else if self.cursor.row == 0 && self.cursor.row == 0 {
-            return None;
-        } else if self.cursor.col > 0 {
-            self.cursor.col += 1;
-        } else if self.cursor.row > 0 {
-            // Traverse emtpy lines
-            let mut row = self.cursor.row - 1;
-            while row > 0 && self.buff[row].len() == 0 {
-                row -= 1;
-            }
-
-            if row == 0 && self.buff[row].len() == 0 {
-                return None;
-            } else {
-                self.cursor.row = row;
-                self.cursor.col = usize::max_value();
-                return Some('\n');
-            }
+        if self.cursor == 0 {
+            None
         } else {
-            return None;
+            self.cursor -= 1;
+            Some(self.rope.char(self.cursor))
         }
-        Some(self.buff[self.cursor.row][self.cursor.col])
     }
 
-    pub fn next_line(&mut self) {
-        if self.buff.len() == self.cursor.row + 1 {
-            return;
-        }
-        self.cursor.row += 1;
-    }
-
-    pub fn set_col(&mut self, value: usize) {
-        self.cursor.col = value;
-    }
-
-    pub fn set_row(&mut self, value: usize) {
-        self.cursor.row = value;
-    }
-
-    pub fn next_col(&mut self) {
-        if self.buff[self.cursor.row].len() + 1 == self.cursor.col {
-            return;
-        }
-        self.cursor.col += 1;
-    }
-
-    pub fn next_row(&mut self) {
-        if self.buff.len() + 1 == self.cursor.row {
-            return;
-        }
-        self.cursor.row += 1;
-    }
-
-    pub fn prev_col(&mut self) {
-        if self.cursor.col == 0 {
-            return;
-        }
-        self.cursor.col -= 1;
-    }
-
-    pub fn prev_row(&mut self) {
-        if self.cursor.row == 0 {
-            return;
-        }
-        self.cursor.row -= 1;
-    }
     pub fn get_end_of_row(&self) -> usize {
-        let len = self.get_curr_line().len();
+        let len = self.get_curr_line().len_chars();
         if len == 0 {
             return 0;
         }
         return len - 1;
     }
 
-    pub fn end_of_row(&mut self) {
-        let len = self.get_curr_line().len();
-        if len == 0 {
-            return;
-        }
-        self.set_col(len - 1);
-    }
-
-    pub fn push_line(&mut self, line: Vec<char>) {
-        self.buff.push(line);
-    }
-
     pub fn is_empty_line(&self) -> bool {
-        self.buff[self.cursor.row].is_empty()
+        self.get_end_of_line() == self.get_start_of_line() + 1
     }
 
-    pub fn get_line_end(&mut self) -> Vec<char> {
-        match self.is_empty_line() {
-            true => self.buff[self.cursor.row].split_off(self.cursor.col),
-            false => vec![],
-        }
+    pub fn get_col(&self) -> usize {
+        let start_idx = self.get_start_of_line();
+        self.cursor - start_idx
     }
 
-    pub fn insert_line(&mut self, index: usize, line: Vec<char>) {
-        self.buff.insert(index, line);
+    pub fn set_col(&mut self, col: usize) {
+        let start_idx = self.get_start_of_line();
+        self.cursor = start_idx + col;
     }
 
-    pub fn remove_line(&mut self, index: usize) -> Vec<char> {
-        self.buff.remove(index)
-    }
-
-    pub fn remove_char(&mut self, index: usize) {
-        let row = &mut self.buff[self.cursor.row];
-
-        if index < row.len() {
-            row.remove(index);
-        }
+    pub fn remove_curr_line(&mut self) {
+        let start_index = self.get_start_of_line();
+        let end_index = self.get_end_of_line();
+        self.rope.remove(start_index..=end_index);
     }
 
     pub fn len(&self) -> usize {
-        self.buff.len()
+        self.rope.len_chars()
     }
 
-    pub fn insert_char_at_cursor(&mut self, c: char) {
-        self.buff[self.cursor.row].insert(self.cursor.col, c);
-    }
-
-    pub fn insert_chars_at_cursor(&mut self, chars: &[char]) {
-        self.buff[self.cursor.row].splice(self.cursor.col..self.cursor.col, chars.iter().cloned());
-    }
-
-    pub fn insert_n_char(&mut self, char: char, n: u8) {
-        self.buff[self.cursor.row].splice(
-            self.cursor.col..self.cursor.col,
-            (0..n).into_iter().map(|_| char),
-        );
-    }
-
-    pub fn delete_curr_char(&mut self) -> char {
-        self.buff[self.cursor.row].remove(self.cursor.col)
+    pub fn delete_curr_char(&mut self) {
+        self.rope.remove(self.cursor..self.cursor);
     }
 
     pub fn replace_curr_char(&mut self, c: char) {
-        self.buff[self.cursor.row][self.cursor.col] = c;
+        self.rope.remove(self.cursor..self.cursor);
+        self.rope.insert(self.cursor, &c.to_string());
+    }
+
+    pub fn get_start_of_line(&self) -> usize {
+        self.rope.line_to_char(self.rope.char_to_line(self.cursor))
+    }
+
+    pub fn start_of_line(&mut self) {
+        self.set_col(self.rope.line_to_char(self.rope.char_to_line(self.cursor)))
+    }
+
+    pub fn get_end_of_line(&self) -> usize {
+        self.rope
+            .line_to_char(self.rope.char_to_line(self.cursor) + 1)
+            - 1
+    }
+
+    pub fn end_of_line(&mut self) {
+        self.set_col(self.get_end_of_line());
+    }
+
+    pub fn find_char_in_current_line(&self) -> usize {
+        todo!()
     }
 }
 
 impl Display for Buffer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(
-            &self
-                .buff
-                .iter()
-                .map(|line| {
-                    let mut c: String = line.iter().collect();
-                    c.push('\n');
-                    c
-                })
-                .collect::<String>(),
-        )
+        f.write_str(&self.rope.to_string())
     }
 }

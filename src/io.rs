@@ -1,5 +1,6 @@
 use anyhow::{bail, Result};
-use std::path::PathBuf;
+use ropey::Rope;
+use std::{fs::File, io::BufReader, path::PathBuf};
 
 use clap::Parser;
 
@@ -21,11 +22,7 @@ pub fn load_file(buffer: &mut Buffer) -> Result<Option<PathBuf>> {
                 // TODO netrw
                 bail!("Orinfar does not support directory navigation");
             } else if path.is_file() {
-                let contents = std::fs::read_to_string(path.clone())?;
-                buffer.buff = vec![];
-                contents
-                    .split('\n')
-                    .for_each(|line| buffer.push_line(line.chars().collect::<Vec<char>>()));
+                buffer.rope = Rope::from_reader(BufReader::new(File::create_new(path)?))?;
                 buffer.flush();
             }
             Some(path)
@@ -35,14 +32,7 @@ pub fn load_file(buffer: &mut Buffer) -> Result<Option<PathBuf>> {
 }
 
 pub fn write(path: PathBuf, buffer: Buffer) -> Result<()> {
-    // There's probably a more efficient way of doing this
-    let buf = buffer
-        .buff
-        .into_iter()
-        .map(|line| line.into_iter().chain(std::iter::once('\n')))
-        .flatten()
-        .collect::<String>();
-    std::fs::write(path, buf)?;
+    std::fs::write(path, buffer.to_string())?;
 
     Ok(())
 }

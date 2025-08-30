@@ -1,6 +1,6 @@
 use crossterm::event::KeyCode;
 
-use crate::{buffer::Buffer, on_next_input_buffer_only, Cursor};
+use crate::{buffer::Buffer, on_next_input_buffer_only};
 
 pub struct Motion<'a> {
     pub name: &'a [char],
@@ -19,7 +19,7 @@ impl<'a> Motion<'a> {
 
     // Called when the motion is chained to an operator
     // Doesn't apply the motion to the buffer but returns where the motion would have gone
-    pub fn evaluate(&self, buffer: &Buffer) -> Cursor {
+    pub fn evaluate(&self, buffer: &Buffer) -> usize {
         let mut fake_buffer = buffer.clone();
         (self.command)(&mut fake_buffer);
 
@@ -28,7 +28,7 @@ impl<'a> Motion<'a> {
 }
 
 pub fn word(buffer: &mut Buffer) {
-    if buffer.get_curr_line().len() == buffer.cursor.col {
+    if buffer.get_curr_line().len_chars() == buffer.cursor {
         return;
     }
     let mut c = buffer.get_curr_char();
@@ -48,7 +48,7 @@ pub fn word(buffer: &mut Buffer) {
 }
 
 pub fn back(buffer: &mut Buffer) {
-    if buffer.buff[buffer.cursor.row].is_empty() {
+    if buffer.cursor == 0 {
         return;
     }
     let mut prev_char = unwrap_or_return!(buffer.get_prev_char());
@@ -60,8 +60,8 @@ pub fn back(buffer: &mut Buffer) {
         }
         while prev_char.is_alphanumeric() {
             // Next char without wrapping lines, since newlines aren't counted
-            if buffer.cursor.col > 0 {
-                buffer.cursor.col -= 1;
+            if buffer.get_col() > 0 {
+                buffer.prev_char();
             } else {
                 break;
             }
@@ -84,8 +84,8 @@ pub fn end_of_word(buffer: &mut Buffer) {
         }
         while next_char.is_alphanumeric() {
             // Next char without wrapping lines, since newlines aren't counted
-            if buffer.cursor.col + 1 < buffer.buff[buffer.cursor.row].len() {
-                buffer.cursor.col += 1;
+            if buffer.get_col() + 1 < buffer.rope.len_chars() {
+                buffer.next_char();
             } else {
                 break;
             }
@@ -100,15 +100,11 @@ pub fn end_of_word(buffer: &mut Buffer) {
 }
 
 pub fn end_of_line(buffer: &mut Buffer) {
-    buffer.end_of_row();
+    buffer.end_of_line();
 }
 
 pub fn beginning_of_line(buffer: &mut Buffer) {
-    let first = buffer.buff[buffer.cursor.row]
-        .iter()
-        .position(|c| !c.is_whitespace())
-        .unwrap_or(buffer.cursor.col);
-    buffer.cursor.col = first
+    buffer.start_of_line();
 }
 
 pub fn find(buffer: &mut Buffer) {
@@ -116,11 +112,10 @@ pub fn find(buffer: &mut Buffer) {
         if let KeyCode::Char(target) = key {
             if let Some(position) = buffer
                 .get_curr_line()
-                .iter()
-                .skip(buffer.cursor.col)
+                .skip(buffer.get_col())
                 .position(|c| *c == target)
             {
-                buffer.cursor.col = position;
+                buffer.set_col(position);
             }
         }
     }

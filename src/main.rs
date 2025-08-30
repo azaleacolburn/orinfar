@@ -13,7 +13,7 @@ mod panic_hook;
 mod register;
 
 use crate::{
-    buffer::{Buffer, Cursor},
+    buffer::Buffer,
     commands::{append, cut, insert, insert_new_line, insert_new_line_above, paste, replace},
     motion::{back, beginning_of_line, end_of_line, end_of_word, find, word, Motion},
     operator::{change, delete, yank, Operator},
@@ -22,13 +22,16 @@ use crate::{
 use anyhow::{bail, Result};
 use commands::Command as Cmd;
 use crossterm::{
-    cursor::{DisableBlinking, MoveTo, SetCursorStyle},
+    cursor::{MoveTo, MoveToRow, SetCursorStyle},
     event::{read, Event, KeyCode},
     execute,
     style::{Color, Print, ResetColor, SetForegroundColor},
-    terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType, ScrollUp, SetSize},
+    terminal::{
+        disable_raw_mode, enable_raw_mode, size, Clear, ClearType, EnterAlternateScreen,
+        LeaveAlternateScreen, ScrollUp, SetSize,
+    },
 };
-use std::io::stdout;
+use std::{fmt::Pointer, io::stdout};
 
 #[derive(Clone, Debug)]
 enum Mode {
@@ -50,7 +53,7 @@ impl Mode {
 }
 
 fn cleanup() -> Result<()> {
-    execute!(stdout(), ResetColor)?;
+    execute!(stdout(), ResetColor, LeaveAlternateScreen)?;
     disable_raw_mode()?;
 
     Ok(())
@@ -60,7 +63,6 @@ fn main() -> Result<()> {
     panic_hook::add_panic_hook(&cleanup);
 
     let mut stdout = stdout();
-    let (cols, rows) = size()?;
     let _leader = ' ';
 
     let mut register_handler = RegisterHandler::new();
@@ -100,11 +102,12 @@ fn main() -> Result<()> {
         .map(|n| *n)
         .collect();
 
+    let (cols, rows) = size()?;
     execute!(
         stdout,
-        SetSize(cols, rows),
+        EnterAlternateScreen,
         Clear(ClearType::All),
-        ScrollUp(rows),
+        MoveToRow(0),
         SetForegroundColor(Color::Blue),
     )?;
 
@@ -149,7 +152,7 @@ fn main() -> Result<()> {
                             }
                         }
                     }
-                    let end = buffer.get_line_end();
+                    let end = buffer.get_end_of_line();
                     buffer.push_line(end);
                     buffer.set_col(0);
                     buffer.next_row();

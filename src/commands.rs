@@ -43,19 +43,17 @@ pub fn insert(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mod
 }
 
 pub fn append(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
-    buffer.next_col();
-    mode.insert();
+    if buffer.cursor != buffer.rope.len_chars() {
+        buffer.cursor += 1;
+        mode.insert();
+    }
 }
 
 pub fn cut(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
-    if buffer.buff[buffer.cursor.row].len() <= buffer.cursor.col {
+    if buffer.rope.get_char(buffer.cursor) == Some('\n') {
         return;
     }
-
-    buffer.remove_char(buffer.cursor.col);
-    if buffer.buff[buffer.cursor.row].len() == buffer.cursor.col && buffer.cursor.col != 0 {
-        buffer.cursor.col -= 1;
-    }
+    buffer.rope.remove(buffer.cursor..buffer.cursor);
 }
 
 pub fn insert_new_line(
@@ -63,44 +61,28 @@ pub fn insert_new_line(
     _register_handler: &mut RegisterHandler,
     mode: &mut Mode,
 ) {
-    buffer.cursor.row += 1;
-    buffer.insert_line(buffer.cursor.row, vec![]);
-    buffer.cursor.col = 0;
+    buffer.rope.insert_char(buffer.cursor, '\n');
+    buffer.cursor += 1;
     mode.insert();
 }
 
-#[allow(non_snake_case)]
 pub fn insert_new_line_above(
     buffer: &mut Buffer,
     _register_handler: &mut RegisterHandler,
     mode: &mut Mode,
 ) {
-    if buffer.cursor.row > 0 {
-        buffer.insert_line(buffer.cursor.row, vec![]);
-        buffer.cursor.col = 0;
-        mode.insert();
-    }
+    let first = buffer
+        .rope
+        .line_to_char(buffer.rope.char_to_line(buffer.cursor))
+        - 1;
+    buffer.rope.insert_char(first, '\n');
+    buffer.cursor = first;
+    mode.insert();
 }
 
-pub fn dd_cmd(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
-    if buffer.len() > 1 {
-        let line = buffer.remove_line(buffer.cursor.row);
-        register_handler.set_reg(line);
-        if buffer.cursor.row == buffer.len() {
-            buffer.cursor.row -= 1;
-        }
-    } else {
-        register_handler.set_reg(buffer.buff[0].clone());
-        buffer.buff[0] = vec![];
-        buffer.cursor.col = 0;
-    }
-}
 pub fn paste(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
-    let mut i = buffer.cursor.col;
-    register_handler.get_reg().iter().for_each(|c| {
-        buffer.buff[buffer.cursor.row].insert(i, *c);
-        i += 1;
-    });
+    let contents = &register_handler.get_reg();
+    buffer.rope.insert(buffer.cursor, contents);
 }
 
 pub fn crash(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
@@ -113,7 +95,7 @@ pub fn double_quote_cmd(
     _mode: &mut Mode,
 ) {
     if let Event::Key(event) = read().unwrap() {
-        register_handler.init_reg(event.code, Vec::default());
+        register_handler.init_reg(event.code, "");
         register_handler.current_register = event.code.to_string();
     }
 }
