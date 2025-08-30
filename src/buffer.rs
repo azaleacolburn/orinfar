@@ -42,7 +42,7 @@ impl Buffer {
     pub fn flush(&self) -> Result<()> {
         let mut stdout = stdout();
 
-        execute!(stdout, MoveTo(0, 0), Clear(ClearType::All),)?;
+        execute!(stdout, MoveTo(0, 0), Clear(ClearType::All))?;
         for row in self.buff.iter() {
             execute!(
                 stdout,
@@ -106,40 +106,33 @@ impl Buffer {
     }
 
     pub fn next_char(&mut self) -> Option<char> {
-        if self.is_last_row() && self.is_last_col() {
-            return None;
-        }
-        if self.cursor.col + 1 < self.buff[self.cursor.row].len() {
-            self.cursor.col += 1;
-        } else if self.cursor.col > self.buff[self.cursor.row].len() {
-            self.cursor.row += 1;
+        if self.cursor.col == usize::max_value() {
             self.cursor.col = 0;
-        } else if self.cursor.row + 1 < self.buff.len() {
+        } else if self.is_last_row() && self.is_last_col() {
+            return None;
+        } else if self.cursor.col + 1 < self.buff[self.cursor.row].len() {
             self.cursor.col += 1;
-            return Some('\n');
+        } else if self.cursor.row + 1 < self.buff.len() {
+            // Traverse emtpy lines
+            let mut row = self.cursor.row + 1;
+            while row < self.buff.len() && self.buff[row].len() == 0 {
+                row += 1;
+            }
+
+            if row == self.buff.len() - 1 && self.buff[row].len() == 0 {
+                return None;
+            } else {
+                self.cursor.row = row;
+                self.cursor.col = usize::max_value();
+                return Some('\n');
+            }
         } else {
             return None;
         }
         Some(self.buff[self.cursor.row][self.cursor.col])
     }
 
-    pub fn prev_char(&mut self) -> Option<char> {
-        if self.cursor.row == 0 && self.cursor.col == 0 {
-            return None;
-        }
-
-        if self.cursor.col > 0 {
-            self.cursor.col -= 1;
-        } else if self.cursor.row > 0 {
-            self.cursor.row -= 1;
-            self.cursor.col = self.buff[self.cursor.row].len() - 1;
-        } else {
-            return None;
-        }
-        Some(self.buff[self.cursor.row][self.cursor.col])
-    }
-
-    pub fn get_prev_char(&mut self) -> Option<char> {
+    pub fn get_prev_char(&self) -> Option<char> {
         if self.cursor.row == 0 && self.cursor.col == 0 {
             return None;
         }
@@ -155,13 +148,39 @@ impl Buffer {
             if row == 0 && self.buff[row].len() == 0 {
                 None
             } else {
-                self.cursor.row = row;
                 let row = &self.buff[row];
                 Some(row[row.len() - 1])
             }
         } else {
             None
         }
+    }
+
+    pub fn prev_char(&mut self) -> Option<char> {
+        if self.cursor.col == usize::max_value() {
+            self.cursor.col = self.buff[self.cursor.row].len() - 1;
+        } else if self.cursor.row == 0 && self.cursor.row == 0 {
+            return None;
+        } else if self.cursor.col > 0 {
+            self.cursor.col += 1;
+        } else if self.cursor.row > 0 {
+            // Traverse emtpy lines
+            let mut row = self.cursor.row - 1;
+            while row > 0 && self.buff[row].len() == 0 {
+                row -= 1;
+            }
+
+            if row == 0 && self.buff[row].len() == 0 {
+                return None;
+            } else {
+                self.cursor.row = row;
+                self.cursor.col = usize::max_value();
+                return Some('\n');
+            }
+        } else {
+            return None;
+        }
+        Some(self.buff[self.cursor.row][self.cursor.col])
     }
 
     pub fn next_line(&mut self) {
