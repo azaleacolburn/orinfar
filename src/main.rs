@@ -60,7 +60,6 @@ fn main() -> Result<()> {
     panic_hook::add_panic_hook(&cleanup);
 
     let mut stdout = stdout();
-    let (cols, rows) = size()?;
     let _leader = ' ';
 
     let mut register_handler = RegisterHandler::new();

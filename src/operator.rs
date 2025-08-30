@@ -1,14 +1,9 @@
-use crate::{
-    buffer::Buffer,
-    motion::{end_of_line, Motion},
-    register::RegisterHandler,
-    Cursor, Mode,
-};
+use crate::{buffer::Buffer, motion::Motion, register::RegisterHandler, Mode};
 
 pub struct Operator<'a> {
     pub name: &'a [char],
     command: fn(
-        end: Cursor,
+        end: usize,
         buffer: &mut Buffer,
         register_handler: &mut RegisterHandler,
         mode: &mut Mode,
@@ -19,7 +14,7 @@ impl<'a> Operator<'a> {
     pub fn new(
         name: &'a [char],
         command: fn(
-            end: Cursor,
+            end: usize,
             buffer: &mut Buffer,
             register_handler: &mut RegisterHandler,
             mode: &mut Mode,
@@ -38,21 +33,14 @@ impl<'a> Operator<'a> {
         let end = motion.evaluate(buffer);
         (self.command)(end, buffer, register_handler, mode);
     }
-
     pub fn entire_line(
         &self,
         buffer: &mut Buffer,
         register_handler: &mut RegisterHandler,
         mode: &mut Mode,
     ) {
-        let orig_col = buffer.cursor.col;
-        buffer.cursor.col = 0;
-        let end_of_line = Cursor {
-            row: buffer.row(),
-            col: buffer.get_end_of_row(),
-        };
-
-        (self.command)(end_of_line, buffer, register_handler, mode);
+        let anchor = buffer.cursor;
+        buffer.cursor = (self.command)(buffer.cursor - 1, buffer, register_handler, mode);
         let len = buffer.get_curr_line().len();
         if len > 0 {
             buffer.cursor.col = usize::min(orig_col, len - 1);
@@ -64,7 +52,7 @@ pub fn iterate_range(
     mode: &mut Mode,
     register_handler: &mut RegisterHandler,
     buffer: &mut Buffer,
-    end: Cursor,
+    end: usize,
     initial_callback: fn(
         register_handler: &mut RegisterHandler,
         buffer: &mut Buffer,
@@ -72,7 +60,7 @@ pub fn iterate_range(
     ),
     iter_callback: fn(register_handler: &mut RegisterHandler, buffer: &mut Buffer),
     after_callback: fn(
-        start: Cursor,
+        start: usize,
         register_handler: &mut RegisterHandler,
         buffer: &mut Buffer,
         mode: &mut Mode,
@@ -96,14 +84,14 @@ pub fn iterate_range(
 }
 
 fn noop(
-    _start: Cursor,
+    _start: usize,
     _register_handler: &mut RegisterHandler,
     _buffer: &mut Buffer,
     _mode: &mut Mode,
 ) {
 }
 fn reset_position(
-    start: Cursor,
+    start: usize,
     _register_handler: &mut RegisterHandler,
     buffer: &mut Buffer,
     _mode: &mut Mode,
@@ -111,7 +99,7 @@ fn reset_position(
     buffer.cursor = start
 }
 fn insert(
-    _start: Cursor,
+    _start: usize,
     _register_handler: &mut RegisterHandler,
     _buffer: &mut Buffer,
     mode: &mut Mode,
@@ -128,7 +116,7 @@ fn delete_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
     buffer.delete_curr_char();
 }
 pub fn delete(
-    end: Cursor,
+    end: usize,
     buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
@@ -152,7 +140,7 @@ fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
     buffer.next_char();
 }
 pub fn yank(
-    end: Cursor,
+    end: usize,
     buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
@@ -172,7 +160,7 @@ pub fn yank(
 }
 
 pub fn change(
-    end: Cursor,
+    end: usize,
     buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
