@@ -24,3 +24,5 @@ I'll specify and revise this list when I get around to specific things and I hav
 - [ ] Lsp support, syntax highlighting, etc
 
 # Buglist
+
+- Last Working Commit: 4ef8532cae2aa889f2ea217fcb2dbcac5ae875a6
