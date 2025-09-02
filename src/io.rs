@@ -22,7 +22,7 @@ pub fn load_file(buffer: &mut Buffer) -> Result<Option<PathBuf>> {
                 // TODO netrw
                 bail!("Orinfar does not support directory navigation");
             } else if path.is_file() {
-                buffer.rope = Rope::from_reader(BufReader::new(File::create_new(path)?))?;
+                buffer.rope = Rope::from_reader(BufReader::new(File::create_new(&path)?))?;
                 buffer.flush();
             }
             Some(path)

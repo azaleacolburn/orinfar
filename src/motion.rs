@@ -112,8 +112,9 @@ pub fn find(buffer: &mut Buffer) {
         if let KeyCode::Char(target) = key {
             if let Some(position) = buffer
                 .get_curr_line()
+                .chars()
                 .skip(buffer.get_col())
-                .position(|c| *c == target)
+                .position(|c| c == target)
             {
                 buffer.set_col(position);
             }

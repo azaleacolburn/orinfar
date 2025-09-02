@@ -33,6 +33,7 @@ impl<'a> Operator<'a> {
         let end = motion.evaluate(buffer);
         (self.command)(end, buffer, register_handler, mode);
     }
+
     pub fn entire_line(
         &self,
         buffer: &mut Buffer,
@@ -40,9 +41,10 @@ impl<'a> Operator<'a> {
         mode: &mut Mode,
     ) {
         let anchor = buffer.cursor;
-        let orig_col = (self.command)(buffer.cursor - 1, buffer, register_handler, mode);
         let len = buffer.get_curr_line().len_chars();
-        buffer.set_cursor(usize::min(orig_col, len - 1));
+
+        (self.command)(buffer.cursor - 1, buffer, register_handler, mode);
+        buffer.cursor = usize::min(anchor, len - 1);
     }
 }
 
@@ -106,11 +108,11 @@ fn insert(
 }
 
 fn clear_reg(register_handler: &mut RegisterHandler, _buffer: &mut Buffer, _mode: &mut Mode) {
-    register_handler.set_reg(Vec::new());
+    register_handler.empty_reg();
 }
 
 fn delete_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
-    register_handler.push_char(buffer.get_curr_char());
+    register_handler.push_reg(&buffer.get_curr_char().to_string());
     buffer.delete_curr_char();
 }
 pub fn delete(

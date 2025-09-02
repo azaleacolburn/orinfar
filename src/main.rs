@@ -5,6 +5,8 @@
 mod utility;
 
 mod buffer;
+mod buffer_char;
+mod buffer_line;
 mod commands;
 mod io;
 mod motion;
@@ -28,10 +30,10 @@ use crossterm::{
     style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{
         disable_raw_mode, enable_raw_mode, size, Clear, ClearType, EnterAlternateScreen,
-        LeaveAlternateScreen, ScrollUp, SetSize,
+        LeaveAlternateScreen,
     },
 };
-use std::{fmt::Pointer, io::stdout};
+use std::io::stdout;
 
 #[derive(Clone, Debug)]
 enum Mode {
@@ -152,10 +154,7 @@ fn main() -> Result<()> {
                             }
                         }
                     }
-                    let end = buffer.get_end_of_line();
-                    buffer.push_line(end);
-                    buffer.set_col(0);
-                    buffer.next_row();
+                    // NOTE I had some stuff here earlier but I'm not sure what I was doing D:
                 }
 
                 (KeyCode::Char(c), Mode::Normal) => {
@@ -196,23 +195,23 @@ fn main() -> Result<()> {
 
                 (KeyCode::Esc, Mode::Insert) => {
                     mode = Mode::Normal;
-                    if buffer.col() != 0 {
-                        buffer.prev_col();
+                    if buffer.get_col() != 0 {
+                        buffer.cursor -= 1;
                     }
                     execute!(stdout, SetCursorStyle::SteadyBlock)?;
                     count = 1;
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
-                    let row = buffer.row();
-                    let col = buffer.col();
-                    if buffer.col() > 0 {
-                        buffer.remove_char(col - 1);
-                        buffer.prev_col();
-                    } else if buffer.row() != 0 {
-                        let mut old_line = buffer.buff[buffer.row()].clone();
-                        let old_line_len = old_line.len();
-                        buffer.buff[row - 1].append(&mut old_line);
-                        buffer.remove_line(row);
+                    let row = buffer.get_row();
+                    let col = buffer.get_col();
+                    if col > 0 {
+                        buffer.rope.remove(col - 1..col - 1);
+                        buffer.cursor -= 1;
+                    } else if buffer.get_row() != 0 {
+                        let mut old_line = buffer.get_curr_line();
+                        let old_line_len = old_line.len_chars();
+                        buffer.push_slice(old_line);
+                        buffer.remove_curr_line();
                         buffer.prev_row();
                         buffer.set_col(buffer.buff[row - 1].len() - old_line_len);
                     }

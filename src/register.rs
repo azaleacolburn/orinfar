@@ -26,6 +26,11 @@ impl RegisterHandler {
         self.registers.insert(self.current_register.clone(), value);
     }
 
+    pub fn empty_reg(&mut self) {
+        self.registers
+            .insert(self.current_register.clone(), String::new());
+    }
+
     pub fn push_reg(&mut self, append_value: &str) {
         match self.registers.get_mut(&self.current_register) {
             Some(value) => {
