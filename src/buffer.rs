@@ -30,13 +30,12 @@ impl Buffer {
     pub fn flush(&self) -> Result<()> {
         let mut stdout = stdout();
 
+        let col = self.get_col();
+        let row = self.get_row();
+
         execute!(stdout, MoveTo(0, 0), Clear(ClearType::All))?;
-        execute!(stdout, Print(self.rope.to_string()),)?;
-        // TODO This might acturlly be non-trivial 3:
-        // execute!(
-        //     stdout,
-        //     MoveTo(self.cursor.col as u16, self.cursor.row as u16)
-        // )?;
+        execute!(stdout, Print(self.to_string()))?;
+        execute!(stdout, MoveTo(col as u16, row as u16))?;
         stdout.flush()?;
 
         Ok(())

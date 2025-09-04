@@ -54,6 +54,10 @@ impl Buffer {
     }
 
     pub fn get_row(&self) -> usize {
+        todo!()
+    }
+
+    pub fn get_total_rows(&self) -> usize {
         self.rope.len_lines()
     }
 
