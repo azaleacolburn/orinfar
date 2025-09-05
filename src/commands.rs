@@ -101,11 +101,11 @@ pub fn double_quote_cmd(
 }
 
 pub fn replace(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
-    execute!(stdout(), SetCursorStyle::SteadyUnderScore);
+    execute!(stdout(), SetCursorStyle::SteadyUnderScore).unwrap();
     if let Event::Key(event) = read().unwrap() {
         if let KeyCode::Char(c) = event.code {
             buffer.replace_curr_char(c);
         }
     }
-    execute!(stdout(), SetCursorStyle::SteadyBlock);
+    execute!(stdout(), SetCursorStyle::SteadyBlock).unwrap();
 }

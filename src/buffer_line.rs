@@ -65,6 +65,12 @@ impl Buffer {
         self.set_col(self.get_end_of_line());
     }
 
+    pub fn get_until_end_of_line(&self) -> RopeSlice<'_> {
+        let line_idx = self.rope.char_to_line(self.cursor);
+        let line = self.rope.get_line(line_idx).unwrap();
+        line.slice(self.cursor..)
+    }
+
     pub fn find_char_in_current_line(&self, c: char) -> Option<usize> {
         let line = self.get_curr_line();
         line.chars().position(|ch| ch == c)
@@ -84,5 +90,9 @@ impl Buffer {
 
     pub fn prev_line(&mut self) {
         self.set_row(self.get_row() - 1);
+    }
+
+    pub fn next_line(&mut self) {
+        self.set_row(self.get_row() + 1);
     }
 }

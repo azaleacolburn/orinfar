@@ -1,6 +1,14 @@
 use crate::buffer::Buffer;
 
 impl Buffer {
+    pub fn insert_char(&mut self, c: char) {
+        self.rope.insert_char(self.cursor, c);
+    }
+
+    pub fn insert_char_n_times(&mut self, c: char, n: u8) {
+        (0..n).for_each(|_| self.insert_char(c));
+    }
+
     pub fn is_last_char(&self) -> bool {
         self.cursor + 1 == self.rope.len_chars()
     }
@@ -10,7 +18,7 @@ impl Buffer {
     }
 
     pub fn get_next_char(&self) -> Option<char> {
-        if self.cursor == 0 {
+        if self.cursor == self.rope.len_chars() {
             None
         } else {
             Some(self.rope.char(self.cursor + 1))
@@ -18,12 +26,12 @@ impl Buffer {
     }
 
     pub fn next_char(&mut self) -> Option<char> {
-        if self.cursor == 0 {
-            None
-        } else {
+        if self.cursor < self.rope.len_chars() {
             self.cursor += 1;
-            Some(self.rope.char(self.cursor))
-        }
+            return Some(self.rope.char(self.cursor));
+        };
+
+        None
     }
 
     pub fn get_prev_char(&self) -> Option<char> {
@@ -54,14 +62,10 @@ impl Buffer {
     }
 
     pub fn get_row(&self) -> usize {
-        todo!()
-    }
-
-    pub fn get_total_rows(&self) -> usize {
-        self.rope.len_lines()
+        self.cursor - self.get_start_of_line()
     }
 
     pub fn set_row(&mut self, row: usize) {
-        todo!()
+        self.cursor = self.get_start_of_line() + row;
     }
 }

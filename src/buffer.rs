@@ -1,5 +1,5 @@
 use anyhow::Result;
-use ropey::{Rope, RopeSlice};
+use ropey::Rope;
 use std::{
     fmt::Display,
     io::{stdout, Write},

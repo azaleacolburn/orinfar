@@ -33,6 +33,7 @@ use crossterm::{
         LeaveAlternateScreen,
     },
 };
+use ropey::Rope;
 use std::io::stdout;
 
 #[derive(Clone, Debug)]
@@ -202,54 +203,56 @@ fn main() -> Result<()> {
                     count = 1;
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
-                    let row = buffer.get_row();
+                    let _row = buffer.get_row();
                     let col = buffer.get_col();
                     if col > 0 {
                         buffer.rope.remove(col - 1..col - 1);
                         buffer.cursor -= 1;
                     } else if buffer.get_row() != 0 {
-                        let mut old_line = buffer.get_curr_line();
+                        // NOTE We need to create a new rope to sever this slice
+                        // from the buffer before appending it again
+                        let old_line = Rope::from(buffer.get_curr_line());
                         let old_line_len = old_line.len_chars();
-                        buffer.push_slice(old_line);
+                        buffer.push_slice(old_line.slice(..));
                         buffer.remove_curr_line();
-                        buffer.prev_row();
-                        buffer.set_col(buffer.buff[row - 1].len() - old_line_len);
+                        buffer.prev_line();
+                        buffer.set_col(buffer.get_curr_line().len_chars() - old_line_len);
                     }
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
-                    buffer.insert_char_at_cursor(c);
-                    buffer.next_col();
+                    buffer.insert_char(c);
+                    buffer.next_char();
                 }
                 (KeyCode::Tab, Mode::Insert) => {
                     // NOTE
                     // Iterates two separate times because we want the insertation batched and
                     // the traversal to happen after
-                    buffer.insert_n_char(' ', 4);
+                    buffer.insert_char_n_times(' ', 4);
                     (0..4).into_iter().for_each(|_| {
-                        buffer.next_col();
+                        buffer.next_char();
                     });
                 }
                 (KeyCode::Enter, Mode::Insert) => {
-                    let end = buffer.get_line_end();
+                    let end = Rope::from(buffer.get_until_end_of_line());
 
-                    buffer.push_line(end);
+                    buffer.push_slice(end.slice(..));
                     buffer.set_col(0);
-                    buffer.next_row();
+                    buffer.next_char();
                 }
 
                 (KeyCode::Left, _) => {
-                    buffer.prev_col();
+                    buffer.prev_char();
                 }
                 (KeyCode::Right, _) => {
-                    buffer.next_col();
+                    buffer.next_char();
                 }
                 (KeyCode::Up, _) => {
-                    if buffer.row() > 0 {
-                        buffer.prev_row();
+                    if buffer.get_row() > 0 {
+                        buffer.prev_line();
 
-                        let len = buffer.get_curr_line().len();
+                        let len = buffer.get_curr_line().len_chars();
                         let col = if len > 0 {
-                            usize::min(buffer.col() + 1, len - 1)
+                            usize::min(buffer.get_col() + 1, len - 1)
                         } else {
                             0
                         };
@@ -257,9 +260,9 @@ fn main() -> Result<()> {
                     }
                 }
                 (KeyCode::Down, _) => {
-                    if buffer.row() + 1 < buffer.len() {
-                        buffer.next_row();
-                        buffer.end_of_row();
+                    if buffer.get_row() + 1 < buffer.len() {
+                        buffer.next_line();
+                        buffer.end_of_line();
                     }
                 }
                 _ => continue,
