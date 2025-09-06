@@ -206,7 +206,7 @@ fn main() -> Result<()> {
                     let _row = buffer.get_row();
                     let col = buffer.get_col();
                     if col > 0 {
-                        buffer.rope.remove(col - 1..col - 1);
+                        buffer.rope.remove(col - 1..col);
                         buffer.cursor -= 1;
                     } else if buffer.get_row() != 0 {
                         // NOTE We need to create a new rope to sever this slice

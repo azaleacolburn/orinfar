@@ -18,7 +18,7 @@ impl Buffer {
     }
 
     pub fn get_next_char(&self) -> Option<char> {
-        if self.cursor == self.rope.len_chars() {
+        if self.cursor + 1 == self.rope.len_chars() {
             None
         } else {
             Some(self.rope.char(self.cursor + 1))
@@ -26,7 +26,7 @@ impl Buffer {
     }
 
     pub fn next_char(&mut self) -> Option<char> {
-        if self.cursor < self.rope.len_chars() {
+        if self.cursor + 1 < self.rope.len_chars() {
             self.cursor += 1;
             return Some(self.rope.char(self.cursor));
         };
@@ -62,10 +62,16 @@ impl Buffer {
     }
 
     pub fn get_row(&self) -> usize {
-        self.cursor - self.get_start_of_line()
+        self.rope.char_to_line(self.cursor)
     }
 
     pub fn set_row(&mut self, row: usize) {
-        self.cursor = self.get_start_of_line() + row;
+        let mut curr_row = 0;
+        while curr_row != row && self.cursor + 1 < self.rope.len_chars() {
+            if self.rope.char(self.cursor) == '\n' {
+                curr_row += 1;
+            }
+            self.cursor += 1;
+        }
     }
 }

@@ -22,7 +22,7 @@ pub struct Buffer {
 impl Buffer {
     pub fn new() -> Buffer {
         Buffer {
-            rope: Rope::new(),
+            rope: Rope::from(" "),
             cursor: 0,
         }
     }
