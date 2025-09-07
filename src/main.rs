@@ -233,11 +233,8 @@ fn main() -> Result<()> {
                     });
                 }
                 (KeyCode::Enter, Mode::Insert) => {
-                    let end = Rope::from(buffer.get_until_end_of_line());
-
-                    buffer.push_slice(end.slice(..));
-                    buffer.set_col(0);
-                    buffer.next_char();
+                    buffer.insert_char('\n');
+                    buffer.cursor += 1;
                 }
 
                 (KeyCode::Left, _) => {
