@@ -6,7 +6,7 @@ use std::{
 };
 
 use crossterm::{
-    cursor::MoveTo,
+    cursor::{MoveDown, MoveTo, MoveToColumn},
     execute,
     style::Print,
     terminal::{Clear, ClearType},
@@ -32,9 +32,15 @@ impl Buffer {
 
         let col = self.get_col();
         let row = self.get_row();
+        let string = self.to_string();
+        let lines = string.lines();
 
         execute!(stdout, MoveTo(0, 0), Clear(ClearType::All))?;
-        execute!(stdout, Print(self.to_string()))?;
+        lines.for_each(|line| {
+            execute!(stdout, Print(line));
+            execute!(stdout, MoveDown(1));
+            execute!(stdout, MoveToColumn(0));
+        });
         execute!(stdout, MoveTo(col as u16, row as u16))?;
         stdout.flush()?;
 

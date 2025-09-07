@@ -25,7 +25,7 @@ impl Buffer {
     }
 
     pub fn len(&self) -> usize {
-        self.rope.len_chars()
+        self.rope.len_lines()
     }
 
     pub fn delete_curr_char(&mut self) {
