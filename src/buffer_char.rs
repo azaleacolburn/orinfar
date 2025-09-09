@@ -66,12 +66,25 @@ impl Buffer {
     }
 
     pub fn set_row(&mut self, row: usize) {
-        let mut curr_row = 0;
-        while curr_row != row && self.cursor + 1 < self.rope.len_chars() {
-            if self.rope.char(self.cursor) == '\n' {
-                curr_row += 1;
-            }
-            self.cursor += 1;
+        let mut curr_row = self.get_row();
+        if curr_row == row {
+            return;
         }
+        // Subtracting a signed integer variable from a usize is annoying
+        if curr_row < row {
+            while curr_row != row && self.cursor + 1 < self.rope.len_chars() {
+                if self.rope.char(self.cursor) == '\n' {
+                    curr_row += 1;
+                }
+                self.cursor += 1;
+            }
+        } else {
+            while curr_row != row && self.cursor - 1 < self.rope.len_chars() {
+                if self.rope.char(self.cursor) == '\n' {
+                    curr_row -= 1;
+                }
+                self.cursor -= 1;
+            }
+        };
     }
 }
