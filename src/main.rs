@@ -203,12 +203,12 @@ fn main() -> Result<()> {
                     count = 1;
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
-                    let _row = buffer.get_row();
+                    let row = buffer.get_row();
                     let col = buffer.get_col();
                     if col > 0 {
                         buffer.rope.remove(col - 1..col);
                         buffer.cursor -= 1;
-                    } else if buffer.get_row() != 0 {
+                    } else if row != 0 {
                         // NOTE We need to create a new rope to sever this slice
                         // from the buffer before appending it again
                         let old_line = Rope::from(buffer.get_curr_line());
@@ -249,7 +249,7 @@ fn main() -> Result<()> {
 
                         let len = buffer.get_curr_line().len_chars();
                         let col = if len > 0 {
-                            usize::min(buffer.get_col() + 1, len - 1)
+                            usize::min(buffer.get_col() + 1, len - 1) // TODO might be not +1
                         } else {
                             0
                         };
@@ -257,9 +257,9 @@ fn main() -> Result<()> {
                     }
                 }
                 (KeyCode::Down, _) => {
-                    if buffer.get_row() + 1 < buffer.len() {
+                    if buffer.get_row() + 1 < buffer.len() - 1 {
                         buffer.next_line();
-                        buffer.end_of_line();
+                        // buffer.end_of_line();
                     }
                 }
                 _ => continue,

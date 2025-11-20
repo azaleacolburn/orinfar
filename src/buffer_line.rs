@@ -54,11 +54,12 @@ impl Buffer {
     }
 
     pub fn get_end_of_n_line(&self, n: usize) -> usize {
-        self.rope.line_to_char(self.rope.char_to_line(n) + 1) - 1
+        self.rope.line_to_char(n) - 1
     }
 
     pub fn get_end_of_line(&self) -> usize {
-        self.get_end_of_n_line(self.cursor)
+        let line = self.rope.char_to_line(self.cursor);
+        self.get_end_of_n_line(line)
     }
 
     pub fn end_of_line(&mut self) {
