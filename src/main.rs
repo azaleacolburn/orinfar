@@ -34,7 +34,10 @@ use crossterm::{
     },
 };
 use ropey::Rope;
-use std::io::stdout;
+use std::{
+    fs::OpenOptions,
+    io::{stdout, Write},
+};
 
 #[derive(Clone, Debug)]
 enum Mode {
@@ -62,8 +65,21 @@ fn cleanup() -> Result<()> {
     Ok(())
 }
 
+fn log(contents: impl ToString) {
+    let mut file = OpenOptions::new()
+        .append(true)
+        .open("log.txt")
+        .expect("Unable to open file");
+
+    // Append data to the file
+    file.write_all(format!("{}\n", contents.to_string()).as_bytes())
+        .expect("Unable to append data");
+}
+
 fn main() -> Result<()> {
     panic_hook::add_panic_hook(&cleanup);
+
+    std::fs::File::create("log.txt")?;
 
     let mut stdout = stdout();
     let _leader = ' ';
@@ -246,8 +262,11 @@ fn main() -> Result<()> {
                 (KeyCode::Up, _) => {
                     if buffer.get_row() > 0 {
                         buffer.prev_line();
+                        // panic!("here");
 
                         let len = buffer.get_curr_line().len_chars();
+
+                        log("up");
                         let col = if len > 0 {
                             usize::min(buffer.get_col() + 1, len - 1) // TODO might be not +1
                         } else {
@@ -257,9 +276,10 @@ fn main() -> Result<()> {
                     }
                 }
                 (KeyCode::Down, _) => {
-                    if buffer.get_row() + 1 < buffer.len() - 1 {
+                    log("down");
+                    if !buffer.is_last_row() {
                         buffer.next_line();
-                        // buffer.end_of_line();
+                        buffer.end_of_line();
                     }
                 }
                 _ => continue,

@@ -1,6 +1,15 @@
-use crate::buffer::Buffer;
+use crate::{buffer::Buffer, log};
 
 impl Buffer {
+    pub fn delete_curr_char(&mut self) {
+        self.rope.remove(self.cursor..self.cursor);
+    }
+
+    pub fn replace_curr_char(&mut self, c: char) {
+        self.rope.remove(self.cursor..self.cursor);
+        self.rope.insert(self.cursor, &c.to_string());
+    }
+
     pub fn insert_char(&mut self, c: char) {
         self.rope.insert_char(self.cursor, c);
     }
@@ -52,11 +61,13 @@ impl Buffer {
     }
 
     pub fn get_col(&self) -> usize {
+        log(format!("get_col cursor: {}", self.cursor));
         let start_idx = self.get_start_of_line();
         self.cursor - start_idx
     }
 
     pub fn set_col(&mut self, col: usize) {
+        log(format!("set_col cursor: {}", self.cursor));
         let start_idx = self.get_start_of_line();
         self.cursor = start_idx + col;
     }
@@ -67,13 +78,14 @@ impl Buffer {
 
     pub fn set_row(&mut self, row: usize) {
         let curr_row = self.get_row();
-        if curr_row == row {
+        if curr_row == row || self.rope.len_lines() == row {
             return;
         }
 
         let col = self.get_col();
-        let start_of_line = self.rope.line_to_char(row);
-        let new_position = start_of_line + col;
+        let end_next_row = self.get_end_of_n_line(row);
+        let start_of_next_line = self.rope.line_to_char(row);
+        let new_position = usize::min(start_of_next_line + col, end_next_row);
         self.cursor = new_position;
         // Subtracting a signed integer variable from a usize is annoying
         // if curr_row < row {

@@ -1,6 +1,6 @@
 use ropey::{Rope, RopeSlice};
 
-use crate::buffer::Buffer;
+use crate::{buffer::Buffer, log};
 
 impl Buffer {
     pub fn is_empty_line(&self) -> bool {
@@ -28,24 +28,24 @@ impl Buffer {
         self.rope.len_lines()
     }
 
-    pub fn delete_curr_char(&mut self) {
-        self.rope.remove(self.cursor..self.cursor);
-    }
-
-    pub fn replace_curr_char(&mut self, c: char) {
-        self.rope.remove(self.cursor..self.cursor);
-        self.rope.insert(self.cursor, &c.to_string());
-    }
-
     pub fn get_start_of_n_line(&self, n: usize) -> usize {
+        if self.cursor > self.rope.len_chars() {
+            panic!("here lol4");
+            // return;
+        }
         self.rope.line_to_char(self.rope.char_to_line(n))
     }
 
     pub fn get_start_of_char_line(&self, n: usize) -> usize {
+        if self.cursor > self.rope.len_chars() {
+            panic!("here lol5");
+            // return;
+        }
         self.rope.line_to_char(self.rope.char_to_line(n))
     }
 
     pub fn get_start_of_line(&self) -> usize {
+        log(format!("get_start_of_line cursor: {}", self.cursor));
         self.get_start_of_char_line(self.cursor)
     }
 
@@ -54,10 +54,25 @@ impl Buffer {
     }
 
     pub fn get_end_of_n_line(&self, n: usize) -> usize {
-        self.rope.line_to_char(n) - 1
+        let mut i = self.rope.line_to_char(n);
+        let len = self.rope.len_chars();
+
+        let mut c = self.rope.char(i);
+        while i + 1 < len {
+            if c == '\n' {
+                break;
+            }
+            i += 1;
+            c = self.rope.char(i);
+        }
+        i
     }
 
     pub fn get_end_of_line(&self) -> usize {
+        if self.cursor > self.rope.len_chars() {
+            panic!("here lol");
+            // return;
+        }
         let line = self.rope.char_to_line(self.cursor);
         self.get_end_of_n_line(line)
     }
@@ -67,6 +82,10 @@ impl Buffer {
     }
 
     pub fn get_until_end_of_line(&self) -> RopeSlice<'_> {
+        if self.cursor > self.rope.len_chars() {
+            panic!("here lol2");
+            // return;
+        }
         let line_idx = self.rope.char_to_line(self.cursor);
         let line = self.rope.get_line(line_idx).unwrap();
         line.slice(self.cursor..)
@@ -86,6 +105,10 @@ impl Buffer {
     }
 
     pub fn get_curr_line(&self) -> RopeSlice<'_> {
+        if self.cursor > self.rope.len_chars() {
+            panic!("here lol3");
+            // return;
+        }
         self.rope.line(self.rope.char_to_line(self.cursor))
     }
 

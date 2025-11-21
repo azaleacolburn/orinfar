@@ -56,7 +56,7 @@ impl Buffer {
     }
 
     pub fn is_last_row(&self) -> bool {
-        self.rope.char_to_line(self.cursor + 1) == self.rope.len_lines()
+        self.rope.char_to_line(self.cursor) + 1 == self.rope.len_lines()
     }
 }
 
