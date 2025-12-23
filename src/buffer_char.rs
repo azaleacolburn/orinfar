@@ -2,7 +2,7 @@ use crate::{buffer::Buffer, log};
 
 impl Buffer {
     pub fn delete_curr_char(&mut self) {
-        self.rope.remove(self.cursor..self.cursor);
+        self.rope.remove(self.cursor..=self.cursor);
     }
 
     pub fn replace_curr_char(&mut self, c: char) {

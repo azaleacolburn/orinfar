@@ -1,4 +1,4 @@
-use crate::{buffer::Buffer, motion::Motion, register::RegisterHandler, Mode};
+use crate::{buffer::Buffer, log, motion::Motion, register::RegisterHandler, Mode};
 
 pub struct Operator<'a> {
     pub name: &'a [char],
@@ -43,8 +43,14 @@ impl<'a> Operator<'a> {
         let anchor = buffer.cursor;
         let len = buffer.get_curr_line().len_chars();
 
-        (self.command)(buffer.cursor - 1, buffer, register_handler, mode);
-        buffer.cursor = usize::min(anchor, len - 1);
+        let start_of_line = buffer.get_start_of_line();
+        buffer.cursor = start_of_line;
+        let end_of_line = buffer.get_end_of_line();
+        (self.command)(end_of_line, buffer, register_handler, mode);
+
+        if (0..buffer.rope.len_chars()).contains(&anchor) {
+            buffer.cursor = anchor;
+        }
     }
 }
 
@@ -92,17 +98,32 @@ pub fn iterate_range(
     // without traversing the buffer since lines are of arbitrary length
     let mut count: usize = 0;
     let anchor_cursor = buffer.cursor.clone();
-    while buffer.cursor != end {
-        buffer.next_char();
-        count += 1;
-    }
-    buffer.cursor = anchor_cursor.clone();
+    if end >= buffer.cursor {
+        while buffer.cursor != end && buffer.cursor < buffer.rope.len_chars() {
+            buffer.next_char();
+            count += 1;
+        }
+        log(format!("count {}", count));
+        buffer.cursor = anchor_cursor.clone();
 
-    initial_callback(register_handler, buffer, mode);
-    (0..=count)
-        .into_iter()
-        .for_each(|_| iter_callback(register_handler, buffer));
-    after_callback(anchor_cursor, register_handler, buffer, mode);
+        initial_callback(register_handler, buffer, mode);
+        (0..=count)
+            .into_iter()
+            .for_each(|_| iter_callback(register_handler, buffer));
+        after_callback(anchor_cursor, register_handler, buffer, mode);
+    } else {
+        while buffer.cursor != end && buffer.cursor > 0 {
+            buffer.prev_char();
+            count -= 1;
+        }
+        buffer.cursor = anchor_cursor.clone();
+
+        initial_callback(register_handler, buffer, mode);
+        (0..=count)
+            .into_iter()
+            .for_each(|_| iter_callback(register_handler, buffer));
+        after_callback(anchor_cursor, register_handler, buffer, mode);
+    }
 }
 
 fn noop(
@@ -136,6 +157,9 @@ fn clear_reg(register_handler: &mut RegisterHandler, _buffer: &mut Buffer, _mode
 }
 
 fn delete_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
+    if buffer.rope.len_chars() <= buffer.cursor || buffer.cursor < 0 {
+        return;
+    }
     register_handler.push_reg(&buffer.get_curr_char().to_string());
     buffer.delete_curr_char();
 }

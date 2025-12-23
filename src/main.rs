@@ -148,6 +148,9 @@ fn main() -> Result<()> {
     let mut chained: Vec<char> = vec![];
 
     loop {
+        if buffer.rope.len_chars() == 0 {
+            buffer.rope = Rope::from(" ");
+        }
         if let Event::Key(event) = read()? {
             match (event.code, mode.clone()) {
                 (KeyCode::Char('q'), Mode::Normal) => break,
@@ -175,6 +178,7 @@ fn main() -> Result<()> {
                 }
 
                 (KeyCode::Char(c), Mode::Normal) => {
+                    // TODO Remove this len_chars thing because pasting
                     if !all_normal_chars.contains(&c) {
                         continue;
                     };
@@ -194,7 +198,10 @@ fn main() -> Result<()> {
                             chained.clear();
                             next_operation = None;
                         } else if c == operation.name[0] {
+                            log("entire line");
                             operation.entire_line(&mut buffer, &mut register_handler, &mut mode);
+                            chained.clear();
+                            next_operation = None;
                         }
                     } else if chained.len() == 1 {
                         if let Some(motion) = motions.iter().find(|motion| motion.name[0] == c) {
