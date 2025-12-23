@@ -18,6 +18,7 @@ mod view_box;
 use crate::{
     buffer::Buffer,
     commands::{append, cut, insert, insert_new_line, insert_new_line_above, paste, replace},
+    io::Cli,
     motion::{back, beginning_of_line, end_of_line, end_of_word, find, word, Motion},
     operator::{change, change_until_before, delete, yank, Operator},
     register::RegisterHandler,
@@ -25,6 +26,7 @@ use crate::{
     view_box::ViewBox,
 };
 use anyhow::{bail, Result};
+use clap::Parser;
 use commands::Command as Cmd;
 use crossterm::{
     cursor::{MoveTo, MoveToRow, SetCursorStyle},
@@ -161,7 +163,8 @@ fn main() -> Result<()> {
     let mut count: u16 = 1;
     let mut chained: Vec<char> = vec![];
 
-    let mut path = io::load_file(&mut buffer)?;
+    let (cli, mut path) = Cli::parse_path()?;
+    io::load_file(&path, &mut buffer)?;
     view_box.flush(&mut buffer, &status_bar, &mode, &path)?;
 
     'main: loop {
@@ -170,7 +173,6 @@ fn main() -> Result<()> {
         }
         if let Event::Key(event) = read()? {
             match (event.code, mode.clone()) {
-                // (KeyCode::Char('q'), Mode::Normal) => break,
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
                     let c = c.to_digit(10).unwrap() as u16;
                     if count == 1 {
@@ -283,19 +285,10 @@ fn main() -> Result<()> {
                                 None => log("Cannot write buffer, no file opened."),
                             },
                             'l' => {
-                                if let Some(ref path) = path {
-                                    log(format!("Loading from path: {}", path.to_string_lossy()));
+                                io::load_file(&path, &mut buffer);
+                                view_box.flush(&buffer, &status_bar, &mode, &path);
 
-                                    io::load_file(&mut buffer);
-                                    view_box.flush(
-                                        &buffer,
-                                        &status_bar,
-                                        &mode,
-                                        &Some(path.clone()),
-                                    );
-
-                                    break;
-                                }
+                                break;
                             }
                             'o' => {
                                 let path_buf =

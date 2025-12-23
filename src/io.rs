@@ -11,23 +11,37 @@ pub struct Cli {
     pub file_name: Option<String>,
 }
 
-pub fn load_file(buffer: &mut Buffer) -> Result<Option<PathBuf>> {
-    let cli = Cli::parse();
-    // TODO This is a bad way of handling things, refactor later
-    Ok(match cli.file_name {
-        Some(path) => {
-            let path = PathBuf::from(path);
+impl Cli {
+    pub fn parse_path() -> Result<(Cli, Option<PathBuf>)> {
+        let cli = Self::parse();
 
-            if path.is_dir() {
-                // TODO netrw
-                bail!("Orinfar does not support directory navigation");
-            } else if path.is_file() {
-                buffer.rope = Rope::from_reader(BufReader::new(File::create_new(&path)?))?;
+        match cli.file_name {
+            Some(ref path) => {
+                let path = PathBuf::from(path);
+
+                if path.is_dir() {
+                    // TODO netrw
+                    bail!("Orinfar does not support directory navigation");
+                } else if path.is_file() {
+                    Ok((cli, Some(path)))
+                } else {
+                    std::fs::write(&path, "")?;
+
+                    Ok((cli, Some(path)))
+                }
             }
-            Some(path)
+            None => Ok((cli, None)),
         }
-        None => None,
-    })
+    }
+}
+
+pub fn load_file(path: &Option<PathBuf>, buffer: &mut Buffer) -> Result<()> {
+    if let Some(ref path) = path {
+        let contents = std::fs::read_to_string(path)?;
+        buffer.rope = Rope::from(contents);
+    }
+
+    Ok(())
 }
 
 pub fn write(path: PathBuf, buffer: Buffer) -> Result<()> {
