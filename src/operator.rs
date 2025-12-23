@@ -48,6 +48,28 @@ impl<'a> Operator<'a> {
     }
 }
 
+/// Iterates over a range, allowing an operation to be performed across the range.
+/// This is more general than just say, capitalizing every character.
+///
+/// Thir is how operations like yank and delete are able to work across arbitrary ranges, even
+/// ranges defined by the contents of the file, such as 'yfi'
+///
+/// # Params
+/// - `mode`: The current mode the editor is in (eg. Visual, Insert, Command).
+/// - `register_handler`: The manager handler, there should just be one for the entire editor.
+///                       This is necessary for the yanking of items, for example.
+/// - `buffer`: The actual underlying text buffer object.
+/// - `end`: The index at which to end the traversal on. Must be greater than the initial value of `buffer.cursor`
+/// - `initial_callback`: The function which is run before the iteration.
+/// - `iter_callback`: The function which runs for every character in the iteration. It should
+///                    assume that `buffer.cursor` is the current index of the iteration.
+///                    This is the only callback incapable of accessing the current mode.
+/// - `after_callback`: The function which runs after the iteration is complete. This callback is
+///                     the only one provided with the original index of the cursor before the
+///                     iteration. One use-case of this callback could be to reset the position of
+///                     the cursor after the iteration.
+///
+/// Any of the given callbacks may be noops. Each callback is free modify
 pub fn iterate_range(
     mode: &mut Mode,
     register_handler: &mut RegisterHandler,
@@ -90,6 +112,7 @@ fn noop(
     _mode: &mut Mode,
 ) {
 }
+
 fn reset_position(
     start: usize,
     _register_handler: &mut RegisterHandler,
@@ -98,6 +121,7 @@ fn reset_position(
 ) {
     buffer.cursor = start
 }
+
 fn insert(
     _start: usize,
     _register_handler: &mut RegisterHandler,

@@ -60,16 +60,25 @@ impl Buffer {
         }
     }
 
+    /// Returns the current zero-indexed column the cursor is on
     pub fn get_col(&self) -> usize {
-        log(format!("get_col cursor: {}", self.cursor));
+        log(format!("get_col cursor: {}, {:?}", self.cursor, self.rope));
         let start_idx = self.get_start_of_line();
         self.cursor - start_idx
     }
 
+    // This is where we are
     pub fn set_col(&mut self, col: usize) {
-        log(format!("set_col cursor: {}", self.cursor));
+        log(format!("\nset_col cursor: {}", self.cursor));
         let start_idx = self.get_start_of_line();
         self.cursor = start_idx + col;
+        log(format!(
+            "start_of_line: {}\ncol: {}\nnew_cursor: {} len: {}\n",
+            start_idx,
+            col,
+            self.cursor,
+            self.rope.len_chars()
+        ));
     }
 
     pub fn get_row(&self) -> usize {
@@ -78,14 +87,15 @@ impl Buffer {
 
     pub fn set_row(&mut self, row: usize) {
         let curr_row = self.get_row();
-        if curr_row == row || self.rope.len_lines() == row {
+        if curr_row == row || self.rope.len_lines() <= row {
             return;
         }
 
         let col = self.get_col();
         let end_next_row = self.get_end_of_n_line(row);
-        let start_of_next_line = self.rope.line_to_char(row);
-        let new_position = usize::min(start_of_next_line + col, end_next_row);
+        let start_of_next_row = self.rope.line_to_char(row);
+
+        let new_position = usize::min(start_of_next_row + col, end_next_row);
         self.cursor = new_position;
         // Subtracting a signed integer variable from a usize is annoying
         // if curr_row < row {

@@ -1,84 +1,105 @@
-use ropey::{Rope, RopeSlice};
-
 use crate::{buffer::Buffer, log};
+use ropey::{Rope, RopeSlice};
 
 impl Buffer {
     pub fn is_empty_line(&self) -> bool {
         self.get_end_of_line() == self.get_start_of_line() + 1
     }
 
-    pub fn remove_n_line(&mut self, n: usize) {
-        let start_index = self.get_start_of_char_line(n);
-        let end_index = self.get_end_of_n_line(n);
+    /// Removes the line represented by the given `line_idx`
+    pub fn remove_n_line(&mut self, line_idx: usize) {
+        let start_index = self.get_start_of_n_line(line_idx);
+        let end_index = self.get_end_of_n_line(line_idx);
         self.rope.remove(start_index..=end_index)
     }
 
-    /// Removes the line that the given character is on
-    pub fn remove_char_line(&mut self, n: usize) {
-        let start_index = self.get_start_of_char_line(n);
-        let end_index = self.get_end_of_n_line(n);
+    /// Removes the line that the given `char_idx` is on
+    pub fn remove_char_line(&mut self, char_idx: usize) {
+        let start_index = self.get_start_of_char_line(char_idx);
+        let end_index = self.get_end_of_n_line(char_idx);
         self.rope.remove(start_index..=end_index)
     }
 
+    /// Remives the current line from the buffer
     pub fn remove_curr_line(&mut self) {
         self.remove_char_line(self.cursor)
     }
 
+    /// Returns the number of lines in the buffer
     pub fn len(&self) -> usize {
         self.rope.len_lines()
     }
 
-    pub fn get_start_of_n_line(&self, n: usize) -> usize {
-        if self.cursor > self.rope.len_chars() {
-            panic!("here lol4");
-            // return;
-        }
-        self.rope.line_to_char(self.rope.char_to_line(n))
+    /// Returns the first index (absolute) of the line represented by the given `line_idx`
+    pub fn get_start_of_n_line(&self, line_idx: usize) -> usize {
+        self.rope.line_to_char(line_idx)
     }
 
-    pub fn get_start_of_char_line(&self, n: usize) -> usize {
-        if self.cursor > self.rope.len_chars() {
-            panic!("here lol5");
-            // return;
-        }
-        self.rope.line_to_char(self.rope.char_to_line(n))
+    /// Returns the first index (absolute) of the line where the given `char_idx` is located
+    pub fn get_start_of_char_line(&self, char_idx: usize) -> usize {
+        self.rope.line_to_char(self.rope.char_to_line(char_idx))
     }
 
     pub fn get_start_of_line(&self) -> usize {
-        log(format!("get_start_of_line cursor: {}", self.cursor));
+        log(format!(
+            "get_start_of_line cursor: {}, {:?}",
+            self.cursor, self.rope
+        ));
         self.get_start_of_char_line(self.cursor)
     }
 
     pub fn start_of_line(&mut self) {
+        log(format!(
+            "start_of_line cursor: {}, {:?}",
+            self.cursor, self.rope
+        ));
         self.set_col(self.get_start_of_char_line(self.cursor))
     }
 
-    pub fn get_end_of_n_line(&self, n: usize) -> usize {
-        let mut i = self.rope.line_to_char(n);
+    /// Returns the absolute index of the end of the given `line`
+    /// NOT the last column in the line
+    pub fn get_end_of_n_line(&self, line: usize) -> usize {
+        let mut idx = self.rope.line_to_char(line);
         let len = self.rope.len_chars();
 
-        let mut c = self.rope.char(i);
-        while i + 1 < len {
+        while idx + 1 < len {
+            let c = self.rope.char(idx);
             if c == '\n' {
                 break;
             }
-            i += 1;
-            c = self.rope.char(i);
+            idx += 1;
         }
-        i
+        idx
     }
 
+    /// Returns the absolute index of the end of the current line
+    /// NOT the last column in the line
     pub fn get_end_of_line(&self) -> usize {
         if self.cursor > self.rope.len_chars() {
             panic!("here lol");
             // return;
         }
         let line = self.rope.char_to_line(self.cursor);
+        log(format!(
+            "get_end_of(curr)_line: {}, line: {}",
+            self.cursor, line
+        ));
         self.get_end_of_n_line(line)
     }
 
+    /// Returns the last column in the current line
+    /// NOT the absolute index
+    pub fn get_last_col_of_line(&self) -> usize {
+        let end_of_line = self.get_end_of_line();
+        let start_of_line = self.get_start_of_line();
+
+        end_of_line - start_of_line
+    }
+
     pub fn end_of_line(&mut self) {
-        self.set_col(self.get_end_of_line());
+        let end_of_line = self.get_last_col_of_line();
+        log(format!("end_of_line: {}", end_of_line));
+        self.set_col(end_of_line);
     }
 
     pub fn get_until_end_of_line(&self) -> RopeSlice<'_> {
@@ -117,6 +138,8 @@ impl Buffer {
     }
 
     pub fn next_line(&mut self) {
-        self.set_row(self.get_row() + 1);
+        let line = self.get_row();
+        log(format!("next_line current_line: {}", line));
+        self.set_row(line + 1);
     }
 }
