@@ -27,26 +27,6 @@ impl Buffer {
         }
     }
 
-    pub fn flush(&self) -> Result<()> {
-        let mut stdout = stdout();
-
-        let col = self.get_col();
-        let row = self.get_row();
-        let string = self.to_string();
-        let lines = string.lines();
-
-        execute!(stdout, MoveTo(0, 0), Clear(ClearType::All))?;
-        lines.for_each(|line| {
-            execute!(stdout, Print(line));
-            execute!(stdout, MoveDown(1));
-            execute!(stdout, MoveToColumn(0));
-        });
-        execute!(stdout, MoveTo(col as u16, row as u16))?;
-        stdout.flush()?;
-
-        Ok(())
-    }
-
     pub fn clear(&mut self) {
         self.rope.remove(0..);
     }

@@ -114,7 +114,7 @@ pub fn iterate_range(
     } else {
         while buffer.cursor != end && buffer.cursor > 0 {
             buffer.prev_char();
-            count -= 1;
+            count += 1;
         }
         buffer.cursor = anchor_cursor.clone();
 
@@ -207,6 +207,24 @@ pub fn change(
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
 ) {
+    iterate_range(
+        mode,
+        register_handler,
+        buffer,
+        end,
+        clear_reg,
+        delete_char,
+        insert,
+    );
+}
+
+pub fn change_until_before(
+    end: usize,
+    buffer: &mut Buffer,
+    register_handler: &mut RegisterHandler,
+    mode: &mut Mode,
+) {
+    let end = if end == 0 { 0 } else { end - 1 };
     iterate_range(
         mode,
         register_handler,

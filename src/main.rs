@@ -3,7 +3,6 @@
 // Needs to be defined first
 #[macro_use]
 mod utility;
-
 mod buffer;
 mod buffer_char;
 mod buffer_line;
@@ -13,13 +12,17 @@ mod motion;
 mod operator;
 mod panic_hook;
 mod register;
+mod status_bar;
+mod view_box;
 
 use crate::{
     buffer::Buffer,
     commands::{append, cut, insert, insert_new_line, insert_new_line_above, paste, replace},
     motion::{back, beginning_of_line, end_of_line, end_of_word, find, word, Motion},
-    operator::{change, delete, yank, Operator},
+    operator::{change, change_until_before, delete, yank, Operator},
     register::RegisterHandler,
+    status_bar::StatusBar,
+    view_box::ViewBox,
 };
 use anyhow::{bail, Result};
 use commands::Command as Cmd;
@@ -37,13 +40,15 @@ use ropey::Rope;
 use std::{
     fs::OpenOptions,
     io::{stdout, Write},
+    path::PathBuf,
 };
 
 #[derive(Clone, Debug)]
 enum Mode {
     Normal,
     Insert,
-    _Visual,
+    Command,
+    Visual,
 }
 
 impl Mode {
@@ -59,8 +64,14 @@ impl Mode {
 }
 
 fn cleanup() -> Result<()> {
-    execute!(stdout(), ResetColor, LeaveAlternateScreen)?;
     disable_raw_mode()?;
+    execute!(
+        stdout(),
+        ResetColor,
+        Clear(ClearType::All),
+        SetCursorStyle::SteadyBlock,
+        LeaveAlternateScreen
+    )?;
 
     Ok(())
 }
@@ -85,7 +96,9 @@ fn main() -> Result<()> {
     let _leader = ' ';
 
     let mut register_handler = RegisterHandler::new();
+
     let mut buffer: Buffer = Buffer::new();
+    let mut status_bar: StatusBar = StatusBar::new();
 
     let commands: &[Cmd] = &[
         Cmd::new(&['i'], insert),
@@ -100,6 +113,7 @@ fn main() -> Result<()> {
         Operator::new(&['d'], delete),
         Operator::new(&['y'], yank),
         Operator::new(&['c'], change),
+        Operator::new(&['t'], change_until_before),
     ];
     let motions: &[Motion] = &[
         Motion::new(&['w'], word),
@@ -122,6 +136,8 @@ fn main() -> Result<()> {
         .collect();
 
     let (cols, rows) = size()?;
+    let mut view_box: ViewBox = ViewBox::new(cols, rows);
+
     execute!(
         stdout,
         EnterAlternateScreen,
@@ -141,19 +157,20 @@ fn main() -> Result<()> {
     execute!(stdout, MoveTo(0, 0))?;
     enable_raw_mode()?;
 
-    let path = io::load_file(&mut buffer)?;
-
     let mut mode = Mode::Normal;
     let mut count: u16 = 1;
     let mut chained: Vec<char> = vec![];
 
-    loop {
+    let mut path = io::load_file(&mut buffer)?;
+    view_box.flush(&mut buffer, &status_bar, &mode, &path)?;
+
+    'main: loop {
         if buffer.rope.len_chars() == 0 {
             buffer.rope = Rope::from(" ");
         }
         if let Event::Key(event) = read()? {
             match (event.code, mode.clone()) {
-                (KeyCode::Char('q'), Mode::Normal) => break,
+                // (KeyCode::Char('q'), Mode::Normal) => break,
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
                     let c = c.to_digit(10).unwrap() as u16;
                     if count == 1 {
@@ -163,17 +180,9 @@ fn main() -> Result<()> {
                     count += c;
                 }
                 (KeyCode::Char(':'), Mode::Normal) => {
-                    if let Event::Key(event) = read()? {
-                        if event.code == KeyCode::Char('w') {
-                            match path {
-                                Some(path) => {
-                                    io::write(path, buffer)?;
-                                    break;
-                                }
-                                None => bail!("Cannot write buffer, no file opened."),
-                            }
-                        }
-                    }
+                    mode = Mode::Command;
+                    status_bar.push(':');
+
                     // NOTE I had some stuff here earlier but I'm not sure what I was doing D:
                 }
 
@@ -260,6 +269,93 @@ fn main() -> Result<()> {
                     buffer.cursor += 1;
                 }
 
+                (KeyCode::Char(c), Mode::Command) => {
+                    status_bar.push(c);
+                }
+
+                (KeyCode::Enter, Mode::Command) => {
+                    for (i, command) in status_bar.iter().enumerate().skip(1) {
+                        match command {
+                            'w' => match &path {
+                                Some(path) => {
+                                    io::write(path.to_path_buf(), buffer.clone())?;
+                                }
+                                None => log("Cannot write buffer, no file opened."),
+                            },
+                            'l' => {
+                                if let Some(ref path) = path {
+                                    log(format!("Loading from path: {}", path.to_string_lossy()));
+
+                                    io::load_file(&mut buffer);
+                                    view_box.flush(
+                                        &buffer,
+                                        &status_bar,
+                                        &mode,
+                                        &Some(path.clone()),
+                                    );
+
+                                    break;
+                                }
+                            }
+                            'o' => {
+                                let path_buf =
+                                    PathBuf::from(status_bar[i..].iter().collect::<String>());
+                                log(format!("Set path to equal: {}", path_buf.to_string_lossy()));
+                                path = Some(path_buf);
+                                break;
+                            }
+                            'q' => break 'main,
+                            '%' => {
+                                if status_bar[i..].len() == 1 {
+                                    break;
+                                }
+                                let substitution: Vec<&[char]> =
+                                    status_bar[i + 1..].split(|c| *c == '/').collect();
+
+                                let original = substitution[0];
+                                let new: String = substitution[1].iter().collect();
+
+                                log(format!(
+                                    "Substition\n\toriginal: {:?}\n\tnew: {}",
+                                    original, new
+                                ));
+
+                                let mut curr: Vec<char> = Vec::with_capacity(original.len() - 1);
+                                let mut idxs_of_substitution: Vec<usize> = Vec::with_capacity(4);
+
+                                for (i, char) in buffer.rope.chars().enumerate() {
+                                    if curr.len() == original.len() {
+                                        idxs_of_substitution.push(i);
+                                        curr.clear();
+                                    }
+                                    if char == original[curr.len()] {
+                                        curr.push(char);
+                                    }
+                                }
+
+                                idxs_of_substitution.iter().for_each(|idx| {
+                                    buffer.rope.remove(idx - original.len()..*idx);
+                                    buffer.rope.insert(idx - original.len(), &new);
+                                });
+                                break;
+                            }
+                            c => log(format!("Unknown Meta-Command: {}", c)),
+                        }
+                    }
+
+                    mode = Mode::Normal;
+                    status_bar.clear();
+                }
+                (KeyCode::Esc, Mode::Command) => {
+                    mode = Mode::Normal;
+                    status_bar.clear();
+                }
+                (KeyCode::Backspace, Mode::Command) => {
+                    status_bar.delete();
+                }
+                // TODO Update buffer-line
+                // Exists to prevent the arrow keys from working for now
+                (_, Mode::Command) => {}
                 (KeyCode::Left, _) => {
                     buffer.prev_char();
                 }
@@ -285,6 +381,17 @@ fn main() -> Result<()> {
                 (KeyCode::Down, _) => {
                     log("down");
                     if !buffer.is_last_row() {
+                        if let Event::Key(event) = read()? {
+                            if event.code == KeyCode::Char('w') {
+                                match path {
+                                    Some(path) => {
+                                        io::write(path, buffer)?;
+                                        break;
+                                    }
+                                    None => bail!("Cannot write buffer, no file opened."),
+                                }
+                            }
+                        }
                         buffer.next_line();
                         buffer.end_of_line();
                     }
@@ -292,7 +399,8 @@ fn main() -> Result<()> {
                 _ => continue,
             };
 
-            buffer.flush()?;
+            view_box.adjust(&buffer);
+            view_box.flush(&buffer, &status_bar, &mode, &path)?;
         }
     }
 
