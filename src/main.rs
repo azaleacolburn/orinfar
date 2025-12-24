@@ -163,7 +163,7 @@ fn main() -> Result<()> {
     let mut count: u16 = 1;
     let mut chained: Vec<char> = vec![];
 
-    let (cli, mut path) = Cli::parse_path()?;
+    let (_cli, mut path) = Cli::parse_path()?;
     io::load_file(&path, &mut buffer)?;
     view_box.flush(&mut buffer, &status_bar, &mode, &path)?;
 
@@ -237,21 +237,11 @@ fn main() -> Result<()> {
                     count = 1;
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
-                    let row = buffer.get_row();
-                    let col = buffer.get_col();
-                    if col > 0 {
-                        buffer.rope.remove(col - 1..col);
-                        buffer.cursor -= 1;
-                    } else if row != 0 {
-                        // NOTE We need to create a new rope to sever this slice
-                        // from the buffer before appending it again
-                        let old_line = Rope::from(buffer.get_curr_line());
-                        let old_line_len = old_line.len_chars();
-                        buffer.push_slice(old_line.slice(..));
-                        buffer.remove_curr_line();
-                        buffer.prev_line();
-                        buffer.set_col(buffer.get_curr_line().len_chars() - old_line_len);
+                    if buffer.cursor == 0 {
+                        continue;
                     }
+                    buffer.delete_curr_char();
+                    buffer.cursor -= 1;
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
                     buffer.insert_char(c);

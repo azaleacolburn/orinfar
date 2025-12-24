@@ -1,6 +1,6 @@
 use anyhow::Result;
 use crossterm::{
-    cursor::{MoveDown, MoveTo, MoveToColumn, MoveToRow},
+    cursor::{Hide, MoveDown, MoveTo, MoveToColumn, MoveToRow, Show},
     execute,
     style::Print,
     terminal::{Clear, ClearType},
@@ -43,7 +43,7 @@ impl ViewBox {
         let col = buffer.get_col();
         let row = buffer.get_row();
 
-        if self.top < row {
+        if self.top > row {
             self.top = row;
         } else if self.top + self.height < row {
             self.top = row - self.height;
@@ -67,15 +67,21 @@ impl ViewBox {
 
         let col = buffer.get_col();
         let row = buffer.get_row();
-        let string = buffer.to_string();
-        let lines = string.lines().skip(self.top).take(self.height);
+        let lines = buffer.rope.lines().skip(self.top).take(self.height);
 
-        execute!(stdout, MoveTo(0, 0), Clear(ClearType::All))?;
+        execute!(stdout, Hide, MoveTo(0, 0), Clear(ClearType::All))?;
         log(format!("In flush:"));
         lines.for_each(|line| {
-            // TODO Check if this really cuts down the line correctly
-            log(format!("line: {}", line));
-            let line = &line[self.left..usize::min(self.width, line.len())];
+            let len = line.len_chars();
+            if len == 0 {
+                return;
+            }
+
+            // NOTE
+            // We actually do want to cut off the newline here, hence the `- 1`
+            let last_col = usize::min(self.left + self.width, len - 1);
+            let line = &line.slice(self.left..last_col);
+
             execute!(stdout, Print(line));
             execute!(stdout, MoveDown(1));
             execute!(stdout, MoveToColumn(0));
@@ -98,7 +104,7 @@ impl ViewBox {
             Mode::Command => (status_bar.idx() as u16, (self.height + 1) as u16),
             _ => (col as u16, row as u16),
         };
-        execute!(stdout, MoveToColumn(new_col), MoveToRow(new_row));
+        execute!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show);
         stdout.flush()?;
 
         Ok(())
