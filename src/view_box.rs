@@ -1,3 +1,4 @@
+use crate::{buffer::Buffer, log, status_bar::StatusBar, Mode};
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn, MoveToRow, Show},
@@ -10,20 +11,12 @@ use std::{
     path::PathBuf,
 };
 
-use crate::{
-    buffer::{self, Buffer},
-    log,
-    status_bar::StatusBar,
-    Mode,
-};
-
 pub struct ViewBox {
-    // The topmost row of the buffer being displayed
-    // Zero-indexed
+    // The topmost row of the buffer being displayed (zero-indexed)
     top: usize,
     // The height in rows of the entire view box (minus the status bar)
     height: usize,
-    // The leftmost row of the buffer being displayed
+    // The leftmost row of the buffer being displayed (zero-indexed)
     left: usize,
     // The width in rows of the entire view box
     width: usize,
@@ -70,7 +63,6 @@ impl ViewBox {
         let lines = buffer.rope.lines().skip(self.top).take(self.height);
 
         execute!(stdout, Hide, MoveTo(0, 0), Clear(ClearType::All))?;
-        log(format!("In flush:"));
         lines.for_each(|line| {
             let len = line.len_chars();
             if len == 0 {

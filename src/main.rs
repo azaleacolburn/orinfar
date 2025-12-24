@@ -25,8 +25,7 @@ use crate::{
     status_bar::StatusBar,
     view_box::ViewBox,
 };
-use anyhow::{bail, Result};
-use clap::Parser;
+use anyhow::Result;
 use commands::Command as Cmd;
 use crossterm::{
     cursor::{MoveTo, MoveToRow, SetCursorStyle},
@@ -209,7 +208,6 @@ fn main() -> Result<()> {
                             chained.clear();
                             next_operation = None;
                         } else if c == operation.name[0] {
-                            log("entire line");
                             operation.entire_line(&mut buffer, &mut register_handler, &mut mode);
                             chained.clear();
                             next_operation = None;
@@ -237,7 +235,7 @@ fn main() -> Result<()> {
                     count = 1;
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
-                    if buffer.cursor == 0 {
+                    if buffer.cursor == 0 || buffer.rope.len_chars() <= buffer.cursor {
                         continue;
                     }
                     buffer.delete_curr_char();
@@ -277,14 +275,20 @@ fn main() -> Result<()> {
                             'l' => {
                                 io::load_file(&path, &mut buffer);
                                 view_box.flush(&buffer, &status_bar, &mode, &path);
-
-                                break;
                             }
                             'o' => {
-                                let path_buf =
-                                    PathBuf::from(status_bar[i..].iter().collect::<String>());
+                                if status_bar.len() == i + 1 {
+                                    break;
+                                }
+                                let path_buf = PathBuf::from(
+                                    status_bar[i + 1..].iter().collect::<String>().trim(),
+                                );
                                 log(format!("Set path to equal: {}", path_buf.to_string_lossy()));
                                 path = Some(path_buf);
+
+                                io::load_file(&path, &mut buffer);
+                                view_box.flush(&buffer, &status_bar, &mode, &path);
+
                                 break;
                             }
                             'q' => break 'main,

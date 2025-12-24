@@ -37,6 +37,7 @@ impl StatusBar {
 
     pub fn clear(&mut self) {
         self.buffer.clear();
+        self.idx = 0;
     }
 }
 

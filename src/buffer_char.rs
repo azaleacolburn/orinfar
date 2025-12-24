@@ -6,7 +6,7 @@ impl Buffer {
     }
 
     pub fn replace_curr_char(&mut self, c: char) {
-        self.rope.remove(self.cursor..self.cursor);
+        self.rope.remove(self.cursor..=self.cursor);
         self.rope.insert(self.cursor, &c.to_string());
     }
 
