@@ -45,8 +45,8 @@ impl ViewBox {
 
         if self.top > row {
             self.top = row;
-        } else if self.top + self.height < row {
-            self.top = row - self.height;
+        } else if self.top + self.height <= row {
+            self.top = row - self.height + 1;
         }
 
         if self.left > col {
@@ -102,7 +102,11 @@ impl ViewBox {
 
         let (new_col, new_row) = match mode {
             Mode::Command => (status_bar.idx() as u16, (self.height + 1) as u16),
-            _ => (col as u16, row as u16),
+            _ => {
+                let row = row - self.top;
+                let col = col - self.left;
+                (col as u16, row as u16)
+            }
         };
         execute!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show);
         stdout.flush()?;

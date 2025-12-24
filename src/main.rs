@@ -363,21 +363,12 @@ fn main() -> Result<()> {
                 }
                 (KeyCode::Down, _) => {
                     log("down");
-                    if !buffer.is_last_row() {
-                        if let Event::Key(event) = read()? {
-                            if event.code == KeyCode::Char('w') {
-                                match path {
-                                    Some(path) => {
-                                        io::write(path, buffer)?;
-                                        break;
-                                    }
-                                    None => bail!("Cannot write buffer, no file opened."),
-                                }
-                            }
-                        }
-                        buffer.next_line();
-                        buffer.end_of_line();
+                    if buffer.is_last_row() {
+                        continue;
                     }
+
+                    buffer.next_line();
+                    buffer.end_of_line();
                 }
                 _ => continue,
             };
