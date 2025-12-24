@@ -7,6 +7,7 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 use std::{
+    fmt::format,
     io::{stdout, Write},
     path::PathBuf,
 };
@@ -103,10 +104,18 @@ impl ViewBox {
             if len == 0 {
                 return;
             }
+            log(format!("line: {}", line));
 
             // We actually do want to cut off the newline here, hence the `- 1`
-            let last_col = usize::min(self.left + self.width, len - 1);
+            let line_len = if line.get_char(line.len_chars() - 1).unwrap() == '\n' {
+                len - 1
+            } else {
+                len
+            };
+            let last_col = usize::min(self.left + self.width, line_len);
+            log(format!("here: {} {}", self.left, last_col));
             let line = &line.slice(self.left..last_col);
+            log(format!("line1: {} ", line));
 
             execute!(
                 stdout,
@@ -118,7 +127,11 @@ impl ViewBox {
 
         let status_message = match (mode, path) {
             (Mode::Command, _) => status_bar.buffer(),
-            (Mode::Normal, Some(path)) => format!("Editing File: \"{}\"", path.to_string_lossy()),
+            (Mode::Normal, Some(path)) => format!(
+                "Editing File: \"{}\" {}b",
+                path.to_string_lossy(),
+                std::fs::read(path)?.len()
+            ),
             (Mode::Normal, None) => "".into(),
             (Mode::Insert, _) => "-- INSERT --".into(),
             (Mode::Visual, _) => "-- VISUAL --".into(),
