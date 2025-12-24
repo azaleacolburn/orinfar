@@ -235,7 +235,7 @@ fn main() -> Result<()> {
                     count = 1;
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
-                    if buffer.cursor == 0 || buffer.rope.len_chars() <= buffer.cursor {
+                    if buffer.cursor == 0 {
                         continue;
                     }
                     buffer.delete_curr_char();
@@ -244,6 +244,12 @@ fn main() -> Result<()> {
                 (KeyCode::Char(c), Mode::Insert) => {
                     buffer.insert_char(c);
                     buffer.next_char();
+                    // buffer.cursor += 1;
+                    // panic!(
+                    //     "buffer: {:?} {}",
+                    //     buffer.rope.bytes().collect::<Vec<u8>>(),
+                    //     buffer.cursor
+                    // );
                 }
                 (KeyCode::Tab, Mode::Insert) => {
                     // NOTE
@@ -256,13 +262,13 @@ fn main() -> Result<()> {
                 }
                 (KeyCode::Enter, Mode::Insert) => {
                     buffer.insert_char('\n');
+                    // buffer.next_char();
                     buffer.cursor += 1;
                 }
 
                 (KeyCode::Char(c), Mode::Command) => {
                     status_bar.push(c);
                 }
-
                 (KeyCode::Enter, Mode::Command) => {
                     for (i, command) in status_bar.iter().enumerate().skip(1) {
                         match command {

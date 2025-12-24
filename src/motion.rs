@@ -35,14 +35,14 @@ pub fn word(buffer: &mut Buffer) {
 
     if !c.is_alphanumeric() {
         while !c.is_alphanumeric() {
-            c = unwrap_or_break!(buffer.next_char());
+            c = unwrap_or_break!(buffer.next_and_char());
         }
     } else {
         while c.is_alphanumeric() {
-            c = unwrap_or_break!(buffer.next_char());
+            c = unwrap_or_break!(buffer.next_and_char());
         }
         while c.is_whitespace() {
-            c = unwrap_or_break!(buffer.next_char());
+            c = unwrap_or_break!(buffer.next_and_char());
         }
     }
 }
@@ -80,7 +80,7 @@ pub fn end_of_word(buffer: &mut Buffer) {
 
     if !next_char.is_alphanumeric() {
         while !next_char.is_alphanumeric() {
-            next_char = unwrap_or_break!(buffer.next_char());
+            next_char = unwrap_or_break!(buffer.next_and_char());
         }
         while next_char.is_alphanumeric() {
             // Next char without wrapping lines, since newlines aren't counted

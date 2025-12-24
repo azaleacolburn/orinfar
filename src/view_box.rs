@@ -56,6 +56,7 @@ impl ViewBox {
         mode: &Mode,
         path: &Option<PathBuf>,
     ) -> Result<()> {
+        log(format!("buffer\n{}", buffer.to_string()));
         let mut stdout = stdout();
 
         let col = buffer.get_col();
@@ -125,6 +126,7 @@ impl ViewBox {
         execute!(
             stdout,
             MoveTo(1, self.height as u16 + 1),
+            SetForegroundColor(Color::White),
             Print(status_message)
         );
 

@@ -1,7 +1,11 @@
-use crate::{buffer::Buffer, log};
+use crate::{
+    buffer::{self, Buffer},
+    log,
+};
 
 impl Buffer {
     pub fn delete_curr_char(&mut self) {
+        // panic!("buffer: {:?}", self.rope.bytes().collect::<Vec<u8>>());
         self.rope.remove(self.cursor..=self.cursor);
     }
 
@@ -34,13 +38,19 @@ impl Buffer {
         }
     }
 
-    pub fn next_char(&mut self) -> Option<char> {
-        if self.cursor + 1 < self.rope.len_chars() {
+    pub fn next_and_char(&mut self) -> Option<char> {
+        if self.cursor <= self.rope.len_chars() {
             self.cursor += 1;
             return Some(self.rope.char(self.cursor));
         };
 
         None
+    }
+
+    pub fn next_char(&mut self) {
+        if self.cursor + 1 < self.rope.len_chars() {
+            self.cursor += 1;
+        }
     }
 
     pub fn get_prev_char(&self) -> Option<char> {
