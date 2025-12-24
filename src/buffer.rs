@@ -15,6 +15,7 @@ use crossterm::{
 // The cursor is always guaranteed to be within the bounds of the buffer
 #[derive(Debug, Clone, PartialEq)]
 pub struct Buffer {
+    pub has_changed: bool,
     pub rope: Rope,
     pub cursor: usize,
 }
@@ -22,6 +23,7 @@ pub struct Buffer {
 impl Buffer {
     pub fn new() -> Buffer {
         Buffer {
+            has_changed: true,
             rope: Rope::from(" "),
             cursor: 0,
         }
@@ -32,7 +34,7 @@ impl Buffer {
     }
 
     pub fn is_last_col(&self) -> bool {
-        self.cursor + 1 >= self.rope.len_chars() || self.rope.char(self.cursor + 1) == '\n'
+        self.cursor + 1 >= self.rope.len_chars() || self.rope.char(self.cursor) == '\n'
     }
 
     pub fn is_last_row(&self) -> bool {

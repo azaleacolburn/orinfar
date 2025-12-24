@@ -8,7 +8,7 @@ use crossterm::{
 };
 use std::{
     fmt::format,
-    io::{stdout, Write},
+    io::{stdout, Stdout, Write},
     path::PathBuf,
 };
 
@@ -33,35 +33,38 @@ impl ViewBox {
         }
     }
 
-    pub fn adjust(&mut self, buffer: &Buffer) {
+    pub fn adjust(&mut self, buffer: &Buffer) -> bool {
         let col = buffer.get_col();
         let row = buffer.get_row();
+        let mut adjusted = false;
 
         if self.top > row {
             self.top = row;
+            adjusted = true;
         } else if self.top + self.height <= row {
             self.top = row - self.height + 1;
+            adjusted = true;
         }
 
         if self.left > col {
             self.left = col;
+            adjusted = true;
         } else if self.left + self.width < col {
             self.left = col - self.width;
+            adjusted = true;
         }
+
+        adjusted
     }
 
-    pub fn flush(
+    fn write_buffer(
         &self,
         buffer: &Buffer,
-        status_bar: &StatusBar,
-        mode: &Mode,
-        path: &Option<PathBuf>,
+        stdout: &mut Stdout,
+        left_padding: usize,
     ) -> Result<()> {
         log(format!("buffer\n{}", buffer.to_string()));
-        let mut stdout = stdout();
 
-        let col = buffer.get_col();
-        let row = buffer.get_row();
         let lines = buffer
             .rope
             .lines()
@@ -70,41 +73,26 @@ impl ViewBox {
             .take(self.height);
 
         execute!(stdout, Hide, MoveTo(0, 0), Clear(ClearType::All))?;
-        execute!(stdout, SetForegroundColor(Color::DarkGrey));
+        let mut padding_buffer = String::with_capacity(left_padding);
 
-        let left_padding = (self.top + self.height).to_string().len();
-        (self.top..self.top + self.height)
-            .take(lines.len())
-            .for_each(|i| {
-                log(i);
-                let padding = (0..left_padding - i.to_string().len()).fold(
-                    String::with_capacity(left_padding),
-                    |mut acc, _| {
-                        acc.push(' ');
-                        acc
-                    },
-                );
-                execute!(
-                    stdout,
-                    Print(padding),
-                    Print(i),
-                    Print(' '),
-                    MoveDown(1),
-                    MoveToColumn(0)
-                );
-            });
+        lines.for_each(|(i, line)| {
+            let i_str = i.to_string();
+            for _ in 0..left_padding - i_str.len() {
+                padding_buffer.push(' ');
+            }
+            padding_buffer.push_str(&i_str);
+            padding_buffer.push(' ');
+            execute!(
+                stdout,
+                SetForegroundColor(Color::DarkGrey),
+                Print(padding_buffer.clone()),
+            );
+            padding_buffer.clear();
 
-        execute!(
-            stdout,
-            MoveTo(left_padding as u16 + 1, 0),
-            SetForegroundColor(Color::Blue)
-        );
-        lines.for_each(|(_, line)| {
             let len = line.len_chars();
             if len == 0 {
                 return;
             }
-            log(format!("line: {}", line));
 
             // We actually do want to cut off the newline here, hence the `- 1`
             let line_len = if line.get_char(line.len_chars() - 1).unwrap() == '\n' {
@@ -113,17 +101,37 @@ impl ViewBox {
                 len
             };
             let last_col = usize::min(self.left + self.width, line_len);
-            log(format!("here: {} {}", self.left, last_col));
             let line = &line.slice(self.left..last_col);
-            log(format!("line1: {} ", line));
 
             execute!(
                 stdout,
+                SetForegroundColor(Color::Blue),
                 Print(line),
                 MoveDown(1),
-                MoveToColumn(left_padding as u16 + 1)
+                MoveToColumn(0)
             );
         });
+
+        Ok(())
+    }
+
+    pub fn flush(
+        &self,
+        buffer: &Buffer,
+        status_bar: &StatusBar,
+        mode: &Mode,
+        path: &Option<PathBuf>,
+        adjusted: bool,
+    ) -> Result<()> {
+        let mut stdout = stdout();
+        let left_padding = (self.top + self.height).to_string().len();
+
+        if buffer.has_changed || adjusted {
+            self.write_buffer(buffer, &mut stdout, left_padding)?;
+        }
+
+        let col = buffer.get_col();
+        let row = buffer.get_row();
 
         let status_message = match (mode, path) {
             (Mode::Command, _) => status_bar.buffer(),

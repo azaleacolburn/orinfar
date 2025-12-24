@@ -178,6 +178,7 @@ pub fn delete(
         delete_char,
         noop,
     );
+    buffer.has_changed = true;
 }
 
 fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
@@ -216,6 +217,7 @@ pub fn change(
         delete_char,
         insert,
     );
+    buffer.has_changed = true;
 }
 
 pub fn change_until_before(
@@ -234,4 +236,5 @@ pub fn change_until_before(
         delete_char,
         insert,
     );
+    buffer.has_changed = true;
 }

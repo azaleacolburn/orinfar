@@ -51,12 +51,17 @@ pub fn append(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode
 
 pub fn cut(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
     if let Some(c) = buffer.rope.get_char(buffer.cursor) {
+        if c == '\n' {
+            return;
+        }
         register_handler.set_reg(c.to_string());
+
         buffer.rope.remove(buffer.cursor..=buffer.cursor);
-        if buffer.cursor != 0 {
+        if buffer.cursor != 0 && buffer.is_last_col() {
             buffer.cursor -= 1;
         }
     }
+    buffer.has_changed = true;
 }
 pub fn insert_new_line(
     buffer: &mut Buffer,
@@ -67,6 +72,7 @@ pub fn insert_new_line(
     buffer.rope.insert_char(buffer.cursor, '\n');
     buffer.cursor += 1;
     mode.insert();
+    buffer.has_changed = true;
 }
 
 pub fn insert_new_line_above(
@@ -80,6 +86,7 @@ pub fn insert_new_line_above(
     buffer.rope.insert_char(first, '\n');
     buffer.cursor = first;
     mode.insert();
+    buffer.has_changed = true;
 }
 
 pub fn paste(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
@@ -110,4 +117,5 @@ pub fn replace(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mo
         }
     }
     execute!(stdout(), SetCursorStyle::SteadyBlock).unwrap();
+    buffer.has_changed = true;
 }

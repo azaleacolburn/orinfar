@@ -37,7 +37,6 @@ use crossterm::{
         LeaveAlternateScreen,
     },
 };
-use ropey::Rope;
 use std::{
     fs::OpenOptions,
     io::{stdout, Write},
@@ -169,9 +168,10 @@ fn main() -> Result<()> {
 
     let (_cli, mut path) = Cli::parse_path()?;
     io::load_file(&path, &mut buffer)?;
-    view_box.flush(&mut buffer, &status_bar, &mode, &path)?;
+    view_box.flush(&mut buffer, &status_bar, &mode, &path, false)?;
 
     'main: loop {
+        buffer.has_changed = false;
         if let Event::Key(event) = read()? {
             match (event.code, mode.clone()) {
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
@@ -240,11 +240,13 @@ fn main() -> Result<()> {
                     }
                     buffer.cursor -= 1;
                     buffer.delete_curr_char();
+                    buffer.has_changed = true;
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
                     buffer.insert_char(c);
                     // if buffer.rope.len_chars() > 1 {
                     buffer.cursor += 1;
+                    buffer.has_changed = true;
                     // }
                     // buffer.next_char();
                     // panic!(
@@ -261,11 +263,13 @@ fn main() -> Result<()> {
                     (0..4).into_iter().for_each(|_| {
                         buffer.next_char();
                     });
+                    buffer.has_changed = true;
                 }
                 (KeyCode::Enter, Mode::Insert) => {
                     buffer.insert_char('\n');
                     // buffer.next_char();
                     buffer.cursor += 1;
+                    buffer.has_changed = true;
                 }
 
                 (KeyCode::Char(c), Mode::Command) => {
@@ -282,7 +286,7 @@ fn main() -> Result<()> {
                             },
                             'l' => {
                                 io::load_file(&path, &mut buffer);
-                                view_box.flush(&buffer, &status_bar, &mode, &path);
+                                view_box.flush(&buffer, &status_bar, &mode, &path, false);
                             }
                             'o' => {
                                 if status_bar.len() == i + 1 {
@@ -295,7 +299,7 @@ fn main() -> Result<()> {
                                 path = Some(path_buf);
 
                                 io::load_file(&path, &mut buffer);
-                                view_box.flush(&buffer, &status_bar, &mode, &path);
+                                view_box.flush(&buffer, &status_bar, &mode, &path, false);
 
                                 break;
                             }
@@ -400,8 +404,8 @@ fn main() -> Result<()> {
                 _ => continue,
             };
 
-            view_box.adjust(&buffer);
-            view_box.flush(&buffer, &status_bar, &mode, &path)?;
+            let adjusted = view_box.adjust(&buffer);
+            view_box.flush(&buffer, &status_bar, &mode, &path, adjusted)?;
         }
     }
 
