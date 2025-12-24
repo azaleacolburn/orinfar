@@ -238,13 +238,15 @@ fn main() -> Result<()> {
                     if buffer.cursor == 0 {
                         continue;
                     }
-                    buffer.delete_curr_char();
                     buffer.cursor -= 1;
+                    buffer.delete_curr_char();
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
                     buffer.insert_char(c);
-                    buffer.next_char();
-                    // buffer.cursor += 1;
+                    // if buffer.rope.len_chars() > 1 {
+                    buffer.cursor += 1;
+                    // }
+                    // buffer.next_char();
                     // panic!(
                     //     "buffer: {:?} {}",
                     //     buffer.rope.bytes().collect::<Vec<u8>>(),

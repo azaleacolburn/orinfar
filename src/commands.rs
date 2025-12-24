@@ -1,4 +1,4 @@
-use crate::{buffer::Buffer, buffer_line, register::RegisterHandler, Mode};
+use crate::{buffer::Buffer, register::RegisterHandler, Mode};
 use crossterm::{
     cursor::SetCursorStyle,
     event::{read, Event, KeyCode},
@@ -51,14 +51,13 @@ pub fn append(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode
 
 pub fn cut(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
     if let Some(c) = buffer.rope.get_char(buffer.cursor) {
-        if c == '\n' {
-            return;
-        }
         register_handler.set_reg(c.to_string());
         buffer.rope.remove(buffer.cursor..=buffer.cursor);
+        if buffer.cursor != 0 {
+            buffer.cursor -= 1;
+        }
     }
 }
-
 pub fn insert_new_line(
     buffer: &mut Buffer,
     _register_handler: &mut RegisterHandler,
