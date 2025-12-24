@@ -63,8 +63,6 @@ impl ViewBox {
         stdout: &mut Stdout,
         left_padding: usize,
     ) -> Result<()> {
-        log(format!("buffer\n{}", buffer.to_string()));
-
         let lines = buffer
             .rope
             .lines()
@@ -146,8 +144,9 @@ impl ViewBox {
         };
         execute!(
             stdout,
-            MoveTo(1, self.height as u16 + 1),
             SetForegroundColor(Color::White),
+            MoveTo(0, self.height as u16 + 1),
+            Clear(ClearType::CurrentLine),
             Print(status_message)
         );
 
