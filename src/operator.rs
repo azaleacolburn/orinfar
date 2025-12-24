@@ -178,7 +178,9 @@ pub fn delete(
         delete_char,
         noop,
     );
-    buffer.has_changed = true;
+    // TODO
+    // Currently using the 'd' command across lines will break because of this
+    buffer.update_list_use_current_line();
 }
 
 fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
@@ -217,7 +219,7 @@ pub fn change(
         delete_char,
         insert,
     );
-    buffer.has_changed = true;
+    buffer.update_list_use_current_line();
 }
 
 pub fn change_until_before(
@@ -236,5 +238,5 @@ pub fn change_until_before(
         delete_char,
         insert,
     );
-    buffer.has_changed = true;
+    buffer.update_list_use_current_line();
 }

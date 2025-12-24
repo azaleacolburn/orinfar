@@ -3,6 +3,8 @@ use ropey::Rope;
 use std::{
     fmt::Display,
     io::{stdout, Write},
+    ops::{IndexMut, Range, RangeBounds, RangeTo},
+    slice::SliceIndex,
 };
 
 use crossterm::{
@@ -12,10 +14,13 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 
+use crate::buffer;
+
 // The cursor is always guaranteed to be within the bounds of the buffer
 #[derive(Debug, Clone, PartialEq)]
 pub struct Buffer {
     pub has_changed: bool,
+    pub lines_for_updating: Vec<bool>,
     pub rope: Rope,
     pub cursor: usize,
 }
@@ -24,6 +29,7 @@ impl Buffer {
     pub fn new() -> Buffer {
         Buffer {
             has_changed: true,
+            lines_for_updating: vec![true],
             rope: Rope::from(" "),
             cursor: 0,
         }

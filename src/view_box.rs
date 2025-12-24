@@ -63,17 +63,34 @@ impl ViewBox {
         stdout: &mut Stdout,
         left_padding: usize,
     ) -> Result<()> {
+        log("in flush");
+        log(format!("update_list: {:?}", buffer.lines_for_updating));
+        log(format!(
+            "lines: {:?}",
+            buffer
+                .rope
+                .lines()
+                .map(|l| l.to_string())
+                .collect::<Vec<String>>()
+        ));
         let lines = buffer
             .rope
             .lines()
+            .zip(buffer.lines_for_updating.iter())
             .enumerate()
             .skip(self.top)
             .take(self.height);
+        let len_lines = lines.len();
 
-        execute!(stdout, Hide, MoveTo(0, 0), Clear(ClearType::All))?;
+        execute!(stdout, Hide, MoveTo(0, 0))?;
         let mut padding_buffer = String::with_capacity(left_padding);
 
-        lines.for_each(|(i, line)| {
+        lines.for_each(|(i, (line, should_update))| {
+            if !should_update {
+                execute!(stdout, MoveDown(1));
+                return;
+            }
+
             let i_str = i.to_string();
             for _ in 0..left_padding - i_str.len() {
                 padding_buffer.push(' ');
@@ -82,6 +99,7 @@ impl ViewBox {
             padding_buffer.push(' ');
             execute!(
                 stdout,
+                Clear(ClearType::CurrentLine),
                 SetForegroundColor(Color::DarkGrey),
                 Print(padding_buffer.clone()),
             );
@@ -109,6 +127,14 @@ impl ViewBox {
                 MoveToColumn(0)
             );
         });
+
+        // This is for clearing trailing lines that we missed
+        if len_lines < self.height {
+            execute!(stdout, MoveTo(0, len_lines as u16));
+            (len_lines..self.height).for_each(|_| {
+                execute!(stdout, Clear(ClearType::CurrentLine), MoveDown(1)).unwrap()
+            });
+        };
 
         Ok(())
     }

@@ -6,6 +6,7 @@ mod utility;
 mod buffer;
 mod buffer_char;
 mod buffer_line;
+mod buffer_update;
 mod commands;
 mod io;
 mod motion;
@@ -171,7 +172,8 @@ fn main() -> Result<()> {
     view_box.flush(&mut buffer, &status_bar, &mode, &path, false)?;
 
     'main: loop {
-        buffer.has_changed = false;
+        buffer.update_list_reset();
+
         if let Event::Key(event) = read()? {
             match (event.code, mode.clone()) {
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
@@ -240,13 +242,13 @@ fn main() -> Result<()> {
                     }
                     buffer.cursor -= 1;
                     buffer.delete_curr_char();
-                    buffer.has_changed = true;
+                    buffer.update_list_use_current_line();
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
                     buffer.insert_char(c);
                     // if buffer.rope.len_chars() > 1 {
                     buffer.cursor += 1;
-                    buffer.has_changed = true;
+                    buffer.update_list_use_current_line();
                     // }
                     // buffer.next_char();
                     // panic!(
@@ -263,13 +265,14 @@ fn main() -> Result<()> {
                     (0..4).into_iter().for_each(|_| {
                         buffer.next_char();
                     });
-                    buffer.has_changed = true;
+                    buffer.update_list_use_current_line();
                 }
                 (KeyCode::Enter, Mode::Insert) => {
+                    buffer.update_list_add_current();
+
                     buffer.insert_char('\n');
                     // buffer.next_char();
                     buffer.cursor += 1;
-                    buffer.has_changed = true;
                 }
 
                 (KeyCode::Char(c), Mode::Command) => {

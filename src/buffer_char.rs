@@ -1,11 +1,11 @@
-use crate::{
-    buffer::{self, Buffer},
-    log,
-};
+use crate::{buffer::Buffer, log};
 
 impl Buffer {
     pub fn delete_curr_char(&mut self) {
         // panic!("buffer: {:?}", self.rope.bytes().collect::<Vec<u8>>());
+        if self.get_curr_char() == '\n' {
+            self.update_list_remove_current();
+        }
         self.rope.remove(self.cursor..=self.cursor);
     }
 
@@ -15,10 +15,16 @@ impl Buffer {
     }
 
     pub fn insert_char(&mut self, c: char) {
+        if c == '\n' {
+            self.update_list_add_current();
+        }
         self.rope.insert_char(self.cursor, c);
     }
 
     pub fn insert_char_n_times(&mut self, c: char, n: u8) {
+        if c == '\n' {
+            (0..n).for_each(|_| self.update_list_add_current());
+        }
         (0..n).for_each(|_| self.insert_char(c));
     }
 

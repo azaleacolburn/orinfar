@@ -8,21 +8,11 @@ impl Buffer {
 
     /// Removes the line represented by the given `line_idx`
     pub fn remove_n_line(&mut self, line_idx: usize) {
+        self.update_list_remove(line_idx);
+
         let start_index = self.get_start_of_n_line(line_idx);
         let end_index = self.get_end_of_n_line(line_idx);
         self.rope.remove(start_index..=end_index)
-    }
-
-    /// Removes the line that the given `char_idx` is on
-    pub fn remove_char_line(&mut self, char_idx: usize) {
-        let start_index = self.get_start_of_char_line(char_idx);
-        let end_index = self.get_end_of_n_line(char_idx);
-        self.rope.remove(start_index..=end_index)
-    }
-
-    /// Remives the current line from the buffer
-    pub fn remove_curr_line(&mut self) {
-        self.remove_char_line(self.cursor)
     }
 
     /// Returns the number of lines in the buffer
@@ -115,14 +105,6 @@ impl Buffer {
     pub fn find_char_in_current_line(&self, c: char) -> Option<usize> {
         let line = self.get_curr_line();
         line.chars().position(|ch| ch == c)
-    }
-
-    pub fn push_line(&mut self, line: &str) {
-        self.rope.append(Rope::from(line));
-    }
-
-    pub fn push_slice(&mut self, rope: RopeSlice<'_>) {
-        self.rope.append(rope.into());
     }
 
     pub fn get_curr_line(&self) -> RopeSlice<'_> {
