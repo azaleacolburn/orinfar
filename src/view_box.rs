@@ -3,7 +3,7 @@ use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn, MoveToRow, Show},
     execute,
-    style::Print,
+    style::{Color, Print, SetForegroundColor},
     terminal::{Clear, ClearType},
 };
 use std::{
@@ -28,7 +28,7 @@ impl ViewBox {
             top: 0,
             height: rows as usize - 1, // Reserve one for the status bar
             left: 0,
-            width: cols as usize,
+            width: cols as usize - 1,
         }
     }
 
@@ -60,24 +60,61 @@ impl ViewBox {
 
         let col = buffer.get_col();
         let row = buffer.get_row();
-        let lines = buffer.rope.lines().skip(self.top).take(self.height);
+        let lines = buffer
+            .rope
+            .lines()
+            .enumerate()
+            .skip(self.top)
+            .take(self.height);
 
         execute!(stdout, Hide, MoveTo(0, 0), Clear(ClearType::All))?;
-        lines.for_each(|line| {
+        execute!(stdout, SetForegroundColor(Color::DarkGrey));
+
+        let left_padding = (self.top + self.height).to_string().len();
+        (self.top..self.top + self.height)
+            .take(lines.len())
+            .for_each(|i| {
+                log(i);
+                let padding = (0..left_padding - i.to_string().len()).fold(
+                    String::with_capacity(left_padding),
+                    |mut acc, _| {
+                        acc.push(' ');
+                        acc
+                    },
+                );
+                execute!(
+                    stdout,
+                    Print(padding),
+                    Print(i),
+                    Print(' '),
+                    MoveDown(1),
+                    MoveToColumn(0)
+                );
+            });
+
+        execute!(
+            stdout,
+            MoveTo(left_padding as u16 + 1, 0),
+            SetForegroundColor(Color::Blue)
+        );
+        lines.for_each(|(_, line)| {
             let len = line.len_chars();
             if len == 0 {
                 return;
             }
 
-            // NOTE
             // We actually do want to cut off the newline here, hence the `- 1`
             let last_col = usize::min(self.left + self.width, len - 1);
             let line = &line.slice(self.left..last_col);
 
-            execute!(stdout, Print(line));
-            execute!(stdout, MoveDown(1));
-            execute!(stdout, MoveToColumn(0));
+            execute!(
+                stdout,
+                Print(line),
+                MoveDown(1),
+                MoveToColumn(left_padding as u16 + 1)
+            );
         });
+
         let status_message = match (mode, path) {
             (Mode::Command, _) => status_bar.buffer(),
             (Mode::Normal, Some(path)) => format!("Editing File: \"{}\"", path.to_string_lossy()),
@@ -85,10 +122,9 @@ impl ViewBox {
             (Mode::Insert, _) => "-- INSERT --".into(),
             (Mode::Visual, _) => "-- VISUAL --".into(),
         };
-
         execute!(
             stdout,
-            MoveToRow(self.height as u16 + 1),
+            MoveTo(1, self.height as u16 + 1),
             Print(status_message)
         );
 
@@ -96,11 +132,11 @@ impl ViewBox {
             Mode::Command => (status_bar.idx() as u16, (self.height + 1) as u16),
             _ => {
                 let row = row - self.top;
-                let col = col - self.left;
+                let col = col - self.left + left_padding + 1;
                 (col as u16, row as u16)
             }
         };
-        execute!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show);
+        execute!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
         stdout.flush()?;
 
         Ok(())

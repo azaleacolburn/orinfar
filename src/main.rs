@@ -42,6 +42,7 @@ use std::{
     fs::OpenOptions,
     io::{stdout, Write},
     path::PathBuf,
+    u16,
 };
 
 #[derive(Clone, Debug)]
@@ -77,6 +78,29 @@ fn cleanup() -> Result<()> {
     Ok(())
 }
 
+fn setup(rows: u16, cols: u16) -> Result<()> {
+    execute!(
+        stdout(),
+        EnterAlternateScreen,
+        Clear(ClearType::All),
+        MoveToRow(0),
+        SetForegroundColor(Color::Blue),
+    )?;
+
+    // Fill entire screen with spaces with the background color
+    for row in 0..rows {
+        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+    }
+    execute!(stdout(), MoveTo(0, 0))?;
+    for row in 0..rows {
+        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+    }
+    execute!(stdout(), MoveTo(0, 0))?;
+    enable_raw_mode()?;
+
+    Ok(())
+}
+
 fn log(contents: impl ToString) {
     let mut file = OpenOptions::new()
         .append(true)
@@ -97,7 +121,6 @@ fn main() -> Result<()> {
     let _leader = ' ';
 
     let mut register_handler = RegisterHandler::new();
-
     let mut buffer: Buffer = Buffer::new();
     let mut status_bar: StatusBar = StatusBar::new();
 
@@ -138,25 +161,7 @@ fn main() -> Result<()> {
 
     let (cols, rows) = size()?;
     let mut view_box: ViewBox = ViewBox::new(cols, rows);
-
-    execute!(
-        stdout,
-        EnterAlternateScreen,
-        Clear(ClearType::All),
-        MoveToRow(0),
-        SetForegroundColor(Color::Blue),
-    )?;
-
-    // Fill entire screen with spaces with the background color
-    for row in 0..rows {
-        execute!(stdout, MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
-    }
-    execute!(stdout, MoveTo(0, 0))?;
-    for row in 0..rows {
-        execute!(stdout, MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
-    }
-    execute!(stdout, MoveTo(0, 0))?;
-    enable_raw_mode()?;
+    setup(rows, cols);
 
     let mut mode = Mode::Normal;
     let mut count: u16 = 1;
@@ -167,9 +172,6 @@ fn main() -> Result<()> {
     view_box.flush(&mut buffer, &status_bar, &mode, &path)?;
 
     'main: loop {
-        if buffer.rope.len_chars() == 0 {
-            buffer.rope = Rope::from(" ");
-        }
         if let Event::Key(event) = read()? {
             match (event.code, mode.clone()) {
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
@@ -183,8 +185,6 @@ fn main() -> Result<()> {
                 (KeyCode::Char(':'), Mode::Normal) => {
                     mode = Mode::Command;
                     status_bar.push(':');
-
-                    // NOTE I had some stuff here earlier but I'm not sure what I was doing D:
                 }
 
                 (KeyCode::Char(c), Mode::Normal) => {
@@ -292,7 +292,7 @@ fn main() -> Result<()> {
                                 break;
                             }
                             'q' => break 'main,
-                            '%' => {
+                            's' => {
                                 if status_bar[i..].len() == 1 {
                                     break;
                                 }
@@ -325,6 +325,21 @@ fn main() -> Result<()> {
                                     buffer.rope.insert(idx - original.len(), &new);
                                 });
                                 break;
+                            }
+                            n if n.is_numeric() => {
+                                let num_str = status_bar[i..].iter().collect::<String>();
+                                let num: usize = match num_str.parse() {
+                                    Ok(n) => n,
+                                    Err(err) => {
+                                        log(format!(
+                                            "Failed to parse number: {} ({})",
+                                            num_str, err
+                                        ));
+                                        break;
+                                    }
+                                };
+
+                                buffer.set_row(num + 1);
                             }
                             c => log(format!("Unknown Meta-Command: {}", c)),
                         }

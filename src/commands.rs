@@ -45,8 +45,8 @@ pub fn insert(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mod
 pub fn append(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
     if buffer.cursor != buffer.rope.len_chars() {
         buffer.cursor += 1;
-        mode.insert();
     }
+    mode.insert();
 }
 
 pub fn cut(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
@@ -64,6 +64,7 @@ pub fn insert_new_line(
     _register_handler: &mut RegisterHandler,
     mode: &mut Mode,
 ) {
+    buffer.end_of_line();
     buffer.rope.insert_char(buffer.cursor, '\n');
     buffer.cursor += 1;
     mode.insert();
@@ -76,8 +77,7 @@ pub fn insert_new_line_above(
 ) {
     let first = buffer
         .rope
-        .line_to_char(buffer.rope.char_to_line(buffer.cursor))
-        - 1;
+        .line_to_char(buffer.rope.char_to_line(buffer.cursor));
     buffer.rope.insert_char(first, '\n');
     buffer.cursor = first;
     mode.insert();
