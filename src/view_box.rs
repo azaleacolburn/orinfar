@@ -7,7 +7,6 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 use std::{
-    fmt::format,
     io::{Stdout, Write, stdout},
     path::PathBuf,
 };

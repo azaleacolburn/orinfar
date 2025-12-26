@@ -1,10 +1,10 @@
 use anyhow::{Result, bail};
 use ropey::Rope;
-use std::{fs::File, io::BufReader, path::PathBuf};
+use std::path::PathBuf;
 
 use clap::Parser;
 
-use crate::{buffer::Buffer, log, status_bar::StatusBar, view_box::ViewBox};
+use crate::buffer::Buffer;
 
 #[derive(Parser)]
 pub struct Cli {

@@ -1,5 +1,5 @@
 use crate::{buffer::Buffer, log};
-use ropey::{Rope, RopeSlice};
+use ropey::RopeSlice;
 
 impl Buffer {
     pub fn is_empty_line(&self) -> bool {

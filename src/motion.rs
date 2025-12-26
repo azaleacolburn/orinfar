@@ -1,7 +1,7 @@
 use crossterm::event::KeyCode;
 
 use crate::{
-    buffer::{self, Buffer},
+    buffer::Buffer,
     log, on_next_input_buffer_only,
 };
 

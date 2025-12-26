@@ -1,20 +1,7 @@
-use anyhow::Result;
 use ropey::Rope;
-use std::{
-    fmt::Display,
-    io::{Write, stdout},
-    ops::{IndexMut, Range, RangeBounds, RangeTo},
-    slice::SliceIndex,
-};
+use std::fmt::Display;
 
-use crossterm::{
-    cursor::{MoveDown, MoveTo, MoveToColumn},
-    execute,
-    style::Print,
-    terminal::{Clear, ClearType},
-};
 
-use crate::buffer;
 
 // The cursor is always guaranteed to be within the bounds of the buffer
 #[derive(Debug, Clone, PartialEq)]
