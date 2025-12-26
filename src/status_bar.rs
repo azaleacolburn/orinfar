@@ -27,11 +27,11 @@ impl StatusBar {
     }
 
     pub fn delete(&mut self) {
-        if self.idx == 0 {
+        if self.idx <= 1 {
             return;
         }
 
-        self.buffer.remove(self.idx);
+        self.buffer.remove(self.idx - 1);
         self.idx -= 1;
     }
 

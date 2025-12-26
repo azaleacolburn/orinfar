@@ -4,7 +4,7 @@ use std::{fs::File, io::BufReader, path::PathBuf};
 
 use clap::Parser;
 
-use crate::{buffer::Buffer, status_bar::StatusBar, view_box::ViewBox};
+use crate::{buffer::Buffer, log, status_bar::StatusBar, view_box::ViewBox};
 
 #[derive(Parser)]
 pub struct Cli {
@@ -39,9 +39,8 @@ pub fn load_file(path: &Option<PathBuf>, buffer: &mut Buffer) -> Result<()> {
     if let Some(path) = path {
         let contents = std::fs::read_to_string(path)?;
         buffer.rope = Rope::from(contents);
-        buffer.lines_for_updating = (0..buffer.rope.len_lines())
-            .map(|_| true)
-            .collect::<Vec<bool>>();
+        buffer.lines_for_updating = (0..buffer.len()).map(|_| true).collect::<Vec<bool>>();
+        buffer.has_changed = true;
     }
 
     Ok(())
