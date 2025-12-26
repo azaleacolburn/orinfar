@@ -134,15 +134,15 @@ fn main() -> Result<()> {
         Cmd::new(&['r'], replace),
     ];
     let operators: &[Operator] = &[
-        Operator::new(&['y'], yank),
         Operator::new(&['d'], delete),
+        Operator::new(&['y'], yank),
         Operator::new(&['c'], change),
         Operator::new(&['t'], change_until_before),
     ];
     let motions: &[Motion] = &[
         Motion::new(&['w'], word),
-        Motion::new(&['e'], end_of_word),
         Motion::new(&['b'], back),
+        Motion::new(&['e'], end_of_word),
         Motion::new(&['$'], end_of_line),
         Motion::new(&['_'], beginning_of_line),
         Motion::new(&['f'], find),
@@ -407,7 +407,7 @@ fn main() -> Result<()> {
                 _ => continue,
             };
 
-            let adjusted = view_box.adjust(&mut buffer);
+            let adjusted = view_box.adjust(&buffer);
             view_box.flush(&buffer, &status_bar, &mode, &path, adjusted)?;
         }
     }
