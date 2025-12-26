@@ -100,26 +100,11 @@ impl Buffer {
         self.get_end_of_n_line(line)
     }
 
-    /// Returns the last column in the current line
-    /// NOT the absolute index
-    pub fn get_last_col_of_line(&self) -> usize {
-        let end_of_line = self.get_end_of_line();
-        let start_of_line = self.get_start_of_line();
-
-        let len = self.rope.len_chars();
-        let len = if len == 0 { len } else { len - 1 };
-
-        if end_of_line == len && start_of_line != end_of_line {
-            end_of_line - start_of_line - 1
-        } else {
-            end_of_line - start_of_line
-        }
-    }
-
+    /// Called by the '$' motion
     pub fn end_of_line(&mut self) {
-        let end_of_line = self.get_last_col_of_line();
+        let end_of_line = self.get_end_of_line();
         log(format!("end_of_line: {}", end_of_line));
-        self.set_col(end_of_line);
+        self.cursor = end_of_line;
     }
 
     pub fn get_until_end_of_line(&self) -> RopeSlice<'_> {

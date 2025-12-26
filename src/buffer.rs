@@ -2,7 +2,7 @@ use anyhow::Result;
 use ropey::Rope;
 use std::{
     fmt::Display,
-    io::{stdout, Write},
+    io::{Write, stdout},
     ops::{IndexMut, Range, RangeBounds, RangeTo},
     slice::SliceIndex,
 };
@@ -30,7 +30,7 @@ impl Buffer {
         Buffer {
             has_changed: true,
             lines_for_updating: vec![true],
-            rope: Rope::from(" "),
+            rope: Rope::from(""),
             cursor: 0,
         }
     }

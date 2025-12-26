@@ -1,4 +1,4 @@
-use crate::{buffer::Buffer, log, status_bar::StatusBar, Mode};
+use crate::{Mode, buffer::Buffer, log, status_bar::StatusBar};
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn, MoveToRow, Show},
@@ -8,7 +8,7 @@ use crossterm::{
 };
 use std::{
     fmt::format,
-    io::{stdout, Stdout, Write},
+    io::{Stdout, Write, stdout},
     path::PathBuf,
 };
 
@@ -33,7 +33,7 @@ impl ViewBox {
         }
     }
 
-    pub fn adjust(&mut self, buffer: &Buffer) -> bool {
+    pub fn adjust(&mut self, buffer: &mut Buffer) -> bool {
         let col = buffer.get_col();
         let row = buffer.get_row();
         let mut adjusted = false;
@@ -52,6 +52,10 @@ impl ViewBox {
         } else if self.left + self.width < col {
             self.left = col - self.width;
             adjusted = true;
+        }
+
+        if adjusted {
+            buffer.update_list_set(.., true);
         }
 
         adjusted

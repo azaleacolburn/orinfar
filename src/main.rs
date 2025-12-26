@@ -407,7 +407,7 @@ fn main() -> Result<()> {
                 _ => continue,
             };
 
-            let adjusted = view_box.adjust(&buffer);
+            let adjusted = view_box.adjust(&mut buffer);
             view_box.flush(&buffer, &status_bar, &mode, &path, adjusted)?;
         }
     }

@@ -39,6 +39,9 @@ pub fn load_file(path: &Option<PathBuf>, buffer: &mut Buffer) -> Result<()> {
     if let Some(path) = path {
         let contents = std::fs::read_to_string(path)?;
         buffer.rope = Rope::from(contents);
+        buffer.lines_for_updating = (0..buffer.rope.len_lines())
+            .map(|_| true)
+            .collect::<Vec<bool>>();
     }
 
     Ok(())

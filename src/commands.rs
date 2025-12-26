@@ -97,7 +97,15 @@ pub fn insert_new_line_above(
 
 pub fn paste(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
     let contents = &register_handler.get_reg();
+
+    let line_idx = buffer.get_row();
+    contents
+        .chars()
+        .filter(|c| *c == '\n')
+        .for_each(|_| buffer.update_list_add(line_idx));
+
     buffer.rope.insert(buffer.cursor, contents);
+    buffer.update_list_use_current_line();
 }
 
 pub fn crash(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {

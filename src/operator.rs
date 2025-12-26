@@ -1,4 +1,4 @@
-use crate::{buffer::Buffer, log, motion::Motion, register::RegisterHandler, Mode};
+use crate::{Mode, buffer::Buffer, log, motion::Motion, register::RegisterHandler};
 
 pub struct Operator<'a> {
     pub name: &'a [char],
