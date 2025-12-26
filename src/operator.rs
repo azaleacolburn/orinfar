@@ -44,11 +44,12 @@ impl<'a> Operator<'a> {
         let len = buffer.get_curr_line().len_chars();
 
         let start_of_line = buffer.get_start_of_line();
-        buffer.cursor = start_of_line;
         let end_of_line = buffer.get_end_of_line();
+        buffer.cursor = start_of_line;
+
         (self.command)(end_of_line, buffer, register_handler, mode);
 
-        if (0..buffer.rope.len_chars()).contains(&anchor) {
+        if (0..len).contains(&anchor) {
             buffer.cursor = anchor;
         }
     }
