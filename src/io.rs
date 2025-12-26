@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use ropey::Rope;
 use std::{fs::File, io::BufReader, path::PathBuf};
 
@@ -36,7 +36,7 @@ impl Cli {
 }
 
 pub fn load_file(path: &Option<PathBuf>, buffer: &mut Buffer) -> Result<()> {
-    if let Some(ref path) = path {
+    if let Some(path) = path {
         let contents = std::fs::read_to_string(path)?;
         buffer.rope = Rope::from(contents);
     }

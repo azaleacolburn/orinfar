@@ -30,6 +30,29 @@ impl Buffer {
         self.rope.line_to_char(self.rope.char_to_line(char_idx))
     }
 
+    pub fn get_first_non_whitespace_col(&self) -> usize {
+        let mut start_of_line = self.get_start_of_line();
+        while let Some(c) = self.rope.get_char(start_of_line)
+            && c.is_whitespace()
+        {
+            start_of_line += 1;
+        }
+
+        start_of_line
+    }
+
+    pub fn first_non_whitespace_col(&self) -> usize {
+        let mut start_of_line = self.get_start_of_line();
+        let anchor = start_of_line;
+        while let Some(c) = self.rope.get_char(start_of_line)
+            && c.is_whitespace()
+        {
+            start_of_line += 1;
+        }
+
+        start_of_line - anchor
+    }
+
     pub fn get_start_of_line(&self) -> usize {
         log(format!(
             "get_start_of_line cursor: {}, {:?}",
@@ -83,7 +106,14 @@ impl Buffer {
         let end_of_line = self.get_end_of_line();
         let start_of_line = self.get_start_of_line();
 
-        end_of_line - start_of_line
+        let len = self.rope.len_chars();
+        let len = if len == 0 { len } else { len - 1 };
+
+        if end_of_line == len && start_of_line != end_of_line {
+            end_of_line - start_of_line - 1
+        } else {
+            end_of_line - start_of_line
+        }
     }
 
     pub fn end_of_line(&mut self) {

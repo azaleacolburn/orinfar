@@ -14,6 +14,7 @@ impl Buffer {
         self.rope.insert(self.cursor, &c.to_string());
     }
 
+    // Inserts a character at the current position
     pub fn insert_char(&mut self, c: char) {
         if c == '\n' {
             self.update_list_add_current();

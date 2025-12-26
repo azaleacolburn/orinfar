@@ -20,8 +20,8 @@ use crate::{
     buffer::Buffer,
     commands::{append, cut, insert, insert_new_line, insert_new_line_above, paste, replace},
     io::Cli,
-    motion::{back, beginning_of_line, end_of_line, end_of_word, find, word, Motion},
-    operator::{change, change_until_before, delete, yank, Operator},
+    motion::{Motion, back, beginning_of_line, end_of_line, end_of_word, find, word},
+    operator::{Operator, change, change_until_before, delete, yank},
     register::RegisterHandler,
     status_bar::StatusBar,
     view_box::ViewBox,
@@ -30,17 +30,17 @@ use anyhow::Result;
 use commands::Command as Cmd;
 use crossterm::{
     cursor::{MoveTo, MoveToRow, SetCursorStyle},
-    event::{read, Event, KeyCode},
+    event::{Event, KeyCode, read},
     execute,
     style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{
-        disable_raw_mode, enable_raw_mode, size, Clear, ClearType, EnterAlternateScreen,
-        LeaveAlternateScreen,
+        Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
+        enable_raw_mode, size,
     },
 };
 use std::{
     fs::OpenOptions,
-    io::{stdout, Write},
+    io::{Write, stdout},
     path::PathBuf,
     u16,
 };

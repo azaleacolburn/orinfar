@@ -1,7 +1,7 @@
-use crate::{buffer::Buffer, register::RegisterHandler, Mode};
+use crate::{Mode, buffer::Buffer, log, register::RegisterHandler};
 use crossterm::{
     cursor::SetCursorStyle,
-    event::{read, Event, KeyCode},
+    event::{Event, KeyCode, read},
     execute,
 };
 use std::io::stdout;
@@ -60,8 +60,8 @@ pub fn cut(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &
         if buffer.cursor != 0 && buffer.is_last_col() {
             buffer.cursor -= 1;
         }
+        buffer.update_list_use_current_line();
     }
-    buffer.has_changed = true;
 }
 pub fn insert_new_line(
     buffer: &mut Buffer,
@@ -69,10 +69,15 @@ pub fn insert_new_line(
     mode: &mut Mode,
 ) {
     buffer.end_of_line();
-    buffer.rope.insert_char(buffer.cursor, '\n');
+    log(format!(
+        "buffer: {:?}\n len: {} cursor: {}",
+        buffer.rope.to_string(),
+        buffer.rope.len_chars(),
+        buffer.cursor
+    ));
+    buffer.insert_char('\n');
     buffer.cursor += 1;
     mode.insert();
-    buffer.has_changed = true;
 }
 
 pub fn insert_new_line_above(
@@ -80,10 +85,11 @@ pub fn insert_new_line_above(
     _register_handler: &mut RegisterHandler,
     mode: &mut Mode,
 ) {
-    let first = buffer
-        .rope
-        .line_to_char(buffer.rope.char_to_line(buffer.cursor));
+    let line_idx = buffer.rope.char_to_line(buffer.cursor);
+    let first = buffer.rope.line_to_char(line_idx);
+    buffer.update_list_add(line_idx);
     buffer.rope.insert_char(first, '\n');
+
     buffer.cursor = first;
     mode.insert();
     buffer.has_changed = true;

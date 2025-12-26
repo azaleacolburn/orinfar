@@ -28,20 +28,26 @@ impl<'a> Motion<'a> {
 }
 
 pub fn word(buffer: &mut Buffer) {
-    if buffer.get_curr_line().len_chars() == buffer.cursor {
+    // panic!(
+    //     "line len: {} cursor: {}",
+    //     buffer.get_curr_line().len_chars(),
+    //     buffer.cursor
+    // );
+    if buffer.get_curr_line().len_chars() - 1 == buffer.cursor {
         return;
     }
     let mut c = buffer.get_curr_char();
 
+    // This has to be `- 2` because we don't want to get rid of the trailing space
     if !c.is_alphanumeric() {
-        while !c.is_alphanumeric() {
+        while !c.is_alphanumeric() && buffer.cursor != buffer.get_curr_line().len_chars() - 2 {
             c = unwrap_or_break!(buffer.next_and_char());
         }
     } else {
         while c.is_alphanumeric() {
             c = unwrap_or_break!(buffer.next_and_char());
         }
-        while c.is_whitespace() {
+        while c.is_whitespace() && buffer.cursor != buffer.get_curr_line().len_chars() - 2 {
             c = unwrap_or_break!(buffer.next_and_char());
         }
     }
@@ -104,7 +110,7 @@ pub fn end_of_line(buffer: &mut Buffer) {
 }
 
 pub fn beginning_of_line(buffer: &mut Buffer) {
-    buffer.start_of_line();
+    buffer.set_col(buffer.first_non_whitespace_col());
 }
 
 pub fn find(buffer: &mut Buffer) {
