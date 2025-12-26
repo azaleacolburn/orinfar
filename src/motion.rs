@@ -1,6 +1,6 @@
 use crossterm::event::KeyCode;
 
-use crate::{buffer::Buffer, on_next_input_buffer_only};
+use crate::{buffer::Buffer, log, on_next_input_buffer_only};
 
 pub struct Motion<'a> {
     pub name: &'a [char],
@@ -28,26 +28,23 @@ impl<'a> Motion<'a> {
 }
 
 pub fn word(buffer: &mut Buffer) {
-    // panic!(
-    //     "line len: {} cursor: {}",
-    //     buffer.get_curr_line().len_chars(),
-    //     buffer.cursor
-    // );
     if buffer.get_curr_line().len_chars() - 1 == buffer.cursor {
         return;
     }
     let mut c = buffer.get_curr_char();
 
+    let last_legal_char = buffer.get_curr_line().len_chars() - 1;
+
     // This has to be `- 2` because we don't want to get rid of the trailing space
     if !c.is_alphanumeric() {
-        while !c.is_alphanumeric() && buffer.cursor != buffer.get_curr_line().len_chars() - 2 {
+        while !c.is_alphanumeric() && buffer.cursor != last_legal_char {
             c = unwrap_or_break!(buffer.next_and_char());
         }
     } else {
-        while c.is_alphanumeric() {
+        while c.is_alphanumeric() && buffer.cursor != last_legal_char {
             c = unwrap_or_break!(buffer.next_and_char());
         }
-        while c.is_whitespace() && buffer.cursor != buffer.get_curr_line().len_chars() - 2 {
+        while c.is_whitespace() && buffer.cursor != last_legal_char {
             c = unwrap_or_break!(buffer.next_and_char());
         }
     }
