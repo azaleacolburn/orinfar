@@ -126,3 +126,63 @@ pub fn find(buffer: &mut Buffer) {
 
     on_next_input_buffer_only(buffer, find).unwrap();
 }
+
+// Goes to the opposite bracket corresponding to the next bracket in the line (inclusive with  the
+// current character).
+pub fn next_corresponding_bracket(buffer: &mut Buffer) {
+    let anchor = buffer.cursor;
+    let end_of_line = buffer.get_end_of_line();
+
+    let mut c = buffer.get_curr_char();
+
+    while c != '{' && c != '[' && c != '(' && c != ')' && c != ']' && c != '}' {
+        if end_of_line > buffer.cursor {
+            buffer.cursor += 1;
+            c = buffer.get_curr_char();
+        } else {
+            buffer.cursor = anchor;
+            return;
+        }
+    }
+
+    let end_of_file = buffer.rope.len_chars();
+    let mut count = 0;
+    let start_character = c;
+    let (search_character, direction): (char, i32) = match c {
+        '{' => ('}', 1),
+        '[' => (']', 1),
+        '(' => (')', 1),
+        '}' => ('{', -1),
+        ']' => ('[', -1),
+        ')' => ('(', -1),
+        _ => panic!("Bug in next_bracket function"),
+    };
+
+    // TODO
+    // There's probably a better way to do this
+    let condition: Box<dyn Fn(usize) -> bool> = match direction {
+        1 => Box::new(|cursor: usize| end_of_file > cursor + 1),
+        -1 => Box::new(|cursor: usize| cursor as i32 > 0),
+        _ => panic!(""),
+    };
+
+    loop {
+        if condition(buffer.cursor) {
+            buffer.cursor = (buffer.cursor as i32 + direction) as usize;
+            c = buffer.get_curr_char();
+        } else {
+            buffer.cursor = anchor;
+            return;
+        }
+
+        if c == start_character {
+            count += 1;
+        } else if c == search_character {
+            if count == 0 {
+                break;
+            } else {
+                count -= 1;
+            }
+        }
+    }
+}

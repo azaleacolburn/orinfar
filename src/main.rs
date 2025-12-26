@@ -20,7 +20,10 @@ use crate::{
     buffer::Buffer,
     commands::{append, cut, insert, insert_new_line, insert_new_line_above, paste, replace},
     io::Cli,
-    motion::{Motion, back, beginning_of_line, end_of_line, end_of_word, find, word},
+    motion::{
+        Motion, back, beginning_of_line, end_of_line, end_of_word, find,
+        next_corresponding_bracket, word,
+    },
     operator::{Operator, change, change_until_before, delete, yank},
     register::RegisterHandler,
     status_bar::StatusBar,
@@ -146,6 +149,7 @@ fn main() -> Result<()> {
         Motion::new(&['$'], end_of_line),
         Motion::new(&['_'], beginning_of_line),
         Motion::new(&['f'], find),
+        Motion::new(&['%'], next_corresponding_bracket),
     ];
     let mut next_operation: Option<&Operator> = None;
 
