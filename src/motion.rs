@@ -1,14 +1,17 @@
 use crossterm::event::KeyCode;
 
-use crate::{buffer::Buffer, log, on_next_input_buffer_only};
+use crate::{
+    buffer::{self, Buffer},
+    log, on_next_input_buffer_only,
+};
 
 pub struct Motion<'a> {
-    pub name: &'a [char],
+    pub name: &'a str,
     command: fn(buffer: &mut Buffer),
 }
 
 impl<'a> Motion<'a> {
-    pub fn new(name: &'a [char], command: fn(buffer: &mut Buffer)) -> Self {
+    pub fn new(name: &'a str, command: fn(buffer: &mut Buffer)) -> Self {
         Self { name, command }
     }
 
@@ -25,6 +28,41 @@ impl<'a> Motion<'a> {
 
         return fake_buffer.cursor;
     }
+}
+
+pub fn prev_char(buffer: &mut Buffer) {
+    buffer.prev_char();
+}
+
+pub fn next_row(buffer: &mut Buffer) {
+    log("down");
+    if buffer.is_last_row() {
+        return;
+    }
+
+    buffer.next_line();
+    buffer.end_of_line();
+}
+
+pub fn prev_row(buffer: &mut Buffer) {
+    if buffer.get_row() > 0 {
+        buffer.prev_line();
+        // panic!("here");
+
+        let len = buffer.get_curr_line().len_chars();
+
+        log("up");
+        let col = if len > 0 {
+            usize::min(buffer.get_col() + 1, len - 1) // TODO might be not +1
+        } else {
+            0
+        };
+        buffer.set_col(col)
+    }
+}
+
+pub fn next_char(buffer: &mut Buffer) {
+    buffer.next_char();
 }
 
 pub fn word(buffer: &mut Buffer) {

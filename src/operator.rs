@@ -1,7 +1,7 @@
 use crate::{Mode, buffer::Buffer, log, motion::Motion, register::RegisterHandler};
 
 pub struct Operator<'a> {
-    pub name: &'a [char],
+    pub name: &'a str,
     command: fn(
         end: usize,
         buffer: &mut Buffer,
@@ -12,7 +12,7 @@ pub struct Operator<'a> {
 
 impl<'a> Operator<'a> {
     pub fn new(
-        name: &'a [char],
+        name: &'a str,
         command: fn(
             end: usize,
             buffer: &mut Buffer,

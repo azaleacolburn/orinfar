@@ -21,8 +21,8 @@ use crate::{
     commands::{append, cut, insert, insert_new_line, insert_new_line_above, paste, replace},
     io::Cli,
     motion::{
-        Motion, back, beginning_of_line, end_of_line, end_of_word, find,
-        next_corresponding_bracket, word,
+        Motion, back, beginning_of_line, end_of_line, end_of_word, find, next_char,
+        next_corresponding_bracket, next_row, prev_char, prev_row, word,
     },
     operator::{Operator, change, change_until_before, delete, yank},
     register::RegisterHandler,
@@ -128,39 +128,44 @@ fn main() -> Result<()> {
     let mut status_bar: StatusBar = StatusBar::new();
 
     let commands: &[Cmd] = &[
-        Cmd::new(&['i'], insert),
-        Cmd::new(&['p'], paste),
-        Cmd::new(&['a'], append),
-        Cmd::new(&['o'], insert_new_line),
-        Cmd::new(&['O'], insert_new_line_above),
-        Cmd::new(&['x'], cut),
-        Cmd::new(&['r'], replace),
+        Cmd::new("i", insert),
+        Cmd::new("p", paste),
+        Cmd::new("a", append),
+        Cmd::new("o", insert_new_line),
+        Cmd::new("O", insert_new_line_above),
+        Cmd::new("x", cut),
+        Cmd::new("r", replace),
     ];
     let operators: &[Operator] = &[
-        Operator::new(&['d'], delete),
-        Operator::new(&['y'], yank),
-        Operator::new(&['c'], change),
-        Operator::new(&['t'], change_until_before),
+        Operator::new("d", delete),
+        Operator::new("y", yank),
+        Operator::new("c", change),
+        Operator::new("t", change_until_before),
     ];
     let motions: &[Motion] = &[
-        Motion::new(&['w'], word),
-        Motion::new(&['b'], back),
-        Motion::new(&['e'], end_of_word),
-        Motion::new(&['$'], end_of_line),
-        Motion::new(&['_'], beginning_of_line),
-        Motion::new(&['f'], find),
-        Motion::new(&['%'], next_corresponding_bracket),
+        // HJKL
+        Motion::new("h", prev_char),
+        Motion::new("j", next_row),
+        Motion::new("k", prev_row),
+        Motion::new("l", next_char),
+        // Word operators
+        Motion::new("w", word),
+        Motion::new("b", back),
+        Motion::new("e", end_of_word),
+        Motion::new("$", end_of_line),
+        Motion::new("_", beginning_of_line),
+        Motion::new("f", find),
+        Motion::new("%", next_corresponding_bracket),
     ];
     let mut next_operation: Option<&Operator> = None;
 
     // Used for not putting excluded chars in the chain
-    let command_chars = commands.iter().map(|cmd| cmd.name).flatten();
-    let operator_chars = operators.iter().map(|cmd| cmd.name).flatten();
-    let motion_chars = motions.iter().map(|cmd| cmd.name).flatten();
+    let command_chars = commands.iter().map(|cmd| cmd.name.chars()).flatten();
+    let operator_chars = operators.iter().map(|cmd| cmd.name.chars()).flatten();
+    let motion_chars = motions.iter().map(|cmd| cmd.name.chars()).flatten();
     let all_normal_chars: Vec<char> = command_chars
         .chain(operator_chars)
         .chain(motion_chars)
-        .map(|n| *n)
         .collect();
 
     let (cols, rows) = size()?;
@@ -200,11 +205,17 @@ fn main() -> Result<()> {
                     };
                     chained.push(c);
 
-                    if let Some(command) = commands.iter().find(|motion| motion.name == chained) {
+                    if let Some(command) = commands
+                        .iter()
+                        .find(|motion| motion.name == chained.iter().collect::<String>())
+                    {
                         command.execute(&mut buffer, &mut register_handler, &mut mode);
                         chained.clear();
                     } else if let Some(operation) = next_operation {
-                        if let Some(motion) = motions.iter().find(|motion| motion.name[0] == c) {
+                        if let Some(motion) = motions
+                            .iter()
+                            .find(|motion| motion.name.chars().nth(0).unwrap() == c)
+                        {
                             operation.execute(
                                 motion,
                                 &mut buffer,
@@ -213,20 +224,24 @@ fn main() -> Result<()> {
                             );
                             chained.clear();
                             next_operation = None;
-                        } else if c == operation.name[0] {
+                        } else if c == operation.name.chars().nth(0).unwrap() {
                             operation.entire_line(&mut buffer, &mut register_handler, &mut mode);
                             chained.clear();
                             next_operation = None;
                         }
                     } else if chained.len() == 1 {
-                        if let Some(motion) = motions.iter().find(|motion| motion.name[0] == c) {
+                        if let Some(motion) = motions
+                            .iter()
+                            .find(|motion| motion.name.chars().nth(0).unwrap() == c)
+                        {
                             motion.apply(&mut buffer);
                             chained.clear();
                         }
                     }
 
-                    if let Some(operator) =
-                        operators.iter().find(|operator| operator.name == chained)
+                    if let Some(operator) = operators
+                        .iter()
+                        .find(|operator| operator.name == chained.iter().collect::<String>())
                     {
                         next_operation = Some(&operator);
                     }
@@ -384,29 +399,10 @@ fn main() -> Result<()> {
                     buffer.next_char();
                 }
                 (KeyCode::Up, _) => {
-                    if buffer.get_row() > 0 {
-                        buffer.prev_line();
-                        // panic!("here");
-
-                        let len = buffer.get_curr_line().len_chars();
-
-                        log("up");
-                        let col = if len > 0 {
-                            usize::min(buffer.get_col() + 1, len - 1) // TODO might be not +1
-                        } else {
-                            0
-                        };
-                        buffer.set_col(col)
-                    }
+                    prev_row(&mut buffer);
                 }
                 (KeyCode::Down, _) => {
-                    log("down");
-                    if buffer.is_last_row() {
-                        continue;
-                    }
-
-                    buffer.next_line();
-                    buffer.end_of_line();
+                    next_row(&mut buffer);
                 }
                 _ => continue,
             };

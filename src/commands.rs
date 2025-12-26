@@ -7,20 +7,20 @@ use crossterm::{
 use std::io::stdout;
 
 pub struct Command<'a> {
-    pub name: &'a [char],
+    pub name: &'a str,
     command: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
 }
 
 impl<'a> Command<'a> {
     pub fn new(
-        name: &'a [char],
+        name: &'a str,
         command: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
     ) -> Self {
         Command { name, command }
     }
 
     pub fn inconslusive(
-        name: &'a [char],
+        name: &'a str,
         command: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
     ) -> Self {
         Command { name, command }
