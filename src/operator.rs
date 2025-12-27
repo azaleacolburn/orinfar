@@ -41,17 +41,29 @@ impl<'a> Operator<'a> {
         mode: &mut Mode,
     ) {
         let anchor = buffer.cursor;
-        let len = buffer.get_curr_line().len_chars();
 
-        let start_of_line = buffer.get_start_of_line();
+        buffer.start_of_line();
         let end_of_line = buffer.get_end_of_line();
-        buffer.cursor = start_of_line;
+
+        log(format!(
+            "end_of_line: {} start_of_line: {}",
+            end_of_line, buffer.cursor,
+        ));
 
         (self.command)(end_of_line, buffer, register_handler, mode);
 
-        if (0..len).contains(&anchor) {
-            buffer.cursor = anchor;
-        }
+        log(format!(
+            "cursor: {} len: {}",
+            buffer.cursor,
+            buffer.rope.len_chars()
+        ));
+
+        // buffer.start_of_line();
+
+        // let len = buffer.get_curr_line().len_chars();
+        // if (0..len).contains(&anchor) {
+        //     buffer.cursor = anchor;
+        // }
     }
 }
 
@@ -97,34 +109,35 @@ pub fn iterate_range(
 ) {
     // NOTE We can't actually know the distance between cursors
     // without traversing the buffer since lines are of arbitrary length
-    let mut count: usize = 0;
-    let anchor_cursor = buffer.cursor.clone();
-    if end >= buffer.cursor {
-        while buffer.cursor != end && buffer.cursor < buffer.rope.len_chars() {
-            buffer.next_char();
-            count += 1;
-        }
-        log(format!("count {}", count));
-        buffer.cursor = anchor_cursor.clone();
-
-        initial_callback(register_handler, buffer, mode);
-        (0..=count)
-            .into_iter()
-            .for_each(|_| iter_callback(register_handler, buffer));
-        after_callback(anchor_cursor, register_handler, buffer, mode);
-    } else {
-        while buffer.cursor != end && buffer.cursor > 0 {
-            buffer.prev_char();
-            count += 1;
-        }
-        buffer.cursor = anchor_cursor.clone();
-
-        initial_callback(register_handler, buffer, mode);
-        (0..=count)
-            .into_iter()
-            .for_each(|_| iter_callback(register_handler, buffer));
-        after_callback(anchor_cursor, register_handler, buffer, mode);
-    }
+    // let mut count: usize = 0;
+    // let anchor_cursor = buffer.cursor.clone();
+    // if end >= buffer.cursor {
+    //     while buffer.cursor != end && buffer.cursor < buffer.rope.len_chars() {
+    //         buffer.next_char();
+    //         count += 1;
+    //     }
+    //     log(format!("count {}", count));
+    //     buffer.cursor = anchor_cursor.clone();
+    //
+    //     initial_callback(register_handler, buffer, mode);
+    //     (0..=count)
+    //         .into_iter()
+    //         .for_each(|_| iter_callback(register_handler, buffer));
+    //     after_callback(anchor_cursor, register_handler, buffer, mode);
+    // } else {
+    //     while buffer.cursor != end && buffer.cursor > 0 {
+    //         buffer.prev_char();
+    //         count += 1;
+    //     }
+    //     buffer.cursor = anchor_cursor.clone();
+    // }
+    let anchor = buffer.cursor;
+    let count = (end as isize - anchor as isize).abs();
+    initial_callback(register_handler, buffer, mode);
+    (0..=count)
+        .into_iter()
+        .for_each(|_| iter_callback(register_handler, buffer));
+    after_callback(anchor, register_handler, buffer, mode);
 }
 
 fn noop(
@@ -158,11 +171,16 @@ fn clear_reg(register_handler: &mut RegisterHandler, _buffer: &mut Buffer, _mode
 }
 
 fn delete_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
+    log(format!("here: {}", buffer.cursor));
     if buffer.rope.len_chars() <= buffer.cursor || buffer.cursor < 0 {
         return;
     }
     register_handler.push_reg(&buffer.get_curr_char().to_string());
     buffer.delete_curr_char();
+
+    // if buffer.cursor > 0 {
+    //     buffer.cursor -= 1;
+    // }
 }
 pub fn delete(
     end: usize,

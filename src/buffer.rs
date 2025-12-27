@@ -1,8 +1,6 @@
 use ropey::Rope;
 use std::fmt::Display;
 
-
-
 // The cursor is always guaranteed to be within the bounds of the buffer
 #[derive(Debug, Clone, PartialEq)]
 pub struct Buffer {

@@ -7,14 +7,7 @@ impl Buffer {
     pub fn update_list_remove_current(&mut self) {
         let current_line = self.get_row();
         self.update_list_remove(current_line);
-        self.update_list_set(
-            if current_line == 0 {
-                0
-            } else {
-                current_line - 1
-            }..,
-            true,
-        );
+        self.update_list_set(usize::max(current_line, 1) - 1.., true);
         self.has_changed = true;
         log(format!("update_list: {:?}", self.lines_for_updating))
     }

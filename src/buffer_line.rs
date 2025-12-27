@@ -27,7 +27,9 @@ impl Buffer {
 
     /// Returns the first index (absolute) of the line where the given `char_idx` is located
     pub fn get_start_of_char_line(&self, char_idx: usize) -> usize {
-        self.rope.line_to_char(self.rope.char_to_line(char_idx))
+        let line_idx = self.rope.char_to_line(char_idx);
+        log(format!("line idx: {} len: {}", line_idx, self.len()));
+        self.rope.line_to_char(line_idx)
     }
 
     pub fn get_first_non_whitespace_col(&self) -> usize {
@@ -104,6 +106,7 @@ impl Buffer {
     pub fn end_of_line(&mut self) {
         let end_of_line = self.get_end_of_line();
         log(format!("end_of_line: {}", end_of_line));
+        log(format!("length of buffer: {}", self.rope.len_chars()));
         self.cursor = end_of_line;
     }
 

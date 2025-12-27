@@ -1,9 +1,6 @@
 use crossterm::event::KeyCode;
 
-use crate::{
-    buffer::Buffer,
-    log, on_next_input_buffer_only,
-};
+use crate::{buffer::Buffer, log, on_next_input_buffer_only};
 
 pub struct Motion<'a> {
     pub name: &'a str,
@@ -35,30 +32,28 @@ pub fn prev_char(buffer: &mut Buffer) {
 }
 
 pub fn next_row(buffer: &mut Buffer) {
-    log("down");
     if buffer.is_last_row() {
         return;
     }
 
     buffer.next_line();
-    buffer.end_of_line();
 }
 
 pub fn prev_row(buffer: &mut Buffer) {
-    if buffer.get_row() > 0 {
-        buffer.prev_line();
-        // panic!("here");
-
-        let len = buffer.get_curr_line().len_chars();
-
-        log("up");
-        let col = if len > 0 {
-            usize::min(buffer.get_col() + 1, len - 1) // TODO might be not +1
-        } else {
-            0
-        };
-        buffer.set_col(col)
+    if buffer.get_row() == 0 {
+        return;
     }
+
+    buffer.prev_line();
+
+    let len = buffer.get_curr_line().len_chars();
+
+    let col = if len > 0 {
+        usize::min(buffer.get_col(), len - 1)
+    } else {
+        0
+    };
+    buffer.set_col(col)
 }
 
 pub fn next_char(buffer: &mut Buffer) {
@@ -201,7 +196,7 @@ pub fn next_corresponding_bracket(buffer: &mut Buffer) {
     let condition: Box<dyn Fn(usize) -> bool> = match direction {
         1 => Box::new(|cursor: usize| end_of_file > cursor + 1),
         -1 => Box::new(|cursor: usize| cursor as i32 > 0),
-        _ => panic!(""),
+        _ => panic!(),
     };
 
     loop {

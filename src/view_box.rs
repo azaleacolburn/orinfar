@@ -1,10 +1,13 @@
 use crate::{Mode, buffer::Buffer, log, status_bar::StatusBar};
 use anyhow::Result;
 use crossterm::{
-    cursor::{Hide, MoveDown, MoveTo, MoveToColumn, MoveToRow, Show},
+    cursor::{Hide, MoveDown, MoveTo, MoveToColumn, MoveToRow, SetCursorStyle, Show},
     execute,
-    style::{Color, Print, SetForegroundColor},
-    terminal::{Clear, ClearType},
+    style::{Color, Print, ResetColor, SetForegroundColor},
+    terminal::{
+        Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
+        enable_raw_mode,
+    },
 };
 use std::{
     io::{Stdout, Write, stdout},
@@ -66,16 +69,7 @@ impl ViewBox {
         stdout: &mut Stdout,
         left_padding: usize,
     ) -> Result<()> {
-        log("in flush");
-        log(format!("update_list: {:?}", buffer.lines_for_updating));
-        log(format!(
-            "lines: {:?}",
-            buffer
-                .rope
-                .lines()
-                .map(|l| l.to_string())
-                .collect::<Vec<String>>()
-        ));
+        log("in wb");
         let lines = buffer
             .rope
             .lines()
@@ -113,20 +107,24 @@ impl ViewBox {
                 return;
             }
 
-            // We actually do want to cut off the newline here, hence the `- 1`
-            let line_len = if line.get_char(line.len_chars() - 1).unwrap() == '\n' {
-                len - 1
+            let last_col = usize::min(self.left + self.width, len);
+            log(format!(
+                "eos {} len {} last_col {} left {}",
+                self.left + self.width,
+                len,
+                last_col,
+                self.left
+            ));
+            let line = if self.left >= last_col {
+                String::from("\n")
             } else {
-                len
+                line.slice(self.left..last_col).to_string()
             };
-            let last_col = usize::min(self.left + self.width, line_len);
-            let line = &line.slice(self.left..last_col);
 
             execute!(
                 stdout,
                 SetForegroundColor(Color::Blue),
                 Print(line),
-                MoveDown(1),
                 MoveToColumn(0)
             );
         });
@@ -158,6 +156,7 @@ impl ViewBox {
         }
 
         let col = buffer.get_col();
+        log("past col");
         let row = buffer.get_row();
 
         let status_message = match (mode, path) {
@@ -192,4 +191,40 @@ impl ViewBox {
 
         Ok(())
     }
+}
+
+pub fn cleanup() -> Result<()> {
+    disable_raw_mode()?;
+    execute!(
+        stdout(),
+        ResetColor,
+        Clear(ClearType::All),
+        SetCursorStyle::SteadyBlock,
+        LeaveAlternateScreen
+    )?;
+
+    Ok(())
+}
+
+pub fn setup(rows: u16, cols: u16) -> Result<()> {
+    execute!(
+        stdout(),
+        EnterAlternateScreen,
+        Clear(ClearType::All),
+        MoveToRow(0),
+        SetForegroundColor(Color::Blue),
+    )?;
+
+    // Fill entire screen with spaces with the background color
+    for row in 0..rows {
+        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+    }
+    execute!(stdout(), MoveTo(0, 0))?;
+    for row in 0..rows {
+        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+    }
+    execute!(stdout(), MoveTo(0, 0))?;
+    enable_raw_mode()?;
+
+    Ok(())
 }

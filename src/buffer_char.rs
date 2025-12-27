@@ -55,7 +55,7 @@ impl Buffer {
     }
 
     pub fn next_char(&mut self) {
-        if self.cursor + 1 < self.rope.len_chars() {
+        if self.cursor < self.rope.len_chars() {
             self.cursor += 1;
         }
     }

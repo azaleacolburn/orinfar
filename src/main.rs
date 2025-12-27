@@ -9,6 +9,7 @@ mod buffer_line;
 mod buffer_update;
 mod commands;
 mod io;
+mod mode;
 mod motion;
 mod operator;
 mod panic_hook;
@@ -20,6 +21,7 @@ use crate::{
     buffer::Buffer,
     commands::{append, cut, insert, insert_new_line, insert_new_line_above, paste, replace},
     io::Cli,
+    mode::Mode,
     motion::{
         Motion, back, beginning_of_line, end_of_line, end_of_word, find, next_char,
         next_corresponding_bracket, next_row, prev_char, prev_row, word,
@@ -27,93 +29,18 @@ use crate::{
     operator::{Operator, change, change_until_before, delete, yank},
     register::RegisterHandler,
     status_bar::StatusBar,
-    view_box::ViewBox,
+    utility::log,
+    view_box::{ViewBox, cleanup, setup},
 };
 use anyhow::Result;
 use commands::Command as Cmd;
 use crossterm::{
-    cursor::{MoveTo, MoveToRow, SetCursorStyle},
+    cursor::SetCursorStyle,
     event::{Event, KeyCode, read},
     execute,
-    style::{Color, Print, ResetColor, SetForegroundColor},
-    terminal::{
-        Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
-        enable_raw_mode, size,
-    },
+    terminal::size,
 };
-use std::{
-    fs::OpenOptions,
-    io::{Write, stdout},
-    path::PathBuf,
-    u16,
-};
-
-#[derive(Clone, Debug)]
-enum Mode {
-    Normal,
-    Insert,
-    Command,
-    Visual,
-}
-
-impl Mode {
-    fn insert(&mut self) {
-        *self = Mode::Insert;
-        execute!(stdout(), SetCursorStyle::BlinkingBar).unwrap();
-    }
-
-    fn normal(&mut self) {
-        *self = Mode::Normal;
-        execute!(stdout(), SetCursorStyle::SteadyBlock).unwrap();
-    }
-}
-
-fn cleanup() -> Result<()> {
-    disable_raw_mode()?;
-    execute!(
-        stdout(),
-        ResetColor,
-        Clear(ClearType::All),
-        SetCursorStyle::SteadyBlock,
-        LeaveAlternateScreen
-    )?;
-
-    Ok(())
-}
-
-fn setup(rows: u16, cols: u16) -> Result<()> {
-    execute!(
-        stdout(),
-        EnterAlternateScreen,
-        Clear(ClearType::All),
-        MoveToRow(0),
-        SetForegroundColor(Color::Blue),
-    )?;
-
-    // Fill entire screen with spaces with the background color
-    for row in 0..rows {
-        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
-    }
-    execute!(stdout(), MoveTo(0, 0))?;
-    for row in 0..rows {
-        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
-    }
-    execute!(stdout(), MoveTo(0, 0))?;
-    enable_raw_mode()?;
-
-    Ok(())
-}
-
-fn log(contents: impl ToString) {
-    let mut file = OpenOptions::new()
-        .append(true)
-        .open("log.txt")
-        .expect("Unable to open file");
-
-    // Append data to the file
-    file.write_all(format!("{}\n", contents.to_string()).as_bytes())
-        .expect("Unable to append data");
-}
+use std::{io::stdout, path::PathBuf, u16};
 
 fn main() -> Result<()> {
     panic_hook::add_panic_hook(&cleanup);
@@ -248,12 +175,11 @@ fn main() -> Result<()> {
                 }
 
                 (KeyCode::Esc, Mode::Insert) => {
-                    mode = Mode::Normal;
-                    if buffer.get_col() != 0 {
+                    if buffer.cursor != buffer.get_start_of_line() {
                         buffer.cursor -= 1;
                     }
+                    mode = Mode::Normal;
                     execute!(stdout, SetCursorStyle::SteadyBlock)?;
-                    count = 1;
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
                     if buffer.cursor == 0 {
@@ -287,8 +213,6 @@ fn main() -> Result<()> {
                     buffer.update_list_use_current_line();
                 }
                 (KeyCode::Enter, Mode::Insert) => {
-                    buffer.update_list_add_current();
-
                     buffer.insert_char('\n');
                     // buffer.next_char();
                     buffer.cursor += 1;

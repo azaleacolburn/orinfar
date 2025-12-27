@@ -38,14 +38,15 @@ impl<'a> Command<'a> {
 
 pub fn noop(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {}
 
-pub fn insert(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
+pub fn insert(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
     mode.insert();
 }
 
 pub fn append(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
-    if buffer.cursor != buffer.rope.len_chars() {
+    if buffer.cursor != buffer.get_end_of_line() || buffer.cursor + 1 == buffer.rope.len_chars() {
         buffer.cursor += 1;
     }
+
     mode.insert();
 }
 
@@ -65,19 +66,13 @@ pub fn cut(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &
 }
 pub fn insert_new_line(
     buffer: &mut Buffer,
-    _register_handler: &mut RegisterHandler,
+    register_handler: &mut RegisterHandler,
     mode: &mut Mode,
 ) {
     buffer.end_of_line();
-    log(format!(
-        "buffer: {:?}\n len: {} cursor: {}",
-        buffer.rope.to_string(),
-        buffer.rope.len_chars(),
-        buffer.cursor
-    ));
+    append(buffer, register_handler, mode);
     buffer.insert_char('\n');
     buffer.cursor += 1;
-    mode.insert();
 }
 
 pub fn insert_new_line_above(
