@@ -5,11 +5,24 @@ use crate::{buffer::Buffer, log, on_next_input_buffer_only};
 pub struct Motion<'a> {
     pub name: &'a str,
     command: fn(buffer: &mut Buffer),
+    pub inclusive: bool,
 }
 
 impl<'a> Motion<'a> {
-    pub fn new(name: &'a str, command: fn(buffer: &mut Buffer)) -> Self {
-        Self { name, command }
+    pub fn exclusive(name: &'a str, command: fn(buffer: &mut Buffer)) -> Self {
+        Self {
+            name,
+            command,
+            inclusive: false,
+        }
+    }
+
+    pub fn inclusive(name: &'a str, command: fn(buffer: &mut Buffer)) -> Self {
+        Self {
+            name,
+            command,
+            inclusive: true,
+        }
     }
 
     // Called when the motion should be applied directly

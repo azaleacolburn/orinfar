@@ -72,21 +72,21 @@ fn main() -> Result<()> {
     ];
     let motions: &[Motion] = &[
         // HJKL
-        Motion::new("h", prev_char),
-        Motion::new("j", next_row),
-        Motion::new("k", prev_row),
-        Motion::new("l", next_char),
+        Motion::inclusive("h", prev_char),
+        Motion::inclusive("j", next_row),
+        Motion::inclusive("k", prev_row),
+        Motion::inclusive("l", next_char),
         // Word operators
-        Motion::new("w", word),
-        Motion::new("b", back),
-        Motion::new("e", end_of_word),
-        Motion::new("$", end_of_line),
-        Motion::new("_", beginning_of_line),
-        Motion::new("f", find),
-        Motion::new("F", find_back),
-        Motion::new("%", next_corresponding_bracket),
-        Motion::new("}", next_newline),
-        Motion::new("{", prev_newline),
+        Motion::exclusive("w", word),
+        Motion::exclusive("b", back),
+        Motion::inclusive("e", end_of_word),
+        Motion::inclusive("$", end_of_line),
+        Motion::inclusive("_", beginning_of_line),
+        Motion::inclusive("f", find),
+        Motion::inclusive("F", find_back),
+        Motion::inclusive("%", next_corresponding_bracket),
+        Motion::inclusive("}", next_newline),
+        Motion::inclusive("{", prev_newline),
     ];
     let mut next_operation: Option<&Operator> = None;
 

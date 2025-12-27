@@ -30,7 +30,13 @@ impl<'a> Operator<'a> {
         register_handler: &mut RegisterHandler,
         mode: &mut Mode,
     ) {
-        let end = motion.evaluate(buffer);
+        let mut end = motion.evaluate(buffer);
+        if !motion.inclusive {
+            if end != buffer.get_end_of_line() {
+                end = usize::max(end, 1) - 1
+            }
+        }
+
         (self.command)(end, buffer, register_handler, mode);
     }
 
