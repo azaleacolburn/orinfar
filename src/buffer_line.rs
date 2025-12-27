@@ -3,7 +3,7 @@ use ropey::RopeSlice;
 
 impl Buffer {
     pub fn is_empty_line(&self) -> bool {
-        self.get_end_of_line() == self.get_start_of_line() + 1
+        self.get_end_of_line() == self.get_start_of_line()
     }
 
     /// Removes the line represented by the given `line_idx`

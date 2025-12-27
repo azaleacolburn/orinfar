@@ -244,3 +244,37 @@ pub fn next_corresponding_bracket(buffer: &mut Buffer) {
         }
     }
 }
+
+/// Moves the cursor to the next empty line after a non-empty line
+pub fn next_newline(buffer: &mut Buffer) {
+    while buffer.is_empty_line() {
+        if buffer.is_last_row() {
+            return;
+        }
+        next_row(buffer);
+    }
+
+    while !buffer.is_empty_line() {
+        if buffer.is_last_row() {
+            return;
+        }
+        next_row(buffer);
+    }
+}
+
+/// Moves the cursor to the next empty line after a non-empty line
+pub fn prev_newline(buffer: &mut Buffer) {
+    while buffer.is_empty_line() {
+        if buffer.is_first_row() {
+            return;
+        }
+        prev_row(buffer);
+    }
+
+    while !buffer.is_empty_line() {
+        if buffer.is_first_row() {
+            return;
+        }
+        prev_row(buffer);
+    }
+}

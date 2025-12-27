@@ -31,6 +31,10 @@ impl Buffer {
     pub fn is_last_row(&self) -> bool {
         self.rope.char_to_line(self.cursor) + 1 == self.rope.len_lines()
     }
+
+    pub fn is_first_row(&self) -> bool {
+        self.rope.char_to_line(self.cursor) == 0
+    }
 }
 
 impl Display for Buffer {
