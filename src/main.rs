@@ -23,7 +23,7 @@ use crate::{
     io::Cli,
     mode::Mode,
     motion::{
-        Motion, back, beginning_of_line, end_of_line, end_of_word, find, next_char,
+        Motion, back, beginning_of_line, end_of_line, end_of_word, find, find_back, next_char,
         next_corresponding_bracket, next_row, prev_char, prev_row, word,
     },
     operator::{Operator, change, change_until_before, delete, yank},
@@ -82,6 +82,7 @@ fn main() -> Result<()> {
         Motion::new("$", end_of_line),
         Motion::new("_", beginning_of_line),
         Motion::new("f", find),
+        Motion::new("F", find_back),
         Motion::new("%", next_corresponding_bracket),
     ];
     let mut next_operation: Option<&Operator> = None;

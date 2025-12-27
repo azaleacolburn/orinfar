@@ -64,11 +64,7 @@ impl Buffer {
     }
 
     pub fn start_of_line(&mut self) {
-        log(format!(
-            "start_of_line cursor: {}, {:?}",
-            self.cursor, self.rope
-        ));
-        self.set_col(self.get_start_of_char_line(self.cursor))
+        self.cursor = self.get_start_of_char_line(self.cursor);
     }
 
     /// Returns the absolute index of the end of the given `line`

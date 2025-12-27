@@ -41,8 +41,10 @@ impl<'a> Operator<'a> {
         mode: &mut Mode,
     ) {
         let anchor = buffer.cursor;
+        log(format!("original cursor: {}", buffer.cursor));
 
         buffer.start_of_line();
+        log(format!("start of line final: {}", buffer.cursor));
         let end_of_line = buffer.get_end_of_line();
 
         log(format!(
@@ -172,9 +174,10 @@ fn clear_reg(register_handler: &mut RegisterHandler, _buffer: &mut Buffer, _mode
 
 fn delete_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
     log(format!("here: {}", buffer.cursor));
-    if buffer.rope.len_chars() <= buffer.cursor || buffer.cursor < 0 {
+    if buffer.rope.len_chars() <= buffer.cursor {
         return;
     }
+    log("hereo");
     register_handler.push_reg(&buffer.get_curr_char().to_string());
     buffer.delete_curr_char();
 

@@ -146,18 +146,43 @@ pub fn beginning_of_line(buffer: &mut Buffer) {
 pub fn find(buffer: &mut Buffer) {
     fn find(key: KeyCode, buffer: &mut Buffer) {
         if let KeyCode::Char(target) = key {
-            if let Some(position) = buffer
-                .get_curr_line()
-                .chars()
-                .skip(buffer.get_col())
-                .position(|c| c == target)
-            {
-                buffer.set_col(position);
+            let anchor = buffer.cursor;
+            loop {
+                if buffer.get_curr_char() == target {
+                    return;
+                }
+                if buffer.cursor == buffer.get_end_of_line() {
+                    break;
+                }
+                buffer.cursor += 1;
             }
+
+            buffer.cursor = anchor
         }
     }
 
     on_next_input_buffer_only(buffer, find).unwrap();
+}
+
+pub fn find_back(buffer: &mut Buffer) {
+    fn find_back(key: KeyCode, buffer: &mut Buffer) {
+        if let KeyCode::Char(target) = key {
+            let anchor = buffer.cursor;
+            loop {
+                if buffer.get_curr_char() == target {
+                    return;
+                }
+                if buffer.cursor == 0 {
+                    break;
+                }
+                buffer.cursor -= 1;
+            }
+
+            buffer.cursor = anchor
+        }
+    }
+
+    on_next_input_buffer_only(buffer, find_back).unwrap();
 }
 
 // Goes to the opposite bracket corresponding to the next bracket in the line (inclusive with  the
