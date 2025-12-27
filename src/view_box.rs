@@ -16,11 +16,11 @@ use std::{
 
 pub struct ViewBox {
     // The topmost row of the buffer being displayed (zero-indexed)
-    top: usize,
+    pub top: usize,
     // The height in rows of the entire view box (minus the status bar)
     height: usize,
     // The leftmost row of the buffer being displayed (zero-indexed)
-    left: usize,
+    pub left: usize,
     // The width in rows of the entire view box
     width: usize,
 }
@@ -190,6 +190,14 @@ impl ViewBox {
         stdout.flush()?;
 
         Ok(())
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
     }
 }
 

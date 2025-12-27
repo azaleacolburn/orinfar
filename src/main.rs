@@ -16,10 +16,14 @@ mod panic_hook;
 mod register;
 mod status_bar;
 mod view_box;
+mod view_command;
 
 use crate::{
     buffer::Buffer,
-    commands::{append, cut, insert, insert_new_line, insert_new_line_above, paste, replace},
+    commands::{
+        append, cut, first_row, insert, insert_new_line, insert_new_line_above, last_row, paste,
+        replace,
+    },
     io::Cli,
     mode::Mode,
     motion::{
@@ -32,6 +36,7 @@ use crate::{
     status_bar::StatusBar,
     utility::log,
     view_box::{ViewBox, cleanup, setup},
+    view_command::{ViewCommand, center_viewbox_on_cursor},
 };
 use anyhow::Result;
 use commands::Command as Cmd;
@@ -55,6 +60,7 @@ fn main() -> Result<()> {
     let mut buffer: Buffer = Buffer::new();
     let mut status_bar: StatusBar = StatusBar::new();
 
+    let view_commands: &[ViewCommand] = &[ViewCommand::new("zz", center_viewbox_on_cursor)];
     let commands: &[Cmd] = &[
         Cmd::new("i", insert),
         Cmd::new("p", paste),
@@ -63,6 +69,8 @@ fn main() -> Result<()> {
         Cmd::new("O", insert_new_line_above),
         Cmd::new("x", cut),
         Cmd::new("r", replace),
+        Cmd::new("G", last_row),
+        Cmd::new("gg", first_row),
     ];
     let operators: &[Operator] = &[
         Operator::new("d", delete),
@@ -94,9 +102,11 @@ fn main() -> Result<()> {
     let command_chars = commands.iter().map(|cmd| cmd.name.chars()).flatten();
     let operator_chars = operators.iter().map(|cmd| cmd.name.chars()).flatten();
     let motion_chars = motions.iter().map(|cmd| cmd.name.chars()).flatten();
+    let view_command_chars = view_commands.iter().map(|cmd| cmd.name.chars()).flatten();
     let all_normal_chars: Vec<char> = command_chars
         .chain(operator_chars)
         .chain(motion_chars)
+        .chain(view_command_chars)
         .collect();
 
     let (cols, rows) = size()?;
@@ -142,6 +152,12 @@ fn main() -> Result<()> {
                     {
                         command.execute(&mut buffer, &mut register_handler, &mut mode);
                         chained.clear();
+                    } else if let Some(view_command) = view_commands
+                        .iter()
+                        .find(|command| command.name == chained.iter().collect::<String>())
+                    {
+                        view_command.execute(&mut buffer, &mut view_box);
+                        chained.clear();
                     } else if let Some(operation) = next_operation {
                         if let Some(motion) = motions
                             .iter()
@@ -169,7 +185,6 @@ fn main() -> Result<()> {
                             chained.clear();
                         }
                     }
-
                     if let Some(operator) = operators
                         .iter()
                         .find(|operator| operator.name == chained.iter().collect::<String>())

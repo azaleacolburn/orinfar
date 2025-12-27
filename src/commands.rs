@@ -19,13 +19,6 @@ impl<'a> Command<'a> {
         Command { name, command }
     }
 
-    pub fn inconslusive(
-        name: &'a str,
-        command: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
-    ) -> Self {
-        Command { name, command }
-    }
-
     pub fn execute(
         &self,
         buffer: &mut Buffer,
@@ -127,4 +120,13 @@ pub fn replace(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mo
     }
     execute!(stdout(), SetCursorStyle::SteadyBlock).unwrap();
     buffer.has_changed = true;
+}
+
+pub fn last_row(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+    let last_row = usize::max(buffer.len(), 1) - 1;
+    buffer.set_row(last_row);
+}
+
+pub fn first_row(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+    buffer.set_row(0);
 }

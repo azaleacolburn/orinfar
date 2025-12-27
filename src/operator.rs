@@ -46,25 +46,10 @@ impl<'a> Operator<'a> {
         register_handler: &mut RegisterHandler,
         mode: &mut Mode,
     ) {
-        let anchor = buffer.cursor;
-        log(format!("original cursor: {}", buffer.cursor));
-
         buffer.start_of_line();
-        log(format!("start of line final: {}", buffer.cursor));
         let end_of_line = buffer.get_end_of_line();
 
-        log(format!(
-            "end_of_line: {} start_of_line: {}",
-            end_of_line, buffer.cursor,
-        ));
-
         (self.command)(end_of_line, buffer, register_handler, mode);
-
-        log(format!(
-            "cursor: {} len: {}",
-            buffer.cursor,
-            buffer.rope.len_chars()
-        ));
 
         // buffer.start_of_line();
 
