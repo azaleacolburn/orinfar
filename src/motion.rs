@@ -125,13 +125,19 @@ pub fn back(buffer: &mut Buffer) {
 }
 
 pub fn end_of_word(buffer: &mut Buffer) {
+    if usize::max(buffer.get_curr_line().len_chars(), 1) - 1 == buffer.cursor {
+        return;
+    }
+
     let mut next_char = unwrap_or_return!(buffer.get_next_char());
 
+    let last_legal_char = buffer.get_end_of_line();
+
     if !next_char.is_alphanumeric() {
-        while !next_char.is_alphanumeric() {
+        while !next_char.is_alphanumeric() && buffer.cursor != last_legal_char {
             next_char = unwrap_or_break!(buffer.next_and_char());
         }
-        while next_char.is_alphanumeric() {
+        while next_char.is_alphanumeric() && buffer.cursor != last_legal_char {
             // Next char without wrapping lines, since newlines aren't counted
             if buffer.get_col() + 1 < buffer.rope.len_chars() {
                 buffer.next_char();
@@ -141,7 +147,7 @@ pub fn end_of_word(buffer: &mut Buffer) {
             next_char = unwrap_or_break!(buffer.get_next_char());
         }
     } else {
-        while next_char.is_alphanumeric() {
+        while next_char.is_alphanumeric() && buffer.cursor != last_legal_char {
             buffer.next_char();
             next_char = unwrap_or_break!(buffer.get_next_char());
         }

@@ -198,7 +198,7 @@ pub fn delete(
     undo_tree: &mut UndoTree,
 ) {
     log("in delete");
-    let text = match buffer.rope.get_slice(buffer.cursor..end) {
+    let text = match buffer.rope.get_slice(buffer.cursor..=end) {
         Some(slice) => slice.to_string(),
         None => {
             log(format!(
@@ -233,7 +233,9 @@ pub fn delete(
 
 fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
     register_handler.push_reg(&buffer.get_curr_char().to_string());
-    buffer.next_char();
+    if buffer.cursor + 1 < buffer.rope.len_chars() {
+        buffer.next_char();
+    }
 }
 pub fn yank(
     end: usize,
@@ -242,6 +244,10 @@ pub fn yank(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
+    let end_of_file = buffer.rope.len_chars();
+    if end == end_of_file && end != 0 {
+        buffer.cursor -= 1;
+    }
     iterate_range(
         mode,
         register_handler,
@@ -279,7 +285,7 @@ pub fn change_until_before(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
-    let end = if end == 0 { 0 } else { end - 1 };
+    let end = usize::max(end, 1) - 1;
     iterate_range(
         mode,
         register_handler,
@@ -290,4 +296,8 @@ pub fn change_until_before(
         insert,
     );
     buffer.update_list_use_current_line();
+
+    let text = register_handler.get_reg();
+    let action = Action::delete(buffer.cursor, text);
+    undo_tree.new_action(action);
 }
