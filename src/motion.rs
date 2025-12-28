@@ -74,7 +74,7 @@ pub fn next_char(buffer: &mut Buffer) {
 }
 
 pub fn word(buffer: &mut Buffer) {
-    if buffer.get_curr_line().len_chars() - 1 == buffer.cursor {
+    if usize::max(buffer.get_curr_line().len_chars(), 1) - 1 == buffer.cursor {
         return;
     }
     let mut c = buffer.get_curr_char();

@@ -15,6 +15,7 @@ mod operator;
 mod panic_hook;
 mod register;
 mod status_bar;
+mod undo;
 mod view_box;
 mod view_command;
 
@@ -22,7 +23,7 @@ use crate::{
     buffer::Buffer,
     commands::{
         append, cut, first_row, insert, insert_new_line, insert_new_line_above, last_row, paste,
-        replace,
+        replace, undo,
     },
     io::Cli,
     mode::Mode,
@@ -34,6 +35,7 @@ use crate::{
     operator::{Operator, change, change_until_before, delete, yank},
     register::RegisterHandler,
     status_bar::StatusBar,
+    undo::{Action, UndoTree},
     utility::log,
     view_box::{ViewBox, cleanup, setup},
     view_command::{ViewCommand, center_viewbox_on_cursor},
@@ -56,6 +58,7 @@ fn main() -> Result<()> {
     let mut stdout = stdout();
     let _leader = ' ';
 
+    let mut undo_tree = UndoTree::new();
     let mut register_handler = RegisterHandler::new();
     let mut buffer: Buffer = Buffer::new();
     let mut status_bar: StatusBar = StatusBar::new();
@@ -71,6 +74,7 @@ fn main() -> Result<()> {
         Cmd::new("r", replace),
         Cmd::new("G", last_row),
         Cmd::new("gg", first_row),
+        Cmd::new("u", undo),
     ];
     let operators: &[Operator] = &[
         Operator::new("d", delete),
@@ -150,7 +154,12 @@ fn main() -> Result<()> {
                         .iter()
                         .find(|motion| motion.name == chained.iter().collect::<String>())
                     {
-                        command.execute(&mut buffer, &mut register_handler, &mut mode);
+                        command.execute(
+                            &mut buffer,
+                            &mut register_handler,
+                            &mut mode,
+                            &mut undo_tree,
+                        );
                         chained.clear();
                     } else if let Some(view_command) = view_commands
                         .iter()
@@ -213,6 +222,9 @@ fn main() -> Result<()> {
                     // if buffer.rope.len_chars() > 1 {
                     buffer.cursor += 1;
                     buffer.update_list_use_current_line();
+
+                    let action = Action::insert(buffer.cursor - 1, c);
+                    undo_tree.new_action(action);
                     // }
                     // buffer.next_char();
                     // panic!(

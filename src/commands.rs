@@ -1,4 +1,9 @@
-use crate::{Mode, buffer::Buffer, log, register::RegisterHandler};
+use crate::{
+    Mode,
+    buffer::Buffer,
+    register::RegisterHandler,
+    undo::{Action, UndoTree},
+};
 use crossterm::{
     cursor::SetCursorStyle,
     event::{Event, KeyCode, read},
@@ -8,13 +13,24 @@ use std::io::stdout;
 
 pub struct Command<'a> {
     pub name: &'a str,
-    command: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
+    command: fn(
+        buffer: &mut Buffer,
+        register_handler: &mut RegisterHandler,
+        mode: &mut Mode,
+        undo_tree: &mut UndoTree,
+    ),
 }
 
 impl<'a> Command<'a> {
     pub fn new(
         name: &'a str,
-        command: fn(buffer: &mut Buffer, register_handler: &mut RegisterHandler, mode: &mut Mode),
+        command: fn(
+            buffer: &mut Buffer,
+            register_handler: &mut RegisterHandler,
+            mode: &mut Mode,
+
+            undo_tree: &mut UndoTree,
+        ),
     ) -> Self {
         Command { name, command }
     }
@@ -24,18 +40,35 @@ impl<'a> Command<'a> {
         buffer: &mut Buffer,
         register_handler: &mut RegisterHandler,
         mode: &mut Mode,
+        undo_tree: &mut UndoTree,
     ) {
-        (self.command)(buffer, register_handler, mode)
+        (self.command)(buffer, register_handler, mode, undo_tree)
     }
 }
 
-pub fn noop(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {}
+pub fn noop(
+    _buffer: &mut Buffer,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+    _undo_tree: &mut UndoTree,
+) {
+}
 
-pub fn insert(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
+pub fn insert(
+    _buffer: &mut Buffer,
+    _register_handler: &mut RegisterHandler,
+    mode: &mut Mode,
+    _undo_tree: &mut UndoTree,
+) {
     mode.insert();
 }
 
-pub fn append(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode: &mut Mode) {
+pub fn append(
+    buffer: &mut Buffer,
+    _register_handler: &mut RegisterHandler,
+    mode: &mut Mode,
+    _undo_tree: &mut UndoTree,
+) {
     if buffer.cursor != buffer.get_end_of_line() || buffer.cursor + 1 == buffer.rope.len_chars() {
         buffer.cursor += 1;
     }
@@ -43,35 +76,50 @@ pub fn append(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, mode
     mode.insert();
 }
 
-pub fn cut(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+pub fn cut(
+    buffer: &mut Buffer,
+    register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+    undo_tree: &mut UndoTree,
+) {
     if let Some(c) = buffer.rope.get_char(buffer.cursor) {
         if c == '\n' {
             return;
         }
         register_handler.set_reg(c.to_string());
+        let anchor = buffer.cursor;
 
         buffer.rope.remove(buffer.cursor..=buffer.cursor);
         if buffer.cursor != 0 && buffer.is_last_col() {
             buffer.cursor -= 1;
         }
         buffer.update_list_use_current_line();
+
+        let action = Action::delete(anchor, c);
+        undo_tree.new_action(action);
     }
 }
 pub fn insert_new_line(
     buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
+    undo_tree: &mut UndoTree,
 ) {
     buffer.end_of_line();
-    append(buffer, register_handler, mode);
+    let anchor = buffer.cursor;
+    append(buffer, register_handler, mode, undo_tree);
     buffer.insert_char('\n');
     buffer.cursor += 1;
+
+    let action = Action::insert(anchor, '\n');
+    undo_tree.new_action(action);
 }
 
 pub fn insert_new_line_above(
     buffer: &mut Buffer,
     _register_handler: &mut RegisterHandler,
     mode: &mut Mode,
+    undo_tree: &mut UndoTree,
 ) {
     let line_idx = buffer.rope.char_to_line(buffer.cursor);
     let first = buffer.rope.line_to_char(line_idx);
@@ -81,9 +129,17 @@ pub fn insert_new_line_above(
     buffer.cursor = first;
     mode.insert();
     buffer.has_changed = true;
+
+    let action = Action::insert(first, '\n');
+    undo_tree.new_action(action);
 }
 
-pub fn paste(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+pub fn paste(
+    buffer: &mut Buffer,
+    register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+    undo_tree: &mut UndoTree,
+) {
     let contents = &register_handler.get_reg();
 
     let line_idx = buffer.get_row();
@@ -94,9 +150,17 @@ pub fn paste(buffer: &mut Buffer, register_handler: &mut RegisterHandler, _mode:
 
     buffer.rope.insert(buffer.cursor, contents);
     buffer.update_list_use_current_line();
+
+    let action = Action::insert(buffer.cursor, contents);
+    undo_tree.new_action(action);
 }
 
-pub fn crash(_buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+pub fn crash(
+    _buffer: &mut Buffer,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+    _undo_tree: &mut UndoTree,
+) {
     panic!("Intentionally Crashed")
 }
 
@@ -104,6 +168,7 @@ pub fn double_quote_cmd(
     _buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
     _mode: &mut Mode,
+    _undo_tree: &mut UndoTree,
 ) {
     if let Event::Key(event) = read().unwrap() {
         register_handler.init_reg(event.code, "");
@@ -111,22 +176,50 @@ pub fn double_quote_cmd(
     }
 }
 
-pub fn replace(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+pub fn replace(
+    buffer: &mut Buffer,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+    undo_tree: &mut UndoTree,
+) {
     execute!(stdout(), SetCursorStyle::SteadyUnderScore).unwrap();
     if let Event::Key(event) = read().unwrap() {
         if let KeyCode::Char(c) = event.code {
+            let original_char = buffer.get_curr_char();
             buffer.replace_curr_char(c);
+
+            let action = Action::replace(buffer.cursor, original_char, c);
+            undo_tree.new_action(action);
         }
     }
     execute!(stdout(), SetCursorStyle::SteadyBlock).unwrap();
     buffer.has_changed = true;
 }
 
-pub fn last_row(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+pub fn undo(
+    buffer: &mut Buffer,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+    undo_tree: &mut UndoTree,
+) {
+    undo_tree.undo(buffer);
+}
+
+pub fn last_row(
+    buffer: &mut Buffer,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+    _undo_tree: &mut UndoTree,
+) {
     let last_row = usize::max(buffer.len(), 1) - 1;
     buffer.set_row(last_row);
 }
 
-pub fn first_row(buffer: &mut Buffer, _register_handler: &mut RegisterHandler, _mode: &mut Mode) {
+pub fn first_row(
+    buffer: &mut Buffer,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+    _undo_tree: &mut UndoTree,
+) {
     buffer.set_row(0);
 }
