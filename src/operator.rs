@@ -1,4 +1,11 @@
-use crate::{Mode, buffer::Buffer, log, motion::Motion, register::RegisterHandler};
+use crate::{
+    Mode,
+    buffer::Buffer,
+    log,
+    motion::Motion,
+    register::RegisterHandler,
+    undo::{Action, UndoTree},
+};
 
 pub struct Operator<'a> {
     pub name: &'a str,
@@ -7,6 +14,7 @@ pub struct Operator<'a> {
         buffer: &mut Buffer,
         register_handler: &mut RegisterHandler,
         mode: &mut Mode,
+        undo_tree: &mut UndoTree,
     ),
 }
 
@@ -18,6 +26,7 @@ impl<'a> Operator<'a> {
             buffer: &mut Buffer,
             register_handler: &mut RegisterHandler,
             mode: &mut Mode,
+            undo_tree: &mut UndoTree,
         ),
     ) -> Self {
         Self { name, command }
@@ -29,6 +38,7 @@ impl<'a> Operator<'a> {
         buffer: &mut Buffer,
         register_handler: &mut RegisterHandler,
         mode: &mut Mode,
+        undo_tree: &mut UndoTree,
     ) {
         let mut end = motion.evaluate(buffer);
         if !motion.inclusive {
@@ -37,7 +47,7 @@ impl<'a> Operator<'a> {
             }
         }
 
-        (self.command)(end, buffer, register_handler, mode);
+        (self.command)(end, buffer, register_handler, mode, undo_tree);
     }
 
     pub fn entire_line(
@@ -45,11 +55,14 @@ impl<'a> Operator<'a> {
         buffer: &mut Buffer,
         register_handler: &mut RegisterHandler,
         mode: &mut Mode,
+        undo_tree: &mut UndoTree,
     ) {
         buffer.start_of_line();
+        // `+ 1` because the `iterate_range` function is exclusive
         let end_of_line = buffer.get_end_of_line();
+        log("past end_of_line");
 
-        (self.command)(end_of_line, buffer, register_handler, mode);
+        (self.command)(end_of_line, buffer, register_handler, mode, undo_tree);
 
         // buffer.start_of_line();
 
@@ -126,6 +139,7 @@ pub fn iterate_range(
     // }
     let anchor = buffer.cursor;
     let count = (end as isize - anchor as isize).abs();
+    log(format!("count: {}", count));
     initial_callback(register_handler, buffer, mode);
     (0..=count)
         .into_iter()
@@ -181,7 +195,25 @@ pub fn delete(
     buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
+    undo_tree: &mut UndoTree,
 ) {
+    log("in delete");
+    let text = match buffer.rope.get_slice(buffer.cursor..end) {
+        Some(slice) => slice.to_string(),
+        None => {
+            log(format!(
+                "count not slice from: {} to {} (exclusive)",
+                buffer.cursor, end
+            ));
+            String::new()
+        }
+    };
+
+    let end_of_file = buffer.rope.len_chars();
+    if end == end_of_file && end != 0 {
+        buffer.cursor -= 1;
+    }
+
     iterate_range(
         mode,
         register_handler,
@@ -194,6 +226,9 @@ pub fn delete(
     // TODO
     // Currently using the 'd' command across lines will break because of this
     buffer.update_list_use_current_line();
+
+    let action = Action::delete(buffer.cursor, text);
+    undo_tree.new_action(action);
 }
 
 fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
@@ -205,6 +240,7 @@ pub fn yank(
     buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
+    undo_tree: &mut UndoTree,
 ) {
     iterate_range(
         mode,
@@ -222,6 +258,7 @@ pub fn change(
     buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
+    undo_tree: &mut UndoTree,
 ) {
     iterate_range(
         mode,
@@ -240,6 +277,7 @@ pub fn change_until_before(
     buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
+    undo_tree: &mut UndoTree,
 ) {
     let end = if end == 0 { 0 } else { end - 1 };
     iterate_range(

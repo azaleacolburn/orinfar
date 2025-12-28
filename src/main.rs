@@ -177,11 +177,17 @@ fn main() -> Result<()> {
                                 &mut buffer,
                                 &mut register_handler,
                                 &mut mode,
+                                &mut undo_tree,
                             );
                             chained.clear();
                             next_operation = None;
                         } else if c == operation.name.chars().nth(0).unwrap() {
-                            operation.entire_line(&mut buffer, &mut register_handler, &mut mode);
+                            operation.entire_line(
+                                &mut buffer,
+                                &mut register_handler,
+                                &mut mode,
+                                &mut undo_tree,
+                            );
                             chained.clear();
                             next_operation = None;
                         }
@@ -214,8 +220,12 @@ fn main() -> Result<()> {
                         continue;
                     }
                     buffer.cursor -= 1;
+                    let char = buffer.get_curr_char();
                     buffer.delete_curr_char();
                     buffer.update_list_use_current_line();
+
+                    let action = Action::delete(buffer.cursor, char);
+                    undo_tree.new_action(action);
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
                     buffer.insert_char(c);
