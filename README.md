@@ -33,4 +33,4 @@ I'll specify and revise this list when I get around to specific things and I hav
 - [ ] Lsp support, syntax highlighting, etc
 
 # Known Bugs
-Please check the [stable](/tree/stable)  for the latest bug-free commit
+Please check the [stable](https://github.com/azaleacolburn/orinfar/tree/stable)  for the latest bug-free commit
