@@ -74,7 +74,7 @@ pub fn next_char(buffer: &mut Buffer) {
 }
 
 pub fn word(buffer: &mut Buffer) {
-    if usize::max(buffer.get_curr_line().len_chars(), 1) - 1 == buffer.cursor {
+    if buffer.get_curr_line().len_chars() == buffer.get_col() {
         return;
     }
     let mut c = buffer.get_curr_char();
@@ -125,12 +125,11 @@ pub fn back(buffer: &mut Buffer) {
 }
 
 pub fn end_of_word(buffer: &mut Buffer) {
-    if usize::max(buffer.get_curr_line().len_chars(), 1) - 1 == buffer.cursor {
+    if buffer.get_curr_line().len_chars() == buffer.get_col() {
         return;
     }
 
     let mut next_char = unwrap_or_return!(buffer.get_next_char());
-
     let last_legal_char = buffer.get_end_of_line();
 
     if !next_char.is_alphanumeric() {

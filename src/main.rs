@@ -225,7 +225,7 @@ fn main() -> Result<()> {
                     buffer.update_list_use_current_line();
 
                     let action = Action::delete(buffer.cursor, char);
-                    undo_tree.new_action(action);
+                    undo_tree.new_action_merge(action);
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
                     buffer.insert_char(c);
@@ -234,7 +234,7 @@ fn main() -> Result<()> {
                     buffer.update_list_use_current_line();
 
                     let action = Action::insert(buffer.cursor - 1, c);
-                    undo_tree.new_action(action);
+                    undo_tree.new_action_merge(action);
                     // }
                     // buffer.next_char();
                     // panic!(

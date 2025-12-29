@@ -62,7 +62,13 @@ impl<'a> Operator<'a> {
         let end_of_line = buffer.get_end_of_line();
         log("past end_of_line");
 
+        let reg_before = register_handler.get_reg().to_string();
         (self.command)(end_of_line, buffer, register_handler, mode, undo_tree);
+        if reg_before != register_handler.get_reg()
+            && register_handler.get_reg().chars().last().unwrap_or('\n') != '\n'
+        {
+            register_handler.push_reg("\n");
+        }
 
         // buffer.start_of_line();
 
@@ -139,7 +145,6 @@ pub fn iterate_range(
     // }
     let anchor = buffer.cursor;
     let count = (end as isize - anchor as isize).abs();
-    log(format!("count: {}", count));
     initial_callback(register_handler, buffer, mode);
     (0..=count)
         .into_iter()
@@ -197,18 +202,6 @@ pub fn delete(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
-    log("in delete");
-    let text = match buffer.rope.get_slice(buffer.cursor..=end) {
-        Some(slice) => slice.to_string(),
-        None => {
-            log(format!(
-                "count not slice from: {} to {} (exclusive)",
-                buffer.cursor, end
-            ));
-            String::new()
-        }
-    };
-
     let end_of_file = buffer.rope.len_chars();
     if end == end_of_file && end != 0 {
         buffer.cursor -= 1;
@@ -227,6 +220,7 @@ pub fn delete(
     // Currently using the 'd' command across lines will break because of this
     buffer.update_list_use_current_line();
 
+    let text = register_handler.get_reg();
     let action = Action::delete(buffer.cursor, text);
     undo_tree.new_action(action);
 }
@@ -242,8 +236,11 @@ pub fn yank(
     buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
     mode: &mut Mode,
-    undo_tree: &mut UndoTree,
+    _undo_tree: &mut UndoTree,
 ) {
+    if end == buffer.rope.len_chars() && end == buffer.cursor {
+        return;
+    }
     let end_of_file = buffer.rope.len_chars();
     if end == end_of_file && end != 0 {
         buffer.cursor -= 1;
@@ -266,6 +263,11 @@ pub fn change(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
+    let end_of_file = buffer.rope.len_chars();
+    if end == end_of_file && end != 0 {
+        buffer.cursor -= 1;
+    }
+
     iterate_range(
         mode,
         register_handler,
@@ -275,7 +277,14 @@ pub fn change(
         delete_char,
         insert,
     );
+
+    // TODO
+    // Currently using the 'c' command across lines will break because of this
     buffer.update_list_use_current_line();
+
+    let text = register_handler.get_reg();
+    let action = Action::delete(buffer.cursor, text);
+    undo_tree.new_action(action);
 }
 
 pub fn change_until_before(
@@ -285,7 +294,11 @@ pub fn change_until_before(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
-    let end = usize::max(end, 1) - 1;
+    let end_of_file = buffer.rope.len_chars();
+    if end == end_of_file && end != 0 {
+        buffer.cursor -= 1;
+    }
+
     iterate_range(
         mode,
         register_handler,

@@ -17,9 +17,9 @@ pub struct Action {
 }
 
 impl Action {
-    pub fn delete(initial_position: usize, text: impl ToString) -> Self {
+    pub fn delete(final_position: usize, text: impl ToString) -> Self {
         Action {
-            position: initial_position,
+            position: final_position,
             r#type: ActionType::Delete(text.to_string()),
         }
     }
@@ -96,7 +96,7 @@ impl UndoTree {
         buffer.has_changed = true;
     }
 
-    pub fn new_action(&mut self, mut action: Action) {
+    pub fn new_action_merge(&mut self, mut action: Action) {
         // The point of this is to squash keystrokes
         log("undo");
         log(format!("action: {:?}", action));
@@ -126,6 +126,10 @@ impl UndoTree {
             _ => {}
         };
 
+        self.actions.push(action);
+    }
+
+    pub fn new_action(&mut self, action: Action) {
         self.actions.push(action);
     }
 }

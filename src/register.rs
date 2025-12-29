@@ -4,6 +4,7 @@ pub type RegId = String;
 pub type RegContents = String;
 pub type Registers = HashMap<RegId, RegContents>;
 
+#[derive(Clone)]
 pub struct RegisterHandler {
     registers: HashMap<RegId, RegContents>,
     pub current_register: RegId,
@@ -45,7 +46,10 @@ impl RegisterHandler {
     }
 
     pub fn get_reg(&mut self) -> &str {
-        self.registers.get(&self.current_register).unwrap()
+        match self.registers.get(&self.current_register) {
+            Some(s) => s,
+            None => "",
+        }
     }
 
     pub fn reset_current_register(&mut self) {
