@@ -28,9 +28,9 @@ use crate::{
     io::Cli,
     mode::Mode,
     motion::{
-        Motion, back, beginning_of_line, end_of_line, end_of_word, find, find_back, next_char,
-        next_corresponding_bracket, next_newline, next_row, prev_char, prev_newline, prev_row,
-        word,
+        Motion, back, beginning_of_line, end_of_line, end_of_word, find, find_back, find_until,
+        next_char, next_corresponding_bracket, next_newline, next_row, prev_char, prev_newline,
+        prev_row, word,
     },
     operator::{Operator, change, change_until_before, delete, yank},
     register::RegisterHandler,
@@ -80,7 +80,6 @@ fn main() -> Result<()> {
         Operator::new("d", delete),
         Operator::new("y", yank),
         Operator::new("c", change),
-        Operator::new("t", change_until_before),
     ];
     let motions: &[Motion] = &[
         // HJKL
@@ -96,6 +95,7 @@ fn main() -> Result<()> {
         Motion::inclusive("_", beginning_of_line),
         Motion::inclusive("f", find),
         Motion::inclusive("F", find_back),
+        Motion::inclusive("t", find_until),
         Motion::inclusive("%", next_corresponding_bracket),
         Motion::inclusive("}", next_newline),
         Motion::inclusive("{", prev_newline),

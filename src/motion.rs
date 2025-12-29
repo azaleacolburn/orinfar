@@ -1,6 +1,9 @@
 use crossterm::event::KeyCode;
 
-use crate::{buffer::Buffer, log, on_next_input_buffer_only};
+use crate::{
+    buffer::{self, Buffer},
+    log, on_next_input_buffer_only,
+};
 
 pub struct Motion<'a> {
     pub name: &'a str,
@@ -180,6 +183,30 @@ pub fn find(buffer: &mut Buffer) {
     }
 
     on_next_input_buffer_only(buffer, find).unwrap();
+}
+
+pub fn find_until(buffer: &mut Buffer) {
+    fn find_until(key: KeyCode, buffer: &mut Buffer) {
+        if let KeyCode::Char(target) = key {
+            let anchor = buffer.cursor;
+            loop {
+                if buffer.get_curr_char() == target {
+                    if buffer.cursor != 0 {
+                        buffer.cursor -= 1;
+                    }
+                    return;
+                }
+                if buffer.cursor == buffer.get_end_of_line() {
+                    break;
+                }
+                buffer.cursor += 1;
+            }
+
+            buffer.cursor = anchor
+        }
+    }
+
+    on_next_input_buffer_only(buffer, find_until).unwrap();
 }
 
 pub fn find_back(buffer: &mut Buffer) {
