@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-pub type RegId = String;
+pub type RegId = char;
 pub type RegContents = String;
 pub type Registers = HashMap<RegId, RegContents>;
 
 #[derive(Clone)]
 pub struct RegisterHandler {
-    registers: HashMap<RegId, RegContents>,
+    registers: Registers,
     pub current_register: RegId,
 }
 
@@ -14,12 +14,12 @@ impl RegisterHandler {
     pub fn new() -> Self {
         RegisterHandler {
             registers: HashMap::new(),
-            current_register: String::from("0"),
+            current_register: '"',
         }
     }
 
-    pub fn init_reg(&mut self, reg: impl ToString, value: impl ToString) {
-        self.current_register = reg.to_string();
+    pub fn init_reg(&mut self, reg: char, value: impl ToString) {
+        self.current_register = reg;
         self.set_reg(value.to_string());
     }
 
@@ -52,7 +52,11 @@ impl RegisterHandler {
         }
     }
 
-    pub fn reset_current_register(&mut self) {
-        self.current_register = "0".into()
+    pub fn get_curr_reg(&mut self) -> char {
+        self.current_register
+    }
+
+    pub fn reset_curr_register(&mut self) {
+        self.current_register = '\"'
     }
 }

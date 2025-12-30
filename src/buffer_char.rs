@@ -1,4 +1,6 @@
-use crate::{buffer::Buffer, log};
+use std::iter::once;
+
+use crate::{DEBUG, buffer::Buffer, log};
 
 impl Buffer {
     pub fn delete_curr_char(&mut self) {
@@ -23,6 +25,32 @@ impl Buffer {
             self.update_list_add_current();
         }
         self.rope.insert_char(self.cursor, c);
+    }
+
+    // Inserts a newline at the current position, then adds spaces to the new line until the last
+    // non-whitespace column lines up
+    //
+    // Increments cursor accordingly
+    //
+    // # Returns
+    // The contents of the newline including the newline character but not including the contents
+    // moved from the previous line
+    //
+    // It returns the contents inserted into the buffer
+    pub fn insert_newline(&mut self) -> String {
+        let first_col = self.get_first_non_whitespace_col();
+        log!("first_col {}", first_col);
+        self.update_list_add_current();
+        self.rope.insert_char(self.cursor, '\n');
+        self.cursor += 1;
+        self.insert_char_n_times(' ', first_col as u8);
+        self.cursor += first_col;
+
+        let newline = once('\n')
+            .chain((0..first_col).map(|_| ' '))
+            .collect::<String>();
+
+        newline
     }
 
     pub fn insert_char_n_times(&mut self, c: char, n: u8) {
@@ -82,23 +110,23 @@ impl Buffer {
 
     /// Returns the current zero-indexed column the cursor is on
     pub fn get_col(&self) -> usize {
-        log(format!("get_col cursor: {}, {:?}", self.cursor, self.rope));
+        log!("get_col cursor: {}, {:?}", self.cursor, self.rope);
         let start_idx = self.get_start_of_line();
         self.cursor - start_idx
     }
 
     // This is where we are
     pub fn set_col(&mut self, col: usize) {
-        log(format!("\nset_col cursor: {}", self.cursor));
+        log!("\nset_col cursor: {}", self.cursor);
         let start_idx = self.get_start_of_line();
         self.cursor = start_idx + col;
-        log(format!(
+        log!(
             "start_of_line: {}\ncol: {}\nnew_cursor: {} len: {}\n",
             start_idx,
             col,
             self.cursor,
             self.rope.len_chars()
-        ));
+        );
     }
 
     pub fn get_row(&self) -> usize {

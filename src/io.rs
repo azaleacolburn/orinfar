@@ -1,14 +1,20 @@
 use anyhow::{Result, bail};
 use ropey::Rope;
-use std::path::PathBuf;
+use std::{env, fs::OpenOptions, io::Write, path::PathBuf};
 
 use clap::Parser;
 
-use crate::buffer::Buffer;
+use crate::{buffer::Buffer, mode::Mode};
 
 #[derive(Parser)]
+#[clap(author, version, about, long_about = None)]
 pub struct Cli {
     pub file_name: Option<String>,
+
+    #[arg(short, long, value_enum, default_value_t = Mode::Normal)]
+    pub mode: Mode,
+    #[arg(short, long, default_value_t = true)]
+    pub debug: bool,
 }
 
 impl Cli {
@@ -52,4 +58,32 @@ pub fn write(path: PathBuf, buffer: Buffer) -> Result<()> {
     std::fs::write(path, buffer.to_string())?;
 
     Ok(())
+}
+
+pub fn log_dir() -> PathBuf {
+    env::home_dir().unwrap().join(".orinfar")
+}
+
+pub fn log_file() -> PathBuf {
+    env::home_dir().unwrap().join(".orinfar/log")
+}
+
+pub fn log(contents: impl ToString) {
+    let mut file = OpenOptions::new()
+        .append(true)
+        .open(log_file())
+        .expect("unable to open file");
+
+    // append data to the file
+    file.write_all(format!("{}\n", contents.to_string()).as_bytes())
+        .expect("unable to append data");
+}
+
+#[macro_export]
+macro_rules! log {
+    ($($arg:tt)*) => {
+        if unsafe { DEBUG } {
+            log(format!($($arg)*))
+        }
+    };
 }

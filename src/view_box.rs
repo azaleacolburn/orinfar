@@ -1,4 +1,4 @@
-use crate::{Mode, buffer::Buffer, log, status_bar::StatusBar};
+use crate::{DEBUG, Mode, buffer::Buffer, log, status_bar::StatusBar};
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn, MoveToRow, SetCursorStyle, Show},
@@ -69,7 +69,6 @@ impl ViewBox {
         stdout: &mut Stdout,
         left_padding: usize,
     ) -> Result<()> {
-        log("in wb");
         let lines = buffer
             .rope
             .lines()
@@ -84,7 +83,7 @@ impl ViewBox {
 
         lines.for_each(|(i, (line, should_update))| {
             if !should_update {
-                execute!(stdout, MoveDown(1));
+                execute!(stdout, MoveDown(1)).unwrap();
                 return;
             }
 
@@ -99,7 +98,8 @@ impl ViewBox {
                 Clear(ClearType::CurrentLine),
                 SetForegroundColor(Color::DarkGrey),
                 Print(padding_buffer.clone()),
-            );
+            )
+            .unwrap();
             padding_buffer.clear();
 
             let len = line.len_chars();
@@ -108,13 +108,13 @@ impl ViewBox {
             }
 
             let last_col = usize::min(self.left + self.width, len);
-            log(format!(
+            log!(
                 "eos {} len {} last_col {} left {}",
                 self.left + self.width,
                 len,
                 last_col,
                 self.left
-            ));
+            );
             let line = if self.left >= last_col {
                 String::from("\n")
             } else {
@@ -126,12 +126,13 @@ impl ViewBox {
                 SetForegroundColor(Color::Blue),
                 Print(line),
                 MoveToColumn(0)
-            );
+            )
+            .unwrap();
         });
 
         // This is for clearing trailing lines that we missed
         if len_lines < self.height {
-            execute!(stdout, MoveTo(0, len_lines as u16));
+            execute!(stdout, MoveTo(0, len_lines as u16))?;
             (len_lines..self.height).for_each(|_| {
                 execute!(stdout, Clear(ClearType::CurrentLine), MoveDown(1)).unwrap()
             });
@@ -147,6 +148,7 @@ impl ViewBox {
         mode: &Mode,
         chained: &[char],
         count: u16,
+        register: char,
         path: &Option<PathBuf>,
         adjusted: bool,
     ) -> Result<()> {
@@ -170,10 +172,17 @@ impl ViewBox {
                     count.to_string()
                 };
 
+                let reg_str = if register == '\"' {
+                    String::new()
+                } else {
+                    format!("\"{}", register)
+                };
+
                 format!(
-                    "Editing File: \"{}\" {}b {}{}",
+                    "Editing File: \"{}\" {}b {}{}{}",
                     path.to_string_lossy(),
                     std::fs::read(path)?.len(),
+                    reg_str,
                     count_str,
                     chained.iter().collect::<String>()
                 )
@@ -196,7 +205,7 @@ impl ViewBox {
             MoveTo(0, self.height as u16 + 1),
             Clear(ClearType::CurrentLine),
             Print(status_message)
-        );
+        )?;
 
         let (new_col, new_row) = match mode {
             Mode::Command => (status_bar.idx() as u16, (self.height + 1) as u16),
@@ -216,7 +225,7 @@ impl ViewBox {
         self.height
     }
 
-    pub fn width(&self) -> usize {
+    pub fn _width(&self) -> usize {
         self.width
     }
 }

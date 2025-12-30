@@ -1,7 +1,6 @@
 use crate::{
     Mode,
     buffer::Buffer,
-    log,
     motion::Motion,
     register::RegisterHandler,
     undo::{Action, UndoTree},
@@ -60,22 +59,14 @@ impl<'a> Operator<'a> {
         buffer.start_of_line();
         // `+ 1` because the `iterate_range` function is exclusive
         let end_of_line = buffer.get_end_of_line();
-        log("past end_of_line");
-
         let reg_before = register_handler.get_reg().to_string();
+
         (self.command)(end_of_line, buffer, register_handler, mode, undo_tree);
         if reg_before != register_handler.get_reg()
             && register_handler.get_reg().chars().last().unwrap_or('\n') != '\n'
         {
             register_handler.push_reg("\n");
         }
-
-        // buffer.start_of_line();
-
-        // let len = buffer.get_curr_line().len_chars();
-        // if (0..len).contains(&anchor) {
-        //     buffer.cursor = anchor;
-        // }
     }
 }
 
@@ -119,30 +110,6 @@ pub fn iterate_range(
         mode: &mut Mode,
     ),
 ) {
-    // NOTE We can't actually know the distance between cursors
-    // without traversing the buffer since lines are of arbitrary length
-    // let mut count: usize = 0;
-    // let anchor_cursor = buffer.cursor.clone();
-    // if end >= buffer.cursor {
-    //     while buffer.cursor != end && buffer.cursor < buffer.rope.len_chars() {
-    //         buffer.next_char();
-    //         count += 1;
-    //     }
-    //     log(format!("count {}", count));
-    //     buffer.cursor = anchor_cursor.clone();
-    //
-    //     initial_callback(register_handler, buffer, mode);
-    //     (0..=count)
-    //         .into_iter()
-    //         .for_each(|_| iter_callback(register_handler, buffer));
-    //     after_callback(anchor_cursor, register_handler, buffer, mode);
-    // } else {
-    //     while buffer.cursor != end && buffer.cursor > 0 {
-    //         buffer.prev_char();
-    //         count += 1;
-    //     }
-    //     buffer.cursor = anchor_cursor.clone();
-    // }
     let anchor = buffer.cursor;
     let count = (end as isize - anchor as isize).abs();
     initial_callback(register_handler, buffer, mode);
@@ -183,17 +150,11 @@ fn clear_reg(register_handler: &mut RegisterHandler, _buffer: &mut Buffer, _mode
 }
 
 fn delete_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
-    log(format!("here: {}", buffer.cursor));
     if buffer.rope.len_chars() <= buffer.cursor {
         return;
     }
-    log("hereo");
     register_handler.push_reg(&buffer.get_curr_char().to_string());
     buffer.delete_curr_char();
-
-    // if buffer.cursor > 0 {
-    //     buffer.cursor -= 1;
-    // }
 }
 pub fn delete(
     end: usize,
@@ -280,34 +241,6 @@ pub fn change(
 
     // TODO
     // Currently using the 'c' command across lines will break because of this
-    buffer.update_list_use_current_line();
-
-    let text = register_handler.get_reg();
-    let action = Action::delete(buffer.cursor, text);
-    undo_tree.new_action(action);
-}
-
-pub fn change_until_before(
-    end: usize,
-    buffer: &mut Buffer,
-    register_handler: &mut RegisterHandler,
-    mode: &mut Mode,
-    undo_tree: &mut UndoTree,
-) {
-    let end_of_file = buffer.rope.len_chars();
-    if end == end_of_file && end != 0 {
-        buffer.cursor -= 1;
-    }
-
-    iterate_range(
-        mode,
-        register_handler,
-        buffer,
-        end,
-        clear_reg,
-        delete_char,
-        insert,
-    );
     buffer.update_list_use_current_line();
 
     let text = register_handler.get_reg();

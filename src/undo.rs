@@ -1,11 +1,10 @@
-use crate::{buffer::Buffer, utility::log};
+use crate::buffer::Buffer;
 
 #[derive(Debug, Clone)]
 pub enum ActionType {
     Insert(String),
     Delete(String),
     Replace { original: String, new: String },
-    Neither,
 }
 
 #[derive(Debug, Clone)]
@@ -41,13 +40,6 @@ impl Action {
             },
         }
     }
-
-    pub fn neither(initial_position: usize) -> Self {
-        Action {
-            position: initial_position,
-            r#type: ActionType::Neither,
-        }
-    }
 }
 
 /// Handles the tracking of versions of the buffer
@@ -71,14 +63,11 @@ impl UndoTree {
             Some(prev_state) => prev_state,
             None => return,
         };
-        log("here1");
 
         match action.r#type {
             ActionType::Insert(text) => {
                 buffer.cursor = action.position;
-                log(format!("here5: {}", text.len()));
                 (0..text.len()).for_each(|_| buffer.delete_curr_char());
-                log("here7");
             }
             ActionType::Delete(text) => {
                 buffer.cursor = action.position;
@@ -89,7 +78,6 @@ impl UndoTree {
                 assert_eq!(original.len(), new.len());
                 new.chars().for_each(|c| buffer.replace_curr_char(c));
             }
-            ActionType::Neither => buffer.cursor = action.position,
         }
 
         buffer.update_list_set(.., true);
@@ -98,9 +86,6 @@ impl UndoTree {
 
     pub fn new_action_merge(&mut self, mut action: Action) {
         // The point of this is to squash keystrokes
-        log("undo");
-        log(format!("action: {:?}", action));
-
         match &action.r#type {
             ActionType::Insert(text) => {
                 let mut text = text.clone();

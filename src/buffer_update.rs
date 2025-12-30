@@ -1,6 +1,5 @@
+use crate::{DEBUG, buffer::Buffer, log};
 use std::{ops::RangeBounds, slice::SliceIndex};
-
-use crate::{buffer::Buffer, log};
 
 impl Buffer {
     /// Updates the has_changed list when a `\n` character is removed
@@ -9,7 +8,7 @@ impl Buffer {
         self.update_list_remove(current_line);
         self.update_list_set(usize::max(current_line, 1) - 1.., true);
         self.has_changed = true;
-        log(format!("update_list: {:?}", self.lines_for_updating))
+        log!("update_list: {:?}", self.lines_for_updating)
     }
 
     /// Updates the has_changed list when a `\n` character is added

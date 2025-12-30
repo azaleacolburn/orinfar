@@ -8,6 +8,7 @@ mod buffer_char;
 mod buffer_line;
 mod buffer_update;
 mod commands;
+#[macro_use]
 mod io;
 mod mode;
 mod motion;
@@ -23,20 +24,19 @@ use crate::{
     buffer::Buffer,
     commands::{
         append, cut, first_row, insert, insert_new_line, insert_new_line_above, last_row, paste,
-        replace, undo,
+        replace, set_curr_register, undo,
     },
-    io::Cli,
+    io::{Cli, log, log_dir, log_file},
     mode::Mode,
     motion::{
         Motion, back, beginning_of_line, end_of_line, end_of_word, find, find_back, find_until,
         next_char, next_corresponding_bracket, next_newline, next_row, prev_char, prev_newline,
         prev_row, word,
     },
-    operator::{Operator, change, change_until_before, delete, yank},
+    operator::{Operator, change, delete, yank},
     register::RegisterHandler,
     status_bar::StatusBar,
     undo::{Action, UndoTree},
-    utility::log,
     view_box::{ViewBox, cleanup, setup},
     view_command::{ViewCommand, center_viewbox_on_cursor},
 };
@@ -50,10 +50,13 @@ use crossterm::{
 };
 use std::{io::stdout, path::PathBuf, u16};
 
+pub static mut DEBUG: bool = true;
+
 fn main() -> Result<()> {
     panic_hook::add_panic_hook(&cleanup);
 
-    std::fs::File::create("log.txt")?;
+    std::fs::create_dir(log_dir());
+    std::fs::File::create(log_file())?;
 
     let mut stdout = stdout();
     let _leader = ' ';
@@ -75,6 +78,7 @@ fn main() -> Result<()> {
         Cmd::new("G", last_row),
         Cmd::new("gg", first_row),
         Cmd::new("u", undo),
+        Cmd::new("\"", set_curr_register),
     ];
     let operators: &[Operator] = &[
         Operator::new("d", delete),
@@ -115,13 +119,17 @@ fn main() -> Result<()> {
 
     let (cols, rows) = size()?;
     let mut view_box: ViewBox = ViewBox::new(cols, rows);
-    setup(rows, cols);
+    setup(rows, cols)?;
 
     let mut mode = Mode::Normal;
     let mut count: u16 = 1;
     let mut chained: Vec<char> = vec![];
 
-    let (_cli, mut path) = Cli::parse_path()?;
+    let (cli, mut path) = Cli::parse_path()?;
+    unsafe {
+        DEBUG = cli.debug;
+    }
+
     io::load_file(&path, &mut buffer)?;
     view_box.flush(
         &mut buffer,
@@ -129,6 +137,7 @@ fn main() -> Result<()> {
         &mode,
         &chained,
         count,
+        register_handler.get_curr_reg(),
         &path,
         false,
     )?;
@@ -248,11 +257,40 @@ fn main() -> Result<()> {
                     }
                     buffer.cursor -= 1;
                     let char = buffer.get_curr_char();
-                    buffer.delete_curr_char();
-                    buffer.update_list_use_current_line();
 
-                    let action = Action::delete(buffer.cursor, char);
-                    undo_tree.new_action_merge(action);
+                    // Handles deleting 4 spaces or up to the alignment of 4 spaces if possible
+                    let mut space_count = 0;
+                    let mut idx = buffer.cursor;
+                    while let Some(c) = buffer.rope.get_char(idx)
+                        && c == ' '
+                        && idx > 0
+                    {
+                        idx -= 1;
+                        space_count += 1;
+                    }
+                    if space_count > 1 {
+                        let mut deleted = String::with_capacity(4);
+                        let mut leftover = space_count % 4;
+                        if leftover == 0 {
+                            leftover = 4
+                        }
+                        assert!(space_count >= leftover);
+
+                        buffer.cursor -= usize::max(leftover, 1) - 1;
+                        (0..leftover).for_each(|_| {
+                            deleted.push(buffer.get_curr_char());
+                            buffer.delete_curr_char();
+                        });
+
+                        let action = Action::delete(buffer.cursor, deleted);
+                        undo_tree.new_action_merge(action);
+                    } else {
+                        buffer.delete_curr_char();
+                        buffer.update_list_use_current_line();
+
+                        let action = Action::delete(buffer.cursor, char);
+                        undo_tree.new_action_merge(action);
+                    }
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
                     buffer.insert_char(c);
@@ -281,9 +319,10 @@ fn main() -> Result<()> {
                     buffer.update_list_use_current_line();
                 }
                 (KeyCode::Enter, Mode::Insert) => {
-                    buffer.insert_char('\n');
-                    // buffer.next_char();
-                    buffer.cursor += 1;
+                    let newline = buffer.insert_newline();
+
+                    let action = Action::insert(buffer.cursor - newline.len(), newline);
+                    undo_tree.new_action(action);
                 }
 
                 (KeyCode::Char(c), Mode::Command) => {
@@ -296,19 +335,20 @@ fn main() -> Result<()> {
                                 Some(path) => {
                                     io::write(path.to_path_buf(), buffer.clone())?;
                                 }
-                                None => log("Cannot write buffer, no file opened."),
+                                None => log!("Cannot write buffer, no file opened."),
                             },
                             'l' => {
-                                io::load_file(&path, &mut buffer);
+                                io::load_file(&path, &mut buffer)?;
                                 view_box.flush(
                                     &buffer,
                                     &status_bar,
                                     &mode,
                                     &chained,
                                     count,
+                                    register_handler.get_curr_reg(),
                                     &path,
                                     false,
-                                );
+                                )?;
                             }
                             'o' => {
                                 if status_bar.len() == i + 1 {
@@ -317,19 +357,20 @@ fn main() -> Result<()> {
                                 let path_buf = PathBuf::from(
                                     status_bar[i + 1..].iter().collect::<String>().trim(),
                                 );
-                                log(format!("Set path to equal: {}", path_buf.to_string_lossy()));
+                                log!("Set path to equal: {}", path_buf.to_string_lossy());
                                 path = Some(path_buf);
 
-                                io::load_file(&path, &mut buffer);
+                                io::load_file(&path, &mut buffer)?;
                                 view_box.flush(
                                     &buffer,
                                     &status_bar,
                                     &mode,
                                     &chained,
                                     count,
+                                    register_handler.get_curr_reg(),
                                     &path,
                                     false,
-                                );
+                                )?;
 
                                 break;
                             }
@@ -344,10 +385,7 @@ fn main() -> Result<()> {
                                 let original = substitution[0];
                                 let new: String = substitution[1].iter().collect();
 
-                                log(format!(
-                                    "Substition\n\toriginal: {:?}\n\tnew: {}",
-                                    original, new
-                                ));
+                                log!("Substition\n\toriginal: {:?}\n\tnew: {}", original, new);
 
                                 let mut curr: Vec<char> = Vec::with_capacity(original.len() - 1);
                                 let mut idxs_of_substitution: Vec<usize> = Vec::with_capacity(4);
@@ -373,17 +411,14 @@ fn main() -> Result<()> {
                                 let num: usize = match num_str.parse() {
                                     Ok(n) => n,
                                     Err(err) => {
-                                        log(format!(
-                                            "Failed to parse number: {} ({})",
-                                            num_str, err
-                                        ));
+                                        log!("Failed to parse number: {} ({})", num_str, err);
                                         break;
                                     }
                                 };
 
                                 buffer.set_row(num + 1);
                             }
-                            c => log(format!("Unknown Meta-Command: {}", c)),
+                            c => log!("Unknown Meta-Command: {}", c),
                         }
                     }
 
@@ -422,6 +457,7 @@ fn main() -> Result<()> {
                 &mode,
                 &chained,
                 count,
+                register_handler.get_curr_reg(),
                 &path,
                 adjusted,
             )?;

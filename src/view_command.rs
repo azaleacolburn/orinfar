@@ -1,9 +1,4 @@
-use crate::{
-    buffer::Buffer,
-    mode::Mode,
-    register::RegisterHandler,
-    view_box::{self, ViewBox},
-};
+use crate::{buffer::Buffer, view_box::ViewBox};
 
 pub struct ViewCommand<'a> {
     pub name: &'a str,

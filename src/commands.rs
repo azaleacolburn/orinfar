@@ -46,14 +46,6 @@ impl<'a> Command<'a> {
     }
 }
 
-pub fn noop(
-    _buffer: &mut Buffer,
-    _register_handler: &mut RegisterHandler,
-    _mode: &mut Mode,
-    _undo_tree: &mut UndoTree,
-) {
-}
-
 pub fn insert(
     _buffer: &mut Buffer,
     _register_handler: &mut RegisterHandler,
@@ -99,6 +91,9 @@ pub fn cut(
         undo_tree.new_action(action);
     }
 }
+
+/// Acts like 'o' does in my nixvim config, it inserts spaces at the beginning of the line to align
+/// the first non-whitespace line of the new line with that of the old one
 pub fn insert_new_line(
     buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
@@ -108,10 +103,9 @@ pub fn insert_new_line(
     buffer.end_of_line();
     let anchor = buffer.cursor;
     append(buffer, register_handler, mode, undo_tree);
-    buffer.insert_char('\n');
-    buffer.cursor += 1;
+    let newline = buffer.insert_newline();
 
-    let action = Action::insert(anchor, '\n');
+    let action = Action::insert(anchor, newline);
     undo_tree.new_action(action);
 }
 
@@ -155,7 +149,7 @@ pub fn paste(
     undo_tree.new_action(action);
 }
 
-pub fn crash(
+pub fn _crash(
     _buffer: &mut Buffer,
     _register_handler: &mut RegisterHandler,
     _mode: &mut Mode,
@@ -164,15 +158,19 @@ pub fn crash(
     panic!("Intentionally Crashed")
 }
 
-pub fn double_quote_cmd(
+pub fn set_curr_register(
     _buffer: &mut Buffer,
     register_handler: &mut RegisterHandler,
     _mode: &mut Mode,
     _undo_tree: &mut UndoTree,
 ) {
     if let Event::Key(event) = read().unwrap() {
-        register_handler.init_reg(event.code, "");
-        register_handler.current_register = event.code.to_string();
+        let reg_name = match event.code {
+            KeyCode::Char(c) => c,
+            _ => return,
+        };
+        register_handler.init_reg(reg_name, "");
+        register_handler.current_register = reg_name;
     }
 }
 
