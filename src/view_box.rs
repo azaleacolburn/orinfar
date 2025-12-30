@@ -145,6 +145,8 @@ impl ViewBox {
         buffer: &Buffer,
         status_bar: &StatusBar,
         mode: &Mode,
+        chained: &[char],
+        count: u16,
         path: &Option<PathBuf>,
         adjusted: bool,
     ) -> Result<()> {
@@ -161,12 +163,30 @@ impl ViewBox {
 
         let status_message = match (mode, path) {
             (Mode::Command, _) => status_bar.buffer(),
-            (Mode::Normal, Some(path)) => format!(
-                "Editing File: \"{}\" {}b",
-                path.to_string_lossy(),
-                std::fs::read(path)?.len()
-            ),
-            (Mode::Normal, None) => "".into(),
+            (Mode::Normal, Some(path)) => {
+                let count_str = if count == 1 {
+                    String::new()
+                } else {
+                    count.to_string()
+                };
+
+                format!(
+                    "Editing File: \"{}\" {}b {}{}",
+                    path.to_string_lossy(),
+                    std::fs::read(path)?.len(),
+                    count_str,
+                    chained.iter().collect::<String>()
+                )
+            }
+            (Mode::Normal, None) => {
+                let count_str = if count == 1 {
+                    String::new()
+                } else {
+                    count.to_string()
+                };
+
+                format!("{}{}", count_str, chained.iter().collect::<String>())
+            }
             (Mode::Insert, _) => "-- INSERT --".into(),
             (Mode::Visual, _) => "-- VISUAL --".into(),
         };

@@ -123,7 +123,15 @@ fn main() -> Result<()> {
 
     let (_cli, mut path) = Cli::parse_path()?;
     io::load_file(&path, &mut buffer)?;
-    view_box.flush(&mut buffer, &status_bar, &mode, &path, false)?;
+    view_box.flush(
+        &mut buffer,
+        &status_bar,
+        &mode,
+        &chained,
+        count,
+        &path,
+        false,
+    )?;
 
     'main: loop {
         buffer.update_list_reset();
@@ -161,6 +169,21 @@ fn main() -> Result<()> {
                             &mut undo_tree,
                         );
                         chained.clear();
+                    } else if let Some(command) = commands
+                        .iter()
+                        .find(|motion| motion.name == &chained.last().unwrap_or(&' ').to_string())
+                    {
+                        (0..count).for_each(|_| {
+                            command.execute(
+                                &mut buffer,
+                                &mut register_handler,
+                                &mut mode,
+                                &mut undo_tree,
+                            );
+                        });
+                        count = 1;
+                        chained.clear();
+                        next_operation = None;
                     } else if let Some(view_command) = view_commands
                         .iter()
                         .find(|command| command.name == chained.iter().collect::<String>())
@@ -172,14 +195,17 @@ fn main() -> Result<()> {
                             .iter()
                             .find(|motion| motion.name.chars().nth(0).unwrap() == c)
                         {
-                            operation.execute(
-                                motion,
-                                &mut buffer,
-                                &mut register_handler,
-                                &mut mode,
-                                &mut undo_tree,
-                            );
+                            (0..count).for_each(|_| {
+                                operation.execute(
+                                    motion,
+                                    &mut buffer,
+                                    &mut register_handler,
+                                    &mut mode,
+                                    &mut undo_tree,
+                                );
+                            });
                             chained.clear();
+                            count = 1;
                             next_operation = None;
                         } else if c == operation.name.chars().nth(0).unwrap() {
                             operation.entire_line(
@@ -189,6 +215,7 @@ fn main() -> Result<()> {
                                 &mut undo_tree,
                             );
                             chained.clear();
+                            count = 1;
                             next_operation = None;
                         }
                     } else if chained.len() == 1 {
@@ -273,7 +300,15 @@ fn main() -> Result<()> {
                             },
                             'l' => {
                                 io::load_file(&path, &mut buffer);
-                                view_box.flush(&buffer, &status_bar, &mode, &path, false);
+                                view_box.flush(
+                                    &buffer,
+                                    &status_bar,
+                                    &mode,
+                                    &chained,
+                                    count,
+                                    &path,
+                                    false,
+                                );
                             }
                             'o' => {
                                 if status_bar.len() == i + 1 {
@@ -286,7 +321,15 @@ fn main() -> Result<()> {
                                 path = Some(path_buf);
 
                                 io::load_file(&path, &mut buffer);
-                                view_box.flush(&buffer, &status_bar, &mode, &path, false);
+                                view_box.flush(
+                                    &buffer,
+                                    &status_bar,
+                                    &mode,
+                                    &chained,
+                                    count,
+                                    &path,
+                                    false,
+                                );
 
                                 break;
                             }
@@ -373,7 +416,15 @@ fn main() -> Result<()> {
             };
 
             let adjusted = view_box.adjust(&mut buffer);
-            view_box.flush(&buffer, &status_bar, &mode, &path, adjusted)?;
+            view_box.flush(
+                &buffer,
+                &status_bar,
+                &mode,
+                &chained,
+                count,
+                &path,
+                adjusted,
+            )?;
         }
     }
 
