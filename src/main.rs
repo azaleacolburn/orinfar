@@ -55,7 +55,12 @@ pub static mut DEBUG: bool = true;
 fn main() -> Result<()> {
     panic_hook::add_panic_hook(&cleanup);
 
-    std::fs::create_dir(log_dir());
+    // This could fail if the dir already exists, so we don't care if this fails
+    if let Err(err) = std::fs::create_dir(log_dir())
+        && err.to_string() != "File exists (os error 17)"
+    {
+        return Err(err.into());
+    }
     std::fs::File::create(log_file())?;
 
     let mut stdout = stdout();
@@ -259,32 +264,15 @@ fn main() -> Result<()> {
                     let char = buffer.get_curr_char();
 
                     // Handles deleting 4 spaces or up to the alignment of 4 spaces if possible
-                    let mut space_count = 0;
-                    let mut idx = buffer.cursor;
-                    while let Some(c) = buffer.rope.get_char(idx)
-                        && c == ' '
-                        && idx > 0
-                    {
-                        idx -= 1;
-                        space_count += 1;
-                    }
-                    if space_count > 1 {
-                        let mut deleted = String::with_capacity(4);
-                        let mut leftover = space_count % 4;
-                        if leftover == 0 {
-                            leftover = 4
-                        }
-                        assert!(space_count >= leftover);
+                    let space_count = buffer.count_spaces_backwards();
 
-                        buffer.cursor -= usize::max(leftover, 1) - 1;
-                        (0..leftover).for_each(|_| {
-                            deleted.push(buffer.get_curr_char());
-                            buffer.delete_curr_char();
-                        });
+                    if space_count > 1 {
+                        let deleted = buffer.delete_to_4_spaces_alignment(space_count);
 
                         let action = Action::delete(buffer.cursor, deleted);
                         undo_tree.new_action_merge(action);
                     } else {
+                        // In most cases, when there's just one character to delete
                         buffer.delete_curr_char();
                         buffer.update_list_use_current_line();
 

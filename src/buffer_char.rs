@@ -162,4 +162,37 @@ impl Buffer {
         //     }
         // };
     }
+
+    pub fn count_spaces_backwards(&self) -> usize {
+        let mut space_count = 0;
+        let mut idx = self.cursor;
+        while let Some(c) = self.rope.get_char(idx)
+            && c == ' '
+            && idx > 0
+        {
+            idx -= 1;
+            space_count += 1;
+        }
+
+        space_count
+    }
+
+    // Returns the deleted string
+    pub fn delete_to_4_spaces_alignment(&mut self, space_count: usize) -> String {
+        let mut deleted = String::with_capacity(4);
+        let mut leftover = space_count % 4;
+        if leftover == 0 {
+            leftover = 4
+        }
+        assert!(space_count >= leftover);
+
+        // We need to subtract one because we've already decremented the cursor
+        self.cursor -= usize::max(leftover, 1) - 1;
+        (0..leftover).for_each(|_| {
+            deleted.push(self.get_curr_char());
+            self.delete_curr_char();
+        });
+
+        deleted
+    }
 }
