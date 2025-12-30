@@ -189,11 +189,11 @@ pub fn find(buffer: &mut Buffer) {
         if let KeyCode::Char(target) = key {
             let anchor = buffer.cursor;
             loop {
-                if buffer.get_curr_char() == target {
-                    return;
-                }
                 if buffer.cursor == buffer.get_end_of_line() {
                     break;
+                }
+                if buffer.get_curr_char() == target {
+                    return;
                 }
                 buffer.cursor += 1;
             }
@@ -210,15 +210,16 @@ pub fn find_until(buffer: &mut Buffer) {
         if let KeyCode::Char(target) = key {
             let anchor = buffer.cursor;
             loop {
+                if buffer.cursor == buffer.get_end_of_line() {
+                    break;
+                }
                 if buffer.get_curr_char() == target {
                     if buffer.cursor != 0 {
                         buffer.cursor -= 1;
                     }
                     return;
                 }
-                if buffer.cursor == buffer.get_end_of_line() {
-                    break;
-                }
+
                 buffer.cursor += 1;
             }
 
@@ -234,12 +235,13 @@ pub fn find_back(buffer: &mut Buffer) {
         if let KeyCode::Char(target) = key {
             let anchor = buffer.cursor;
             loop {
-                if buffer.get_curr_char() == target {
-                    return;
-                }
                 if buffer.cursor == 0 {
                     break;
                 }
+                if buffer.get_curr_char() == target {
+                    return;
+                }
+
                 buffer.cursor -= 1;
             }
 
