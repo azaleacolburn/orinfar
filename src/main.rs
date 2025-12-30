@@ -249,6 +249,11 @@ fn main() -> Result<()> {
                     }
                 }
 
+                (KeyCode::Esc, Mode::Normal) => {
+                    chained.clear();
+                    count = 1;
+                    next_operation = None;
+                }
                 (KeyCode::Esc, Mode::Insert) => {
                     if buffer.cursor != buffer.get_start_of_line() {
                         buffer.cursor -= 1;
