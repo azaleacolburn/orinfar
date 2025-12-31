@@ -24,12 +24,11 @@ impl RegisterHandler {
     }
 
     pub fn set_reg(&mut self, value: RegContents) {
-        self.registers.insert(self.current_register.clone(), value);
+        self.registers.insert(self.current_register, value);
     }
 
     pub fn empty_reg(&mut self) {
-        self.registers
-            .insert(self.current_register.clone(), String::new());
+        self.registers.insert(self.current_register, String::new());
     }
 
     pub fn push_reg(&mut self, append_value: &str) {
@@ -40,7 +39,7 @@ impl RegisterHandler {
             }
             None => {
                 self.registers
-                    .insert(self.current_register.clone(), append_value.to_string());
+                    .insert(self.current_register, append_value.to_string());
             }
         }
     }
@@ -58,5 +57,11 @@ impl RegisterHandler {
 
     pub fn reset_curr_register(&mut self) {
         self.current_register = '\"'
+    }
+}
+
+impl Default for RegisterHandler {
+    fn default() -> Self {
+        Self::new()
     }
 }

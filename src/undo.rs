@@ -90,22 +90,22 @@ impl UndoTree {
             ActionType::Insert(text) => {
                 let mut text = text.clone();
 
-                if let Some(last) = self.actions.clone().last() {
-                    if let ActionType::Insert(last_text) = &last.r#type {
-                        text.push_str(&last_text);
-                        self.actions.pop();
-                        action = Action::insert(last.position, text);
-                    }
+                if let Some(last) = self.actions.clone().last()
+                    && let ActionType::Insert(last_text) = &last.r#type
+                {
+                    text.push_str(last_text);
+                    self.actions.pop();
+                    action = Action::insert(last.position, text);
                 }
             }
             ActionType::Delete(text) => {
                 let mut text = text.clone();
-                if let Some(last) = self.actions.clone().last() {
-                    if let ActionType::Delete(last_text) = &last.r#type {
-                        text.push_str(&last_text);
-                        self.actions.pop();
-                        action = Action::delete(action.position, text);
-                    }
+                if let Some(last) = self.actions.clone().last()
+                    && let ActionType::Delete(last_text) = &last.r#type
+                {
+                    text.push_str(last_text);
+                    self.actions.pop();
+                    action = Action::delete(action.position, text);
                 }
             }
             _ => {}

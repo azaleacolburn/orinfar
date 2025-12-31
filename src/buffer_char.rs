@@ -17,6 +17,8 @@ impl Buffer {
     pub fn replace_curr_char(&mut self, c: char) {
         self.rope.remove(self.cursor..=self.cursor);
         self.rope.insert(self.cursor, &c.to_string());
+
+        self.update_list_use_current_line();
     }
 
     // Inserts a character at the current position
@@ -46,11 +48,9 @@ impl Buffer {
         self.insert_char_n_times(' ', first_col as u8);
         self.cursor += first_col;
 
-        let newline = once('\n')
+        once('\n')
             .chain((0..first_col).map(|_| ' '))
-            .collect::<String>();
-
-        newline
+            .collect::<String>()
     }
 
     pub fn insert_char_n_times(&mut self, c: char, n: u8) {

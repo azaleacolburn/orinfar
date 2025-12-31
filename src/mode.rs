@@ -1,4 +1,4 @@
-use std::io::stdout;
+use std::{fmt::Display, io::stdout};
 
 use clap::ValueEnum;
 use crossterm::{cursor::SetCursorStyle, execute};
@@ -8,7 +8,7 @@ use crossterm::{cursor::SetCursorStyle, execute};
 pub enum Mode {
     Normal,
     Insert,
-    Command,
+    Meta,
     Visual,
 }
 
@@ -24,14 +24,15 @@ impl Mode {
     }
 }
 
-impl ToString for Mode {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for Mode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
             Mode::Normal => "normal",
             Mode::Insert => "insert",
-            Mode::Command => "command",
+            Mode::Meta => "meta",
             Mode::Visual => "visual",
-        }
-        .to_string()
+        };
+
+        f.write_str(str)
     }
 }

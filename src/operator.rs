@@ -40,10 +40,8 @@ impl<'a> Operator<'a> {
         undo_tree: &mut UndoTree,
     ) {
         let mut end = motion.evaluate(buffer);
-        if !motion.inclusive {
-            if end != buffer.get_end_of_line() {
-                end = usize::max(end, 1) - 1
-            }
+        if !motion.inclusive && end != buffer.get_end_of_line() {
+            end = usize::max(end, 1) - 1
         }
 
         (self.command)(end, buffer, register_handler, mode, undo_tree);
@@ -79,17 +77,17 @@ impl<'a> Operator<'a> {
 /// # Params
 /// - `mode`: The current mode the editor is in (eg. Visual, Insert, Command).
 /// - `register_handler`: The manager handler, there should just be one for the entire editor.
-///                       This is necessary for the yanking of items, for example.
+///   This is necessary for the yanking of items, for example.
 /// - `buffer`: The actual underlying text buffer object.
 /// - `end`: The index at which to end the traversal on. Must be greater than the initial value of `buffer.cursor`
 /// - `initial_callback`: The function which is run before the iteration.
 /// - `iter_callback`: The function which runs for every character in the iteration. It should
-///                    assume that `buffer.cursor` is the current index of the iteration.
-///                    This is the only callback incapable of accessing the current mode.
+///   assume that `buffer.cursor` is the current index of the iteration.
+///   This is the only callback incapable of accessing the current mode.
 /// - `after_callback`: The function which runs after the iteration is complete. This callback is
-///                     the only one provided with the original index of the cursor before the
-///                     iteration. One use-case of this callback could be to reset the position of
-///                     the cursor after the iteration.
+///   the only one provided with the original index of the cursor before the
+///   iteration. One use-case of this callback could be to reset the position of
+///   the cursor after the iteration.
 ///
 /// Any of the given callbacks may be noops. Each callback is free modify
 pub fn iterate_range(
@@ -113,9 +111,7 @@ pub fn iterate_range(
     let anchor = buffer.cursor;
     let count = (end as isize - anchor as isize).abs();
     initial_callback(register_handler, buffer, mode);
-    (0..=count)
-        .into_iter()
-        .for_each(|_| iter_callback(register_handler, buffer));
+    (0..=count).for_each(|_| iter_callback(register_handler, buffer));
     after_callback(anchor, register_handler, buffer, mode);
 }
 

@@ -48,7 +48,7 @@ use crossterm::{
     execute,
     terminal::size,
 };
-use std::{io::stdout, path::PathBuf, u16};
+use std::{io::stdout, path::PathBuf};
 
 pub static mut DEBUG: bool = true;
 
@@ -112,10 +112,10 @@ fn main() -> Result<()> {
     let mut next_operation: Option<&Operator> = None;
 
     // Used for not putting excluded chars in the chain
-    let command_chars = commands.iter().map(|cmd| cmd.name.chars()).flatten();
-    let operator_chars = operators.iter().map(|cmd| cmd.name.chars()).flatten();
-    let motion_chars = motions.iter().map(|cmd| cmd.name.chars()).flatten();
-    let view_command_chars = view_commands.iter().map(|cmd| cmd.name.chars()).flatten();
+    let command_chars = commands.iter().flat_map(|cmd| cmd.name.chars());
+    let operator_chars = operators.iter().flat_map(|cmd| cmd.name.chars());
+    let motion_chars = motions.iter().flat_map(|cmd| cmd.name.chars());
+    let view_command_chars = view_commands.iter().flat_map(|cmd| cmd.name.chars());
     let all_normal_chars: Vec<char> = command_chars
         .chain(operator_chars)
         .chain(motion_chars)
@@ -137,7 +137,7 @@ fn main() -> Result<()> {
 
     io::load_file(&path, &mut buffer)?;
     view_box.flush(
-        &mut buffer,
+        &buffer,
         &status_bar,
         &mode,
         &chained,
@@ -161,7 +161,7 @@ fn main() -> Result<()> {
                     count += c;
                 }
                 (KeyCode::Char(':'), Mode::Normal) => {
-                    mode = Mode::Command;
+                    mode = Mode::Meta;
                     status_bar.push(':');
                 }
 
@@ -185,7 +185,7 @@ fn main() -> Result<()> {
                         chained.clear();
                     } else if let Some(command) = commands
                         .iter()
-                        .find(|motion| motion.name == &chained.last().unwrap_or(&' ').to_string())
+                        .find(|motion| motion.name == chained.last().unwrap_or(&' ').to_string())
                     {
                         (0..count).for_each(|_| {
                             command.execute(
@@ -207,7 +207,7 @@ fn main() -> Result<()> {
                     } else if let Some(operation) = next_operation {
                         if let Some(motion) = motions
                             .iter()
-                            .find(|motion| motion.name.chars().nth(0).unwrap() == c)
+                            .find(|motion| motion.name.chars().next().unwrap() == c)
                         {
                             (0..count).for_each(|_| {
                                 operation.execute(
@@ -221,7 +221,7 @@ fn main() -> Result<()> {
                             chained.clear();
                             count = 1;
                             next_operation = None;
-                        } else if c == operation.name.chars().nth(0).unwrap() {
+                        } else if c == operation.name.chars().next().unwrap() {
                             operation.entire_line(
                                 &mut buffer,
                                 &mut register_handler,
@@ -232,20 +232,19 @@ fn main() -> Result<()> {
                             count = 1;
                             next_operation = None;
                         }
-                    } else if chained.len() == 1 {
-                        if let Some(motion) = motions
+                    } else if chained.len() == 1
+                        && let Some(motion) = motions
                             .iter()
-                            .find(|motion| motion.name.chars().nth(0).unwrap() == c)
-                        {
-                            motion.apply(&mut buffer);
-                            chained.clear();
-                        }
+                            .find(|motion| motion.name.chars().next().unwrap() == c)
+                    {
+                        motion.apply(&mut buffer);
+                        chained.clear();
                     }
                     if let Some(operator) = operators
                         .iter()
                         .find(|operator| operator.name == chained.iter().collect::<String>())
                     {
-                        next_operation = Some(&operator);
+                        next_operation = Some(operator);
                     }
                 }
 
@@ -306,7 +305,7 @@ fn main() -> Result<()> {
                     // Iterates two separate times because we want the insertation batched and
                     // the traversal to happen after
                     buffer.insert_char_n_times(' ', 4);
-                    (0..4).into_iter().for_each(|_| {
+                    (0..4).for_each(|_| {
                         buffer.next_char();
                     });
                     buffer.update_list_use_current_line();
@@ -318,10 +317,10 @@ fn main() -> Result<()> {
                     undo_tree.new_action(action);
                 }
 
-                (KeyCode::Char(c), Mode::Command) => {
+                (KeyCode::Char(c), Mode::Meta) => {
                     status_bar.push(c);
                 }
-                (KeyCode::Enter, Mode::Command) => {
+                (KeyCode::Enter, Mode::Meta) => {
                     for (i, command) in status_bar.iter().enumerate().skip(1) {
                         match command {
                             'w' => match &path {
@@ -375,28 +374,58 @@ fn main() -> Result<()> {
                                 let substitution: Vec<&[char]> =
                                     status_bar[i + 1..].split(|c| *c == '/').collect();
 
-                                let original = substitution[0];
-                                let new: String = substitution[1].iter().collect();
+                                if substitution.len() != 3 || !substitution[0].is_empty() {
+                                    log!(
+                                        "Malformed substitution meta-command: {:?}. Should be in the form: s/[orig]/[new]",
+                                        substitution
+                                    );
+
+                                    break;
+                                }
+
+                                let original = substitution[1];
+                                let new: String = substitution[2].iter().collect();
 
                                 log!("Substition\n\toriginal: {:?}\n\tnew: {}", original, new);
 
+                                let offset = new.len() as i32 - original.len() as i32;
                                 let mut curr: Vec<char> = Vec::with_capacity(original.len() - 1);
                                 let mut idxs_of_substitution: Vec<usize> = Vec::with_capacity(4);
 
                                 for (i, char) in buffer.rope.chars().enumerate() {
-                                    if curr.len() == original.len() {
-                                        idxs_of_substitution.push(i);
-                                        curr.clear();
-                                    }
                                     if char == original[curr.len()] {
                                         curr.push(char);
                                     }
+                                    if curr.len() == original.len() {
+                                        idxs_of_substitution.push(i + 1);
+                                        curr.clear();
+                                    }
                                 }
 
-                                idxs_of_substitution.iter().for_each(|idx| {
-                                    buffer.rope.remove(idx - original.len()..*idx);
-                                    buffer.rope.insert(idx - original.len(), &new);
-                                });
+                                log!("idxs of sub: {:?}", idxs_of_substitution);
+
+                                for (i, idx) in idxs_of_substitution.iter().enumerate() {
+                                    let offset = i as i32 * offset;
+                                    assert!(
+                                        *idx as i32 >= original.len() as i32 + offset,
+                                        "idx {} orig {} offset {}",
+                                        idx,
+                                        original.len(),
+                                        offset
+                                    );
+                                    let idx_of_substitution =
+                                        (*idx as i32 - original.len() as i32 + offset) as usize;
+                                    log!("IDX: {} offset {}", idx_of_substitution, offset);
+
+                                    buffer.rope.remove(
+                                        idx_of_substitution
+                                            ..(*idx as i32 - offset) as usize as usize,
+                                    );
+                                    buffer.rope.insert(idx_of_substitution, &new);
+                                }
+
+                                buffer.update_list_set(.., true);
+                                buffer.has_changed = true;
                                 break;
                             }
                             n if n.is_numeric() => {
@@ -418,16 +447,16 @@ fn main() -> Result<()> {
                     mode = Mode::Normal;
                     status_bar.clear();
                 }
-                (KeyCode::Esc, Mode::Command) => {
+                (KeyCode::Esc, Mode::Meta) => {
                     mode = Mode::Normal;
                     status_bar.clear();
                 }
-                (KeyCode::Backspace, Mode::Command) => {
+                (KeyCode::Backspace, Mode::Meta) => {
                     status_bar.delete();
                 }
                 // TODO Update buffer-line
                 // Exists to prevent the arrow keys from working for now
-                (_, Mode::Command) => {}
+                (_, Mode::Meta) => {}
                 (KeyCode::Left, _) => {
                     buffer.prev_char();
                 }

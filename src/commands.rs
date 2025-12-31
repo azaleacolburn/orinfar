@@ -181,15 +181,14 @@ pub fn replace(
     undo_tree: &mut UndoTree,
 ) {
     execute!(stdout(), SetCursorStyle::SteadyUnderScore).unwrap();
-    if let Event::Key(event) = read().unwrap() {
-        if let KeyCode::Char(c) = event.code {
+    if let Event::Key(event) = read().unwrap()
+        && let KeyCode::Char(c) = event.code {
             let original_char = buffer.get_curr_char();
             buffer.replace_curr_char(c);
 
             let action = Action::replace(buffer.cursor, original_char, c);
             undo_tree.new_action(action);
         }
-    }
     execute!(stdout(), SetCursorStyle::SteadyBlock).unwrap();
     buffer.has_changed = true;
 }

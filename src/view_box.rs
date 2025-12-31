@@ -141,6 +141,7 @@ impl ViewBox {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn flush(
         &self,
         buffer: &Buffer,
@@ -164,7 +165,7 @@ impl ViewBox {
         let row = buffer.get_row();
 
         let status_message = match (mode, path) {
-            (Mode::Command, _) => status_bar.buffer(),
+            (Mode::Meta, _) => status_bar.buffer(),
             (Mode::Normal, Some(path)) => {
                 let count_str = if count == 1 {
                     String::new()
@@ -208,7 +209,7 @@ impl ViewBox {
         )?;
 
         let (new_col, new_row) = match mode {
-            Mode::Command => (status_bar.idx() as u16, (self.height + 1) as u16),
+            Mode::Meta => (status_bar.idx() as u16, (self.height + 1) as u16),
             _ => {
                 let row = row - self.top;
                 let col = col - self.left + left_padding + 1;

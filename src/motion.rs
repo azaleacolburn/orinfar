@@ -36,7 +36,7 @@ impl<'a> Motion<'a> {
         let mut fake_buffer = buffer.clone();
         (self.command)(&mut fake_buffer);
 
-        return fake_buffer.cursor;
+        fake_buffer.cursor
     }
 }
 
