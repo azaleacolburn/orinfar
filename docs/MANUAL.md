@@ -31,7 +31,8 @@ Once a sequence of meta-commands are entered, they can be executed by pressing t
 The meta-commands are as follows:
 - `w`: The write meta-command. Writes the current contents of the buffer to the underlying file associated with the buffer. In the case that the buffer is not attatched to a path, an error will be displayed in the status-line and this commmatand will be aborted.
 - `q`: The quite meta-command. Quites from the editor without writing, aborting to process.
-- `o[file_path]`: The open operator. Attatches the buffer to the file at the argument path. Because it has an argument, no other meta-commands may follow it.
+- `o[file_path]`: The open meta-command. Attaches the buffer to the file at the argument path. Because it has an argument, no other meta-commands may follow it.
+- `l`: The load meta-command. Replaces the current buffer with the contents of the currently attached buffer. If the buffer is not attached a file, the command will do nothing.
 - `s[search]/[substitute]`: The substitute operator. Searches to current buffer for the given `[search]` string, then replaces each instance with the `[substitute]` string.
 
 This command can be entered by pressing `:`.
@@ -57,7 +58,6 @@ Operators are single character actions that, once pressed in Normal mode, wait f
 - `y[motion]`: The yank operator. Copies every character traversed by the given motion into the current yank register.This operator will copy the current character for inclusive motions but not for exclusive motions. Analogous to the `y` operator in Vi.
 - `d[motion]`: The delete operator. Deletes and copies every character traversed by the given motion into the current yank register. This operator will delete the current character for inclusive motions but not for exclusive motions. Analogous to the `d` operator in Vi.
 - `c[motion]`: The change operator. Deletes and copies every character traversed by the given motion into the current yank register, then enters insert mode. This operator will delete and copy the current character for inclusive motions but not for exclusive motions. Analogous to the `c` operator in Vi.
-- `t[motion]`: The change until operator. Deletes and copies every character traversed by the given motion, except the last character, into the current yank register, then enters insert mode. This operator will delete and copy the current character for inclusive motions but not for exclusive motions. Analogous to the `t` operator in Vi.
 
 ## Motion
 Motions are single or multi-character actions that move the cursor over the buffer in some way. They can either literally move the cursor or simply "outline" some region that an operator can be applied over. They are are necessary for operators to work and are thus always chained to them, although they can be used independently. 
@@ -72,7 +72,12 @@ The following descriptions of motions only describe the aforementioned independe
 - `b`: The back word motion. Moves the current cursor backwards to the previous beginning of a word. Analogous to the `b` motion in Vi.
 - `$`: The end of line motion. Moves the current cursor forwards to the end of the current line, usually a newline character. Inclusive. Analogous to the `$` motion in Vi.
 - `_`: The beginning of line motion. Moves the current cursor backwards to first beginning of a word on the current line. In otherwords, to the first non-whitespace character in the line. Ultra-inclusive Analogous to the `_` motion in Vi.
-- `f[character]`: The find motion. Waits for another character input, then moves the cursor forwards to the next instance of that character. If a newline character is encountered before the argument character, the motion will be aborted and not move the cursor. Inclusive. Analogous to the `f` motion in Vi.
+- `f[character]`: The find motion. Waits for another character input, then moves the cursor forwards to the next instance of that character. If a newline character or the end of the buffer is encountered before the argument character, the motion will be aborted and not move the cursor. Inclusive. Analogous to the `f` motion in Vi.
+- `F[character]`: The find back motion. Waits for another character input, then moves the cursor backwards to the next previous instance of that character. If a newline character of the start of the buffer is encountered before the argument character, the motion will be aborted and not move the cursor. Inclusive. Analogous to the `F` motion in Vi.
+- `t[character]`: The find until motion. Waits for another character input, then moves the cursor forwards to the next instance of that character. If a newline character of the end of the buffer is encountered before the argument character, the motion will be aborted and not move the cursor. Inclusive. Analogous to the `t` motion in Vi.
+- `%`: The next bracket motion. Finds (forward) the next occurence of a bracket ('[]{}()'), then moves the cursor to the corresponding open or closed bracket ('}' <-> '{', ')' <-> '(', ']' <-> '['), even if the corresponding bracket is on another line. If either the original or corresponding bracket cannot be found, the motion does not move the cursor.
+- `}`: The next paragraph motion. Moves the current cursor to the next empty row above a non-empty row, or the end of the file.
+- `{`: The previous paragraph motion. Moves the current cursor to the next previous empty row below a non-empty row, or the beginning of the file.
 
 # Non-actions
 ## Normal Mode

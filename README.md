@@ -28,9 +28,19 @@ Please read the [user manual](https://github.com/azaleacolburn/orinfar/tree/main
 
 I'll specify and revise this list when I get around to specific things and I have a better understanding of where I want to take this project
 
-- [x] Basic Vi commands (w, b, o, d, etc)
-- [ ] Additionally Vi features (a robust register system, marks, etc)
-- [ ] Lsp support, syntax highlighting, etc
+- [x] Basic Vi Commands and Features (see the [user manual](https://github.com/azaleacolburn/orinfar/tree/main/docs/MANUAL.md))
+- [ ] Additional Vi Features
+    - [x] Undo System (not comprehensively documented)
+    - [ ] Redo System
+    - [x] Status Bar (not comprehensively documented)
+    - [x] Minimal Register System (not yet documented)
+    - [ ] Robust Register System
+    - [ ] Mark System
+    - [ ] Text Objects
+- [ ] Advanced Features
+    - [ ] Syntax Highlighting (tree-sitter)
+    - [ ] LSP Client Support
+
 
 # Known Bugs
 Please check the [stable](https://github.com/azaleacolburn/orinfar/tree/stable)  for the latest bug-free commit
