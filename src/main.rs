@@ -366,6 +366,10 @@ fn main() -> Result<()> {
 
                                 break;
                             }
+                            'd' => {
+                                let path = 
+                                let dir = std::fs::read_dir(path);
+                            }
                             'q' => break 'main,
                             's' => {
                                 if status_bar[i..].len() == 1 {
