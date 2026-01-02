@@ -1,43 +1,47 @@
 use crate::buffer::Buffer;
+use crate::{DEBUG, io::log};
 
 #[derive(Debug, Clone)]
-pub enum ActionType {
-    Insert(String),
-    Delete(String),
-    Replace { original: String, new: String },
+pub enum Action {
+    Insert {
+        position: usize,
+        text: String,
+    },
+    Delete {
+        position: usize,
+        text: String,
+    },
+    Replace {
+        positions: Vec<usize>,
+        original: String,
+        new: String,
+    },
 }
-
-#[derive(Debug, Clone)]
-pub struct Action {
-    // It's an initial position for the Insertions
-    // And a final position for the Deletions
-    position: usize,
-    r#type: ActionType,
-}
-
 impl Action {
     pub fn delete(final_position: usize, text: impl ToString) -> Self {
-        Action {
+        Action::Delete {
             position: final_position,
-            r#type: ActionType::Delete(text.to_string()),
+            text: text.to_string(),
         }
     }
 
     pub fn insert(initial_position: usize, text: impl ToString) -> Self {
-        Action {
+        Action::Insert {
             position: initial_position,
-            r#type: ActionType::Insert(text.to_string()),
+            text: text.to_string(),
         }
     }
 
     // Original and new must be of the same length
-    pub fn replace(initial_position: usize, original: impl ToString, new: impl ToString) -> Self {
-        Action {
-            position: initial_position,
-            r#type: ActionType::Replace {
-                original: original.to_string(),
-                new: new.to_string(),
-            },
+    pub fn replace(
+        initial_positions: Vec<usize>,
+        original: impl ToString,
+        new: impl ToString,
+    ) -> Self {
+        Action::Replace {
+            positions: initial_positions,
+            original: original.to_string(),
+            new: new.to_string(),
         }
     }
 }
@@ -64,19 +68,23 @@ impl UndoTree {
             None => return,
         };
 
-        match action.r#type {
-            ActionType::Insert(text) => {
-                buffer.cursor = action.position;
+        match action {
+            Action::Insert { text, position } => {
+                buffer.cursor = position;
                 (0..text.len()).for_each(|_| buffer.delete_curr_char());
             }
-            ActionType::Delete(text) => {
-                buffer.cursor = action.position;
+            Action::Delete { text, position } => {
+                buffer.cursor = position;
                 text.chars().rev().for_each(|c| buffer.insert_char(c));
             }
-            ActionType::Replace { original, new } => {
-                buffer.cursor = action.position;
+            Action::Replace {
+                positions,
+                original,
+                new,
+            } => {
+                log!("un-replacing: {} {}", buffer.cursor, new);
                 assert_eq!(original.len(), new.len());
-                new.chars().for_each(|c| buffer.replace_curr_char(c));
+                buffer.replace_text(original, new, &positions, self);
             }
         }
 
@@ -86,27 +94,42 @@ impl UndoTree {
 
     pub fn new_action_merge(&mut self, mut action: Action) {
         // The point of this is to squash keystrokes
-        match &action.r#type {
-            ActionType::Insert(text) => {
+        match &action {
+            Action::Insert { text, position: _ } => {
                 let mut text = text.clone();
 
                 if let Some(last) = self.actions.clone().last()
-                    && let ActionType::Insert(last_text) = &last.r#type
+                    && let Action::Insert {
+                        text: last_text,
+                        position: last_position,
+                    } = &last
                 {
                     text.push_str(last_text);
                     self.actions.pop();
-                    action = Action::insert(last.position, text);
+                    action = Action::insert(*last_position, text);
                 }
             }
-            ActionType::Delete(text) => {
+            Action::Delete { text, position } => {
                 let mut text = text.clone();
                 if let Some(last) = self.actions.clone().last()
-                    && let ActionType::Delete(last_text) = &last.r#type
+                    && let Action::Delete {
+                        text: last_text,
+                        position: _,
+                    } = &last
                 {
                     text.push_str(last_text);
                     self.actions.pop();
-                    action = Action::delete(action.position, text);
+                    action = Action::delete(*position, text);
                 }
+            }
+            Action::Replace {
+                positions,
+                original,
+                new,
+            } => {
+                self.actions.pop();
+                let positions = positions.iter().chain();
+                action = Action::replace(*position, text);
             }
             _ => {}
         };

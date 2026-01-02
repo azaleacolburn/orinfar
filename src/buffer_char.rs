@@ -1,6 +1,11 @@
 use std::iter::once;
 
-use crate::{DEBUG, buffer::Buffer, log};
+use crate::{
+    DEBUG,
+    buffer::Buffer,
+    log,
+    undo::{Action, UndoTree},
+};
 
 impl Buffer {
     pub fn delete_curr_char(&mut self) {
@@ -194,5 +199,34 @@ impl Buffer {
         });
 
         deleted
+    }
+
+    pub fn replace_text(
+        &mut self,
+        new: String,
+        original: String,
+        idxs_of_substitution: &[usize],
+        undo_tree: &mut UndoTree,
+    ) {
+        let offset = new.len() as i32 - original.len() as i32;
+        for (i, idx) in idxs_of_substitution.iter().enumerate() {
+            let offset = i as i32 * offset;
+            assert!(
+                *idx as i32 >= original.len() as i32 + offset,
+                "idx {} orig {} offset {}",
+                idx,
+                original.len(),
+                offset
+            );
+            let idx_of_substitution = (*idx as i32 - original.len() as i32 + offset) as usize;
+            log!("IDX: {} offset {}", idx_of_substitution, offset);
+
+            self.rope
+                .remove(idx_of_substitution..(*idx as i32 - offset) as usize as usize);
+            self.rope.insert(idx_of_substitution, &new);
+
+            let action = Action::replace(idx_of_substitution, &original, &new);
+            undo_tree.new_action(action);
+        }
     }
 }

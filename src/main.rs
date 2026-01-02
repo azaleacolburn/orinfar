@@ -48,6 +48,7 @@ use crossterm::{
     execute,
     terminal::size,
 };
+use ropey::Rope;
 use std::{io::stdout, path::PathBuf};
 
 pub static mut DEBUG: bool = true;
@@ -367,8 +368,31 @@ fn main() -> Result<()> {
                                 break;
                             }
                             'd' => {
-                                let path = 
-                                let dir = std::fs::read_dir(path);
+                                let path = match path.clone() {
+                                    Some(mut p) => {
+                                        p.pop();
+                                        p
+                                    }
+                                    None => PathBuf::from("./"),
+                                };
+                                let dir = std::fs::read_dir(path)?;
+                                let contents = dir
+                                    .filter_map(|item| item.ok())
+                                    .map(|item| {
+                                        let mut path =
+                                            item.file_name().to_string_lossy().to_string();
+                                        path.push('\n');
+                                        path
+                                    })
+                                    .collect::<String>();
+
+                                buffer.has_changed = true;
+                                contents.lines().for_each(|_| buffer.update_list_add(0));
+
+                                let action = Action::insert(0, contents.clone());
+                                undo_tree.new_action(action);
+
+                                buffer.rope = Rope::from(contents);
                             }
                             'q' => break 'main,
                             's' => {
@@ -392,7 +416,6 @@ fn main() -> Result<()> {
 
                                 log!("Substition\n\toriginal: {:?}\n\tnew: {}", original, new);
 
-                                let offset = new.len() as i32 - original.len() as i32;
                                 let mut curr: Vec<char> = Vec::with_capacity(original.len() - 1);
                                 let mut idxs_of_substitution: Vec<usize> = Vec::with_capacity(4);
 
@@ -408,25 +431,12 @@ fn main() -> Result<()> {
 
                                 log!("idxs of sub: {:?}", idxs_of_substitution);
 
-                                for (i, idx) in idxs_of_substitution.iter().enumerate() {
-                                    let offset = i as i32 * offset;
-                                    assert!(
-                                        *idx as i32 >= original.len() as i32 + offset,
-                                        "idx {} orig {} offset {}",
-                                        idx,
-                                        original.len(),
-                                        offset
-                                    );
-                                    let idx_of_substitution =
-                                        (*idx as i32 - original.len() as i32 + offset) as usize;
-                                    log!("IDX: {} offset {}", idx_of_substitution, offset);
-
-                                    buffer.rope.remove(
-                                        idx_of_substitution
-                                            ..(*idx as i32 - offset) as usize as usize,
-                                    );
-                                    buffer.rope.insert(idx_of_substitution, &new);
-                                }
+                                buffer.replace_text(
+                                    new,
+                                    original.iter().collect(),
+                                    &idxs_of_substitution,
+                                    &mut undo_tree,
+                                );
 
                                 buffer.update_list_set(.., true);
                                 buffer.has_changed = true;
