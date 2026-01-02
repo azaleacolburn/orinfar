@@ -262,7 +262,7 @@ impl Buffer {
             self.rope.insert(start_idx, &new);
 
             if !undoing {
-                let action = Action::replace(&original, &new);
+                let action = Action::replace(vec![start_idx + new.len()], &original, &new);
                 undo_tree.new_action_merge(action);
             }
         }

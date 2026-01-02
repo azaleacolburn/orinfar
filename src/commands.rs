@@ -190,7 +190,7 @@ pub fn replace(
         let original_char = buffer.get_curr_char();
         buffer.replace_curr_char(c);
 
-        let action = Action::replace(original_char, c);
+        let action = Action::replace(vec![buffer.cursor], original_char, c);
         undo_tree.new_action_merge(action);
     }
     execute!(stdout(), SetCursorStyle::SteadyBlock).unwrap();

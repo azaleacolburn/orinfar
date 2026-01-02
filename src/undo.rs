@@ -1,11 +1,23 @@
 use crate::buffer::Buffer;
+use crate::{DEBUG, io::log};
 
 #[derive(Debug, Clone)]
 pub enum Action {
-    Insert { position: usize, text: String },
-    Delete { position: usize, text: String },
-    Replace { original: String, new: String },
+    Insert {
+        position: usize,
+        text: String,
+    },
+    Delete {
+        position: usize,
+        text: String,
+    },
+    Replace {
+        positions: Vec<usize>,
+        original: String,
+        new: String,
+    },
 }
+
 impl Action {
     pub fn delete(final_position: usize, text: impl ToString) -> Self {
         Action::Delete {
@@ -22,8 +34,13 @@ impl Action {
     }
 
     // Original and new must be of the same length
-    pub fn replace(original: impl ToString, new: impl ToString) -> Self {
+    pub fn replace(
+        initial_positions: Vec<usize>,
+        original: impl ToString,
+        new: impl ToString,
+    ) -> Self {
         Action::Replace {
+            positions: initial_positions,
             original: original.to_string(),
             new: new.to_string(),
         }
@@ -61,9 +78,17 @@ impl UndoTree {
                 buffer.cursor = position;
                 text.chars().rev().for_each(|c| buffer.insert_char(c));
             }
-            Action::Replace { original, new } => {
-                let new_chars: Vec<char> = new.chars().collect();
-                let positions = buffer.find_occurences(&new_chars);
+            Action::Replace {
+                positions,
+                original,
+                new,
+            } => {
+                log!(
+                    "un-replacing: {} {} positions {:?}",
+                    buffer.cursor,
+                    new,
+                    positions
+                );
                 buffer.replace_text(original, new, &positions, self, true);
             }
         }
@@ -102,17 +127,28 @@ impl UndoTree {
                     action = Action::delete(*position, text);
                 }
             }
-            Action::Replace { original, new } => {
+            Action::Replace {
+                positions,
+                original,
+                new,
+            } => {
                 if let Some(last) = self.actions.clone().last()
                     && let Action::Replace {
                         new: last_new,
                         original: last_original,
+                        positions: last_positions,
                     } = &last
                     && new == last_new
                     && original == last_original
                 {
+                    let mut positions: Vec<usize> = positions
+                        .into_iter()
+                        .chain(last_positions.into_iter())
+                        .map(|n| *n)
+                        .collect();
+                    positions.sort();
                     self.actions.pop();
-                    action = Action::replace(original, new);
+                    action = Action::replace(positions, original, new);
                 }
             }
         };
@@ -122,11 +158,5 @@ impl UndoTree {
 
     pub fn new_action(&mut self, action: Action) {
         self.actions.push(action);
-    }
-}
-
-impl Default for UndoTree {
-    fn default() -> Self {
-        Self::new()
     }
 }
