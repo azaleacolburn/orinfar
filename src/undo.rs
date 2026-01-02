@@ -3,19 +3,9 @@ use crate::{DEBUG, io::log};
 
 #[derive(Debug, Clone)]
 pub enum Action {
-    Insert {
-        position: usize,
-        text: String,
-    },
-    Delete {
-        position: usize,
-        text: String,
-    },
-    Replace {
-        positions: Vec<usize>,
-        original: String,
-        new: String,
-    },
+    Insert { position: usize, text: String },
+    Delete { position: usize, text: String },
+    Replace { original: String, new: String },
 }
 impl Action {
     pub fn delete(final_position: usize, text: impl ToString) -> Self {
@@ -33,13 +23,8 @@ impl Action {
     }
 
     // Original and new must be of the same length
-    pub fn replace(
-        initial_positions: Vec<usize>,
-        original: impl ToString,
-        new: impl ToString,
-    ) -> Self {
+    pub fn replace(original: impl ToString, new: impl ToString) -> Self {
         Action::Replace {
-            positions: initial_positions,
             original: original.to_string(),
             new: new.to_string(),
         }
@@ -77,14 +62,10 @@ impl UndoTree {
                 buffer.cursor = position;
                 text.chars().rev().for_each(|c| buffer.insert_char(c));
             }
-            Action::Replace {
-                positions,
-                original,
-                new,
-            } => {
-                log!("un-replacing: {} {}", buffer.cursor, new);
-                assert_eq!(original.len(), new.len());
-                buffer.replace_text(original, new, &positions, self);
+            Action::Replace { original, new } => {
+                let new_chars: Vec<char> = new.chars().collect();
+                let positions = buffer.find_occurences(&new_chars);
+                buffer.replace_text(original, new, &positions, self, true);
             }
         }
 
@@ -122,16 +103,19 @@ impl UndoTree {
                     action = Action::delete(*position, text);
                 }
             }
-            Action::Replace {
-                positions,
-                original,
-                new,
-            } => {
-                self.actions.pop();
-                let positions = positions.iter().chain();
-                action = Action::replace(*position, text);
+            Action::Replace { original, new } => {
+                if let Some(last) = self.actions.clone().last()
+                    && let Action::Replace {
+                        new: last_new,
+                        original: last_original,
+                    } = &last
+                    && new == last_new
+                    && original == last_original
+                {
+                    self.actions.pop();
+                    action = Action::replace(original, new);
+                }
             }
-            _ => {}
         };
 
         self.actions.push(action);

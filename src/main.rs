@@ -416,19 +416,7 @@ fn main() -> Result<()> {
 
                                 log!("Substition\n\toriginal: {:?}\n\tnew: {}", original, new);
 
-                                let mut curr: Vec<char> = Vec::with_capacity(original.len() - 1);
-                                let mut idxs_of_substitution: Vec<usize> = Vec::with_capacity(4);
-
-                                for (i, char) in buffer.rope.chars().enumerate() {
-                                    if char == original[curr.len()] {
-                                        curr.push(char);
-                                    }
-                                    if curr.len() == original.len() {
-                                        idxs_of_substitution.push(i + 1);
-                                        curr.clear();
-                                    }
-                                }
-
+                                let idxs_of_substitution = buffer.find_occurences(original);
                                 log!("idxs of sub: {:?}", idxs_of_substitution);
 
                                 buffer.replace_text(
@@ -436,6 +424,7 @@ fn main() -> Result<()> {
                                     original.iter().collect(),
                                     &idxs_of_substitution,
                                     &mut undo_tree,
+                                    false,
                                 );
 
                                 buffer.update_list_set(.., true);

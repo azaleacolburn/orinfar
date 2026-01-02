@@ -201,32 +201,74 @@ impl Buffer {
         deleted
     }
 
+    /// Finds all the occurences of a certain substring `text` in the buffer.
+    ///
+    /// # Returns
+    /// A list of the last index of each occurence.
+    ///
+    /// For example for the string 'hello world' and the substring 'world',
+    /// the index `10` will be put in the list.
+    pub fn find_occurences(&self, text: &[char]) -> Vec<usize> {
+        let mut curr: Vec<char> = Vec::with_capacity(text.len() - 1);
+        let mut idxs_of_substitution: Vec<usize> = Vec::with_capacity(4);
+
+        for (i, char) in self.rope.chars().enumerate() {
+            if char == text[curr.len()] {
+                curr.push(char);
+            }
+            if curr.len() == text.len() {
+                idxs_of_substitution.push(i + 1);
+                curr.clear();
+            }
+        }
+
+        idxs_of_substitution
+    }
+
+    // Replaces all instances of the `original` text with the `new` text in the buffer, given a
+    // list of indexes at which they occur
+    //
+    // # Params
+    // - `new`: The text to replace `original`
+    // - `original`: The text to be replaced.
+    // - `idxs_of_substitution`: The index of the end of each of the occurences of `original` (the
+    // last character of each).
+    // - `undo_tree`: The undo tree to write an action to
+    // - `undoing`: Whether or not this replacement is undoing a previous action or whether it's a
+    // new action.
     pub fn replace_text(
         &mut self,
         new: String,
         original: String,
         idxs_of_substitution: &[usize],
         undo_tree: &mut UndoTree,
+        undoing: bool,
     ) {
         let offset = new.len() as i32 - original.len() as i32;
-        for (i, idx) in idxs_of_substitution.iter().enumerate() {
+        for (i, end_idx) in idxs_of_substitution.iter().enumerate() {
             let offset = i as i32 * offset;
             assert!(
-                *idx as i32 >= original.len() as i32 + offset,
-                "idx {} orig {} offset {}",
-                idx,
+                *end_idx as i32 >= original.len() as i32 + offset,
+                "end_idx {} original len {} offset {}",
+                end_idx,
                 original.len(),
                 offset
             );
-            let idx_of_substitution = (*idx as i32 - original.len() as i32 + offset) as usize;
-            log!("IDX: {} offset {}", idx_of_substitution, offset);
+            let start_idx = (*end_idx as i32 - original.len() as i32 + offset) as usize;
+            log!("start_idx: {} offset {}", start_idx, offset);
 
             self.rope
-                .remove(idx_of_substitution..(*idx as i32 - offset) as usize as usize);
-            self.rope.insert(idx_of_substitution, &new);
+                .remove(start_idx..(*end_idx as i32 + offset) as usize);
+            self.rope.insert(start_idx, &new);
 
-            let action = Action::replace(idx_of_substitution, &original, &new);
-            undo_tree.new_action(action);
+            if !undoing {
+                let action = Action::replace(&original, &new);
+                undo_tree.new_action_merge(action);
+            }
+        }
+
+        if self.cursor > self.rope.len_chars() {
+            self.cursor = self.rope.len_chars();
         }
     }
 }
