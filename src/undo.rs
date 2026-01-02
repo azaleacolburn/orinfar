@@ -1,5 +1,4 @@
 use crate::buffer::Buffer;
-use crate::{DEBUG, io::log};
 
 #[derive(Debug, Clone)]
 pub enum Action {
@@ -123,5 +122,11 @@ impl UndoTree {
 
     pub fn new_action(&mut self, action: Action) {
         self.actions.push(action);
+    }
+}
+
+impl Default for UndoTree {
+    fn default() -> Self {
+        Self::new()
     }
 }
