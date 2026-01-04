@@ -84,9 +84,10 @@ impl UndoTree {
                 new,
             } => {
                 log!(
-                    "un-replacing: {} {} positions {:?}",
+                    "un-replacing:\n\tcursor: {} new: {} old: {} positions {:?}",
                     buffer.cursor,
                     new,
+                    original,
                     positions
                 );
                 buffer.replace_text(original, new, &positions, self, true);
