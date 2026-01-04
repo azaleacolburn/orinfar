@@ -1,5 +1,10 @@
 Orinfar is a modern, minimal text editor for witches. It's largely based on the [Vi](https://www.man7.org/linux/man-pages/man1/vi.1p.html) text editor.
 
+# Quickstart
+The editor mostly works like Vi.
+
+To get started editing a file, run the meta-command `:o [file_path]` to attatch the editor to a file, then do your editing and use the meta-commands `:wq` to write the the buffer to the file.
+
 # Modes
 Orinfar is a modal editor, much like Vi.
 
@@ -11,7 +16,7 @@ This mode can be entered by pressing the `esc` key from any other mode.
 ## Insert
 Text entered in Insert mode is written to the buffer, much like one would normally expect when typing in a text editor.
 
-This mode can be entered with the `a`, `i`, or `o` commands.
+This mode can be entered with the `a`, `i`, `o`, or `O` commands (see Commands section).
 
 ## Visual
 > [!WARNING]
@@ -31,9 +36,10 @@ Once a sequence of meta-commands are entered, they can be executed by pressing t
 The meta-commands are as follows:
 - `w`: The write meta-command. Writes the current contents of the buffer to the underlying file associated with the buffer. In the case that the buffer is not attatched to a path, an error will be displayed in the status-line and this commmatand will be aborted.
 - `q`: The quite meta-command. Quites from the editor without writing, aborting to process.
-- `o[file_path]`: The open meta-command. Attaches the buffer to the file at the argument path. Because it has an argument, no other meta-commands may follow it.
+- `o[file_path]`: The open meta-command. Attaches the buffer to the file at the argument path, relative to where the executable was run from. Any number of spaces can be put between the `:o` and the file path, including none. Because it has an argument, no other meta-commands may follow it.
 - `l`: The load meta-command. Replaces the current buffer with the contents of the currently attached buffer. If the buffer is not attached a file, the command will do nothing.
-- `s[search]/[substitute]`: The substitute operator. Searches to current buffer for the given `[search]` string, then replaces each instance with the `[substitute]` string.
+- `s/[search]/[substitute]`: The substitute operator. Searches to current buffer for the given `[search]` string, then replaces each instance with the `[substitute]` string.
+- `d`: The directory operator. Clears the buffer, replacing its contents with a list of every item in the current directory (either the directory of the attatched file, or the directory where the program was run), delimited by newline characters. If the cursor is outside the bounds of the new buffer contents, the cursor is placed at the beginning of the buffer. This can be trivially undone (`u`) or the attatched file reloaded if applicable (`:l`).
 
 This command can be entered by pressing `:`.
 
@@ -67,19 +73,26 @@ The following descriptions of motions only describe the aforementioned independe
 - `j`: The down motion. Moves the current cursor one row down. Exclusive. Analogous to the `j` motion in Vi.
 - `k`: The up motion. Moves the current cursor one row up. Exclusive. Analogous to the `k` motion in Vi.
 - `l`: The right motion. Moves the current cursor one column to the right. Exclusive. Analogous to the `l` motion in Vi.
+
 - `w`: The word motion. Moves the current cursor to the beginning of the next word. Exclusive. Analogous to the `w` motion in Vi.
 - `e`: The end of word motion. Moves the current cursor to the next end of a word. Inclusive. Analogous to the `e` motion in Vi.
 - `b`: The back word motion. Moves the current cursor backwards to the previous beginning of a word. Analogous to the `b` motion in Vi.
 - `$`: The end of line motion. Moves the current cursor forwards to the end of the current line, usually a newline character. Inclusive. Analogous to the `$` motion in Vi.
 - `_`: The beginning of line motion. Moves the current cursor backwards to first beginning of a word on the current line. In otherwords, to the first non-whitespace character in the line. Ultra-inclusive Analogous to the `_` motion in Vi.
+
 - `f[character]`: The find motion. Waits for another character input, then moves the cursor forwards to the next instance of that character. If a newline character or the end of the buffer is encountered before the argument character, the motion will be aborted and not move the cursor. Inclusive. Analogous to the `f` motion in Vi.
 - `F[character]`: The find back motion. Waits for another character input, then moves the cursor backwards to the next previous instance of that character. If a newline character of the start of the buffer is encountered before the argument character, the motion will be aborted and not move the cursor. Inclusive. Analogous to the `F` motion in Vi.
 - `t[character]`: The find until motion. Waits for another character input, then moves the cursor forwards to the next instance of that character. If a newline character of the end of the buffer is encountered before the argument character, the motion will be aborted and not move the cursor. Inclusive. Analogous to the `t` motion in Vi.
+
 - `%`: The next bracket motion. Finds (forward) the next occurence of a bracket ('[]{}()'), then moves the cursor to the corresponding open or closed bracket ('}' <-> '{', ')' <-> '(', ']' <-> '['), even if the corresponding bracket is on another line. If either the original or corresponding bracket cannot be found, the motion does not move the cursor.
 - `}`: The next paragraph motion. Moves the current cursor to the next empty row above a non-empty row, or the end of the file.
 - `{`: The previous paragraph motion. Moves the current cursor to the next previous empty row below a non-empty row, or the beginning of the file.
 
 # Non-actions
+## Visual Commands
+These have no relation to normal mode. They operate in exactly the same way as normal Commands, however they do not affect the buffer, instead only affectly the current view box.
+- `zz`: The centering visual command. Centers the view box around the cursor position vertically. Analogous to the `zz` command in Vi.
+
 ## Normal Mode
 - `:`: Enters Meta mode. 
 - `esc`: Clears the current chain of characters and sets the current count to 1. For example pressing `d`, `esc`, and then `d` will not delete the current line. Subsequently pressing `d` will delete the current line.

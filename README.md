@@ -2,6 +2,11 @@
 
 a text editor for witches
 
+# Building
+To build this project, first install [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html), the Rust package manager, then clone this repo and `cargo run` in the project directory.
+
+The editor is inspired by Vi, but has a few key differences, so you should read the [user manual](https://github.com/azaleacolburn/orinfar/tree/main/docs/MANUAL.md) before using it in a meaningful manner.
+
 # Principles
 
 ## Minimal
@@ -9,7 +14,7 @@ a text editor for witches
 - A TUI text editor
 - Simple but powerful and opinionated
 - Not configurable
-- Similar to base vi, but with better defaults (lsp support, etc)
+- Similar to base Vi, but with better defaults (lsp support, etc)
 - Similar in princible to [Helix](https://helix-editor.com/), but more minimal
 
 ## Reliable
@@ -20,7 +25,7 @@ a text editor for witches
 - Not much else to say at the moment
 
 # User Manual
-Please read the [user manual](https://github.com/azaleacolburn/orinfar/tree/main/docs/MANUAL.md) before trying to edit text with Orinfar. While this text editor is mostly a subset of Vi, there are subtle differences.
+Please read the [user manual](https://github.com/azaleacolburn/orinfar/tree/main/docs/MANUAL.md) before trying to edit text with Orinfar. While this text editor is mostly a subset of Vi, there are plenty of differences, both subtle and unsubtle.
 
 # Implementation
 
@@ -34,12 +39,16 @@ I'll specify and revise this list when I get around to specific things and I hav
     - [ ] Redo System
     - [x] Status Bar (not comprehensively documented)
     - [x] Minimal Register System (not yet documented)
-    - [ ] Robust Register System
+    - [ ] Robust Register System (idk what that means exactly)
     - [ ] Mark System
     - [ ] Text Objects
 - [ ] Advanced Features
     - [ ] Syntax Highlighting (tree-sitter)
     - [ ] LSP Client Support
+
+# Feature/Bug Requests
+
+If I haven't implemented your favorite Vi feature, or you've found some undesirable bug or behavior, feel free to reach out to me at `azaleacolburn[AT]gmail[DOT]com`.
 
 
 # Known Bugs

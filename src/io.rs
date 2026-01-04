@@ -44,7 +44,7 @@ impl Cli {
 pub fn load_file(path: &Option<PathBuf>, buffer: &mut Buffer) -> Result<()> {
     if let Some(path) = path {
         if !std::fs::exists(path)? {
-            std::fs::write(path, buffer.rope.to_string());
+            std::fs::write(path, buffer.rope.to_string())?;
             return Ok(());
         }
 
