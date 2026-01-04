@@ -1,6 +1,5 @@
-use crossterm::event::KeyCode;
-
 use crate::{buffer::Buffer, on_next_input_buffer_only, utility::is_symbol};
+use crossterm::event::KeyCode;
 
 pub struct Motion<'a> {
     pub name: &'a str,
@@ -202,7 +201,7 @@ pub fn find(buffer: &mut Buffer) {
         }
     }
 
-    on_next_input_buffer_only(buffer, find).unwrap();
+    on_next_input_buffer_only(buffer, find).expect("Failed to get character to find");
 }
 
 pub fn find_until(buffer: &mut Buffer) {
@@ -227,7 +226,7 @@ pub fn find_until(buffer: &mut Buffer) {
         }
     }
 
-    on_next_input_buffer_only(buffer, find_until).unwrap();
+    on_next_input_buffer_only(buffer, find_until).expect("Failed to get character to find");
 }
 
 pub fn find_back(buffer: &mut Buffer) {
@@ -249,7 +248,7 @@ pub fn find_back(buffer: &mut Buffer) {
         }
     }
 
-    on_next_input_buffer_only(buffer, find_back).unwrap();
+    on_next_input_buffer_only(buffer, find_back).expect("Failed to get character to find");
 }
 
 // Goes to the opposite bracket corresponding to the next bracket in the line (inclusive with  the

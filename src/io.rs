@@ -66,11 +66,15 @@ pub fn write(path: PathBuf, buffer: Buffer) -> Result<()> {
 }
 
 pub fn log_dir() -> PathBuf {
-    env::home_dir().unwrap().join(".orinfar")
+    env::home_dir()
+        .expect("Failed to get home dir")
+        .join(".orinfar")
 }
 
 pub fn log_file() -> PathBuf {
-    env::home_dir().unwrap().join(".orinfar/log")
+    env::home_dir()
+        .expect("Failed to get home dir")
+        .join(".orinfar/log")
 }
 
 pub fn log(contents: impl ToString) {

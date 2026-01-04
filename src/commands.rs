@@ -164,7 +164,7 @@ pub fn set_curr_register(
     _mode: &mut Mode,
     _undo_tree: &mut UndoTree,
 ) {
-    if let Event::Key(event) = read().unwrap() {
+    if let Event::Key(event) = read().expect("Could not read character from stdin") {
         let reg_name = match event.code {
             KeyCode::Char(c) => c,
             _ => return,
@@ -183,8 +183,9 @@ pub fn replace(
     if buffer.cursor == buffer.rope.len_chars() {
         return;
     }
-    execute!(stdout(), SetCursorStyle::SteadyUnderScore).unwrap();
-    if let Event::Key(event) = read().unwrap()
+    execute!(stdout(), SetCursorStyle::SteadyUnderScore)
+        .expect("Crossterm steady underscore command failed");
+    if let Event::Key(event) = read().expect("Failed to read replacement character")
         && let KeyCode::Char(c) = event.code
     {
         let original_char = buffer.get_curr_char();
@@ -193,7 +194,7 @@ pub fn replace(
         let action = Action::replace(vec![buffer.cursor], original_char, c);
         undo_tree.new_action_merge(action);
     }
-    execute!(stdout(), SetCursorStyle::SteadyBlock).unwrap();
+    execute!(stdout(), SetCursorStyle::SteadyBlock).expect("Crossterm steady block command failed");
     buffer.has_changed = true;
 }
 

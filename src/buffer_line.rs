@@ -103,7 +103,10 @@ impl Buffer {
         assert!(self.cursor <= self.rope.len_chars());
 
         let line_idx = self.rope.char_to_line(self.cursor);
-        let line = self.rope.get_line(line_idx).unwrap();
+        let line = self
+            .rope
+            .get_line(line_idx)
+            .expect("Line index not present in buffer");
         line.slice(self.cursor..)
     }
 

@@ -154,7 +154,7 @@ fn main() -> Result<()> {
         if let Event::Key(event) = read()? {
             match (event.code, mode.clone()) {
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
-                    let c = c.to_digit(10).unwrap() as u16;
+                    let c = c.to_digit(10).expect("Numeric digit not in base 10") as u16;
                     if count == 1 {
                         count = 0;
                     }
@@ -206,10 +206,9 @@ fn main() -> Result<()> {
                         view_command.execute(&mut buffer, &mut view_box);
                         chained.clear();
                     } else if let Some(operation) = next_operation {
-                        if let Some(motion) = motions
-                            .iter()
-                            .find(|motion| motion.name.chars().next().unwrap() == c)
-                        {
+                        if let Some(motion) = motions.iter().find(|motion| {
+                            motion.name.chars().next().expect("No chars in motion") == c
+                        }) {
                             (0..count).for_each(|_| {
                                 operation.execute(
                                     motion,
@@ -222,7 +221,13 @@ fn main() -> Result<()> {
                             chained.clear();
                             count = 1;
                             next_operation = None;
-                        } else if c == operation.name.chars().next().unwrap() {
+                        } else if c
+                            == operation
+                                .name
+                                .chars()
+                                .next()
+                                .expect("No chars in operation")
+                        {
                             operation.entire_line(
                                 &mut buffer,
                                 &mut register_handler,
@@ -234,9 +239,9 @@ fn main() -> Result<()> {
                             next_operation = None;
                         }
                     } else if chained.len() == 1
-                        && let Some(motion) = motions
-                            .iter()
-                            .find(|motion| motion.name.chars().next().unwrap() == c)
+                        && let Some(motion) = motions.iter().find(|motion| {
+                            motion.name.chars().next().expect("No chars in motion") == c
+                        })
                     {
                         motion.apply(&mut buffer);
                         chained.clear();

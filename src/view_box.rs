@@ -83,7 +83,7 @@ impl ViewBox {
 
         lines.for_each(|(i, (line, should_update))| {
             if !should_update {
-                execute!(stdout, MoveDown(1)).unwrap();
+                execute!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
                 return;
             }
 
@@ -99,7 +99,7 @@ impl ViewBox {
                 SetForegroundColor(Color::DarkGrey),
                 Print(padding_buffer.clone()),
             )
-            .unwrap();
+            .expect("Crossterm padding buffer print failed");
             padding_buffer.clear();
 
             let len = line.len_chars();
@@ -127,14 +127,15 @@ impl ViewBox {
                 Print(line),
                 MoveToColumn(0)
             )
-            .unwrap();
+            .expect("Crossterm print line command failed");
         });
 
         // This is for clearing trailing lines that we missed
         if len_lines < self.height {
             execute!(stdout, MoveTo(0, len_lines as u16))?;
             (len_lines..self.height).for_each(|_| {
-                execute!(stdout, Clear(ClearType::CurrentLine), MoveDown(1)).unwrap()
+                execute!(stdout, Clear(ClearType::CurrentLine), MoveDown(1))
+                    .expect("Crossterm clearing trailing lines failed")
             });
         };
 

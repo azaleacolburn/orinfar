@@ -15,12 +15,14 @@ pub enum Mode {
 impl Mode {
     pub fn insert(&mut self) {
         *self = Mode::Insert;
-        execute!(stdout(), SetCursorStyle::BlinkingBar).unwrap();
+        execute!(stdout(), SetCursorStyle::BlinkingBar)
+            .expect("Crossterm blinking bar command failed");
     }
 
     pub fn normal(&mut self) {
         *self = Mode::Normal;
-        execute!(stdout(), SetCursorStyle::SteadyBlock).unwrap();
+        execute!(stdout(), SetCursorStyle::SteadyBlock)
+            .expect("Crossterm steady block command failed");
     }
 }
 
