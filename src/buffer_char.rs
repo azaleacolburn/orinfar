@@ -12,7 +12,6 @@ impl Buffer {
         if self.cursor == self.rope.len_chars() {
             return;
         }
-        // panic!("buffer: {:?}", self.rope.bytes().collect::<Vec<u8>>());
         if self.get_curr_char() == '\n' {
             self.update_list_remove_current();
         }

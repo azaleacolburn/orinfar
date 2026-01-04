@@ -288,7 +288,7 @@ pub fn next_corresponding_bracket(buffer: &mut Buffer) {
     let condition: Box<dyn Fn(usize) -> bool> = match direction {
         1 => Box::new(|cursor: usize| end_of_file > cursor + 1),
         -1 => Box::new(|cursor: usize| cursor as i32 > 0),
-        _ => panic!(),
+        _ => unreachable!(),
     };
 
     loop {

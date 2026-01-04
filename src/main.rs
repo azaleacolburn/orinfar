@@ -293,13 +293,6 @@ fn main() -> Result<()> {
 
                     let action = Action::insert(buffer.cursor - 1, c);
                     undo_tree.new_action_merge(action);
-                    // }
-                    // buffer.next_char();
-                    // panic!(
-                    //     "buffer: {:?} {}",
-                    //     buffer.rope.bytes().collect::<Vec<u8>>(),
-                    //     buffer.cursor
-                    // );
                 }
                 (KeyCode::Tab, Mode::Insert) => {
                     // NOTE

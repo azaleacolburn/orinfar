@@ -84,10 +84,8 @@ impl Buffer {
     /// Returns the absolute index of the end of the current line
     /// NOT the last column in the line
     pub fn get_end_of_line(&self) -> usize {
-        if self.cursor > self.rope.len_chars() {
-            panic!("here lol");
-            // return;
-        }
+        assert!(self.cursor <= self.rope.len_chars());
+
         let line = self.rope.char_to_line(self.cursor);
         log!("get_end_of(curr)_line: {}, line: {}", self.cursor, line);
         self.get_end_of_n_line(line)
@@ -102,10 +100,8 @@ impl Buffer {
     }
 
     pub fn get_until_end_of_line(&self) -> RopeSlice<'_> {
-        if self.cursor > self.rope.len_chars() {
-            panic!("here lol2");
-            // return;
-        }
+        assert!(self.cursor <= self.rope.len_chars());
+
         let line_idx = self.rope.char_to_line(self.cursor);
         let line = self.rope.get_line(line_idx).unwrap();
         line.slice(self.cursor..)
@@ -117,10 +113,7 @@ impl Buffer {
     }
 
     pub fn get_curr_line(&self) -> RopeSlice<'_> {
-        if self.cursor > self.rope.len_chars() {
-            panic!("here lol3");
-            // return;
-        }
+        assert!(self.cursor <= self.rope.len_chars());
         self.rope.line(self.rope.char_to_line(self.cursor))
     }
 
