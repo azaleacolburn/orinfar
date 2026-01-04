@@ -57,7 +57,6 @@ impl Buffer {
     }
 
     pub fn get_start_of_line(&self) -> usize {
-        log!("get_start_of_line cursor: {}, {:?}", self.cursor, self.rope);
         self.get_start_of_char_line(self.cursor)
     }
 

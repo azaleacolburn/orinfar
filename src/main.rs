@@ -385,12 +385,16 @@ fn main() -> Result<()> {
                                     .collect::<String>();
 
                                 buffer.has_changed = true;
+                                buffer.lines_for_updating.clear();
                                 contents.lines().for_each(|_| buffer.update_list_add(0));
 
                                 let action = Action::insert(0, contents.clone());
                                 undo_tree.new_action(action);
 
                                 buffer.rope = Rope::from(contents);
+                                if buffer.cursor > buffer.rope.len_chars() {
+                                    buffer.cursor = 0;
+                                }
                             }
                             'q' => break 'main,
                             's' => {
