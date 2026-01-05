@@ -114,7 +114,6 @@ impl Buffer {
 
     /// Returns the current zero-indexed column the cursor is on
     pub fn get_col(&self) -> usize {
-        log!("get_col cursor: {}, {:?}", self.cursor, self.rope);
         let start_idx = self.get_start_of_line();
         self.cursor - start_idx
     }
