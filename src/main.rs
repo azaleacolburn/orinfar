@@ -354,6 +354,7 @@ fn main() -> Result<()> {
                                 if let Some(_path) = path {
                                     buffer.rope = Rope::new();
                                     buffer.cursor = 0;
+                                    buffer.lines_for_updating = Vec::new();
                                 }
                                 path = Some(path_buf);
 
