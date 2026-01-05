@@ -349,6 +349,12 @@ fn main() -> Result<()> {
                                     status_bar[i + 1..].iter().collect::<String>().trim(),
                                 );
                                 log!("Set path to equal: {}", path_buf.to_string_lossy());
+                                // If we already have a file, we don't want to write the contents
+                                // to a new empty file
+                                if let Some(_path) = path {
+                                    buffer.rope = Rope::new();
+                                    buffer.cursor = 0;
+                                }
                                 path = Some(path_buf);
 
                                 io::load_file(&path, &mut buffer)?;
