@@ -80,8 +80,6 @@ pub fn word(buffer: &mut Buffer) {
 
     let last_legal_char = buffer.get_end_of_line();
 
-    // This has to be `- 2` because we don't want to get rid of the trailing space
-
     if is_symbol(c) {
         while is_symbol(c) && buffer.cursor < last_legal_char {
             c = unwrap_or_break!(buffer.next_and_char());
