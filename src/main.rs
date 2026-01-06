@@ -355,6 +355,7 @@ fn main() -> Result<()> {
                                     buffer.rope = Rope::new();
                                     buffer.cursor = 0;
                                     buffer.lines_for_updating = Vec::new();
+                                    buffer.has_changed = true;
                                 }
                                 path = Some(path_buf);
 
