@@ -148,22 +148,6 @@ impl Buffer {
 
         let new_position = usize::min(start_of_next_row + col, end_next_row);
         self.cursor = new_position;
-        // Subtracting a signed integer variable from a usize is annoying
-        // if curr_row < row {
-        //     while curr_row != row && self.cursor + 1 < self.rope.len_chars() {
-        //         if self.rope.char(self.cursor) == '\n' {
-        //             curr_row += 1;
-        //         }
-        //         self.cursor += 1;
-        //     }
-        // } else {
-        //     while curr_row != row && self.cursor - 1 < self.rope.len_chars() {
-        //         if self.rope.char(self.cursor) == '\n' {
-        //             curr_row -= 1;
-        //         }
-        //         self.cursor -= 1;
-        //     }
-        // };
     }
 
     pub fn count_spaces_backwards(&self) -> usize {

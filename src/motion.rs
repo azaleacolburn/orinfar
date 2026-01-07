@@ -249,8 +249,8 @@ pub fn find_back(buffer: &mut Buffer) {
     on_next_input_buffer_only(buffer, find_back).expect("Failed to get character to find");
 }
 
-// Goes to the opposite bracket corresponding to the next bracket in the line (inclusive with  the
-// current character).
+/// Goes to the opposite bracket corresponding to the next bracket in the line (inclusive with  the
+/// current character).
 pub fn next_corresponding_bracket(buffer: &mut Buffer) {
     let anchor = buffer.cursor;
     let end_of_line = buffer.get_end_of_line();

@@ -167,7 +167,6 @@ fn main() -> Result<()> {
                 }
 
                 (KeyCode::Char(c), Mode::Normal) => {
-                    // TODO Remove this len_chars thing because pasting
                     if !all_normal_chars.contains(&c) {
                         continue;
                     };
@@ -292,7 +291,6 @@ fn main() -> Result<()> {
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
                     buffer.insert_char(c);
-                    // if buffer.rope.len_chars() > 1 {
                     buffer.cursor += 1;
                     buffer.update_list_use_current_line();
 

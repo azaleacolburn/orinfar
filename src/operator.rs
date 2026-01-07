@@ -55,7 +55,6 @@ impl<'a> Operator<'a> {
         undo_tree: &mut UndoTree,
     ) {
         buffer.start_of_line();
-        // `+ 1` because the `iterate_range` function is exclusive
         let end_of_line = buffer.get_end_of_line();
         let reg_before = register_handler.get_reg().to_string();
 
