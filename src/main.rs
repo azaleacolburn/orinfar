@@ -8,12 +8,14 @@ mod buffer_char;
 mod buffer_line;
 mod buffer_update;
 mod commands;
+mod highlight;
 #[macro_use]
 mod io;
 mod mode;
 mod motion;
 mod operator;
 mod panic_hook;
+mod parser;
 mod register;
 mod status_bar;
 mod undo;
@@ -50,6 +52,8 @@ use crossterm::{
 };
 use ropey::Rope;
 use std::{io::stdout, path::PathBuf};
+use tree_sitter::Parser;
+use tree_sitter_highlight::{HighlightConfiguration, HighlightEvent};
 
 pub static mut DEBUG: bool = true;
 
