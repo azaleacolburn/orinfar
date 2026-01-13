@@ -371,6 +371,7 @@ fn main() -> Result<()> {
 
                                 break;
                             }
+                            // Print Directories
                             'd' => {
                                 let path = match path.clone() {
                                     Some(mut p) => {
@@ -390,19 +391,13 @@ fn main() -> Result<()> {
                                     })
                                     .collect::<String>();
 
-                                buffer.has_changed = true;
-                                buffer.lines_for_updating.clear();
-                                contents.lines().for_each(|_| buffer.update_list_add(0));
-
-                                let action = Action::insert(0, contents.clone());
-                                undo_tree.new_action(action);
-
-                                buffer.rope = Rope::from(contents);
-                                if buffer.cursor > buffer.rope.len_chars() {
-                                    buffer.cursor = 0;
-                                }
+                                buffer.replace_contents(contents, &mut undo_tree);
                             }
-                            'q' => break 'main,
+                            // Print Registers
+                            'r' => {
+                                let contents = register_handler.to_string();
+                                buffer.replace_contents(contents, &mut undo_tree);
+                            }
                             's' => {
                                 if status_bar[i..].len() == 1 {
                                     break;
@@ -451,6 +446,7 @@ fn main() -> Result<()> {
 
                                 buffer.set_row(num + 1);
                             }
+                            'q' => break 'main,
                             c => log!("Unknown Meta-Command: {}", c),
                         }
                     }

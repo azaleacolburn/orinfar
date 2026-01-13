@@ -14,7 +14,7 @@ impl RegisterHandler {
     pub fn new() -> Self {
         RegisterHandler {
             registers: HashMap::new(),
-            current_register: '"',
+            current_register: 'a',
         }
     }
 
@@ -56,12 +56,27 @@ impl RegisterHandler {
     }
 
     pub fn reset_curr_register(&mut self) {
-        self.current_register = '\"'
+        self.current_register = 'a'
     }
 }
 
 impl Default for RegisterHandler {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl ToString for RegisterHandler {
+    fn to_string(&self) -> String {
+        self.registers
+            .iter()
+            .map(|(name, contents)| {
+                if *name == self.current_register {
+                    format!("(*) {name}: '{contents}'\n")
+                } else {
+                    format!("{name}: '{contents}'\n")
+                }
+            })
+            .collect::<String>()
     }
 }
