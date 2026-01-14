@@ -1,6 +1,7 @@
 use crate::{
-    Mode,
+    DEBUG, Mode,
     buffer::Buffer,
+    log,
     register::RegisterHandler,
     undo::{Action, UndoTree},
 };
@@ -134,6 +135,11 @@ pub fn paste(
     _mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
+    log!(
+        "printing contents: {:?}\ncurrent register contents{}\n",
+        register_handler.to_string(),
+        register_handler.get_curr_reg(),
+    );
     let contents = &register_handler.get_reg();
 
     let line_idx = buffer.get_row();
@@ -169,7 +175,6 @@ pub fn set_curr_register(
             KeyCode::Char(c) => c,
             _ => return,
         };
-        register_handler.init_reg(reg_name, "");
         register_handler.current_register = reg_name;
     }
 }

@@ -31,11 +31,11 @@ impl RegisterHandler {
         self.registers.insert(self.current_register, String::new());
     }
 
-    pub fn push_reg(&mut self, append_value: &str) {
+    pub fn push_reg(&mut self, append_value: impl ToString) {
+        let str = append_value.to_string();
         match self.registers.get_mut(&self.current_register) {
             Some(value) => {
-                value.reserve(append_value.len());
-                value.push_str(append_value);
+                value.push_str(&str);
             }
             None => {
                 self.registers
