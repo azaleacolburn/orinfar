@@ -56,6 +56,12 @@ pub struct UndoTree {
     actions: Vec<Action>,
 }
 
+impl Default for UndoTree {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UndoTree {
     pub fn new() -> Self {
         UndoTree {
@@ -142,11 +148,8 @@ impl UndoTree {
                     && new == last_new
                     && original == last_original
                 {
-                    let mut positions: Vec<usize> = positions
-                        .into_iter()
-                        .chain(last_positions.into_iter())
-                        .map(|n| *n)
-                        .collect();
+                    let mut positions: Vec<usize> =
+                        positions.iter().chain(last_positions).copied().collect();
                     positions.sort();
                     self.actions.pop();
                     action = Action::replace(positions, original, new);

@@ -41,6 +41,37 @@ impl Cli {
     }
 }
 
+pub fn try_get_git_hash(path: &Option<PathBuf>) -> Option<String> {
+    let mut git_hash: Option<String> = None;
+    if let Some(path) = path {
+        let path = match path.is_dir() {
+            true => path,
+            false => path.parent().unwrap(),
+        }
+        .to_str()
+        .unwrap();
+
+        let git_stem = if path.is_empty() {
+            String::from(".git")
+        } else {
+            format!("{}/.git", path)
+        };
+
+        let head_path = format!("{}/HEAD", git_stem);
+
+        if let Ok(head_str) = std::fs::read_to_string(head_path).map(|s| s.trim().to_string()) {
+            let head = head_str.split(" ").collect::<Vec<&str>>()[1];
+
+            let ref_path = format!("{git_stem}/{head}");
+            git_hash = std::fs::read_to_string(ref_path)
+                .ok()
+                .map(|s| s.trim().chars().take(7).collect::<String>());
+        };
+    };
+
+    git_hash
+}
+
 pub fn load_file(path: &Option<PathBuf>, buffer: &mut Buffer) -> Result<()> {
     if let Some(path) = path {
         if !std::fs::exists(path)? {

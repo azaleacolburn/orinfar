@@ -148,7 +148,7 @@ fn delete_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
     if buffer.rope.len_chars() <= buffer.cursor {
         return;
     }
-    register_handler.push_reg(&buffer.get_curr_char().to_string());
+    register_handler.push_reg(buffer.get_curr_char().to_string());
     buffer.delete_curr_char();
 }
 pub fn delete(
@@ -182,7 +182,7 @@ pub fn delete(
 }
 
 fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
-    register_handler.push_reg(&buffer.get_curr_char().to_string());
+    register_handler.push_reg(buffer.get_curr_char().to_string());
     if buffer.cursor + 1 < buffer.rope.len_chars() {
         buffer.next_char();
     }

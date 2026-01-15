@@ -152,6 +152,7 @@ impl ViewBox {
         count: u16,
         register: char,
         path: &Option<PathBuf>,
+        git_hash: &Option<String>,
         adjusted: bool,
     ) -> Result<()> {
         let mut stdout = stdout();
@@ -162,41 +163,62 @@ impl ViewBox {
         }
 
         let col = buffer.get_col();
-        log("past col");
         let row = buffer.get_row();
 
         let status_message = match (mode, path) {
             (Mode::Meta, _) => status_bar.buffer(),
             (Mode::Normal, Some(path)) => {
+                let info_str = "Editing File: ".to_string();
+                let file_size = std::fs::read(path)?.len();
+                let path = path.to_string_lossy();
+
                 let count_str = if count == 1 {
                     String::new()
                 } else {
                     count.to_string()
                 };
-
                 let reg_str = if register == '\"' {
                     String::new()
                 } else {
                     format!("\"{}", register)
                 };
+                let chained_str = chained.iter().collect::<String>();
+
+                let git_hash = git_hash.clone().unwrap_or_default();
+
+                let middle_buffer = (0..self.width
+                    - info_str.len()
+                    - path.len()
+                    - 2 // For the 2 quotations
+                    - 3 // For the 3 spaces
+                    - file_size.checked_ilog10().unwrap_or(1) as usize
+                    - reg_str.len()
+                    - count_str.len()
+                    - chained_str.len()
+                    - git_hash.len())
+                    .map(|_| " ")
+                    .collect::<String>();
 
                 format!(
-                    "Editing File: \"{}\" {}b {}{}{}",
-                    path.to_string_lossy(),
-                    std::fs::read(path)?.len(),
-                    reg_str,
-                    count_str,
-                    chained.iter().collect::<String>()
+                    "{info_str}\"{path}\" {file_size}b {reg_str}{count_str} {chained_str}{middle_buffer}{git_hash}",
                 )
             }
             (Mode::Normal, None) => {
+                let info_str = "-- Unattached Buffer -- ".to_string();
+
                 let count_str = if count == 1 {
                     String::new()
                 } else {
                     count.to_string()
                 };
+                let reg_str = if register == '\"' {
+                    String::new()
+                } else {
+                    format!("\"{}", register)
+                };
+                let chained_str = chained.iter().collect::<String>();
 
-                format!("{}{}", count_str, chained.iter().collect::<String>())
+                format!("{info_str}{count_str}{reg_str}{chained_str}")
             }
             (Mode::Insert, _) => "-- INSERT --".into(),
             (Mode::Visual, _) => "-- VISUAL --".into(),

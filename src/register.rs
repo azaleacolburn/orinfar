@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 pub type RegId = char;
 pub type RegContents = String;
@@ -66,9 +66,10 @@ impl Default for RegisterHandler {
     }
 }
 
-impl ToString for RegisterHandler {
-    fn to_string(&self) -> String {
-        self.registers
+impl Display for RegisterHandler {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = self
+            .registers
             .iter()
             .map(|(name, contents)| {
                 if *name == self.current_register {
@@ -77,6 +78,8 @@ impl ToString for RegisterHandler {
                     format!("{name}: '{contents}'\n")
                 }
             })
-            .collect::<String>()
+            .collect::<String>();
+
+        f.write_str(&str)
     }
 }

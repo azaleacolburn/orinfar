@@ -26,7 +26,7 @@ use crate::{
         append, cut, first_row, insert, insert_new_line, insert_new_line_above, last_row, paste,
         replace, set_curr_register, undo,
     },
-    io::{Cli, log, log_dir, log_file},
+    io::{Cli, log, log_dir, log_file, try_get_git_hash},
     mode::Mode,
     motion::{
         Motion, back, beginning_of_line, end_of_line, end_of_word, find, find_back, find_until,
@@ -74,16 +74,20 @@ fn main() -> Result<()> {
 
     let view_commands: &[ViewCommand] = &[ViewCommand::new("zz", center_viewbox_on_cursor)];
     let commands: &[Cmd] = &[
+        // Insert
         Cmd::new("i", insert),
-        Cmd::new("p", paste),
         Cmd::new("a", append),
         Cmd::new("o", insert_new_line),
         Cmd::new("O", insert_new_line_above),
+        // Single character edit
         Cmd::new("x", cut),
         Cmd::new("r", replace),
+        // File Traversal
         Cmd::new("G", last_row),
         Cmd::new("gg", first_row),
+        // Misc
         Cmd::new("u", undo),
+        Cmd::new("p", paste),
         Cmd::new("\"", set_curr_register),
     ];
     let operators: &[Operator] = &[
@@ -101,11 +105,14 @@ fn main() -> Result<()> {
         Motion::exclusive("w", word),
         Motion::exclusive("b", back),
         Motion::inclusive("e", end_of_word),
+        // Line operators
         Motion::inclusive("$", end_of_line),
         Motion::inclusive("_", beginning_of_line),
+        // Finding operators
         Motion::inclusive("f", find),
         Motion::inclusive("F", find_back),
         Motion::inclusive("t", find_until),
+        // Paragraph operators
         Motion::inclusive("%", next_corresponding_bracket),
         Motion::inclusive("}", next_newline),
         Motion::inclusive("{", prev_newline),
@@ -136,7 +143,9 @@ fn main() -> Result<()> {
         DEBUG = cli.debug;
     }
 
+    let mut git_hash = try_get_git_hash(&path);
     io::load_file(&path, &mut buffer)?;
+
     view_box.flush(
         &buffer,
         &status_bar,
@@ -145,18 +154,9 @@ fn main() -> Result<()> {
         count,
         register_handler.get_curr_reg(),
         &path,
+        &git_hash,
         false,
     )?;
-
-    let git_hash = path.map(|path| {
-        path.read_dir()
-            .map(|iter| {
-                let t = iter
-                    .filter_map(|n| n.ok())
-                    .find(|dir| dir.file_name() == ".git");
-            })
-            .map(|t| t)
-    });
 
     'main: loop {
         buffer.update_list_reset();
@@ -334,8 +334,11 @@ fn main() -> Result<()> {
                                 Some(path) => {
                                     io::write(path.to_path_buf(), buffer.clone())?;
                                 }
-                                None => log!("Cannot write buffer, no file opened."),
+                                None => log!("WARNING: Cannot Write Unattached Buffer"),
                             },
+                            'u' => {
+                                path = None;
+                            }
                             'l' => {
                                 io::load_file(&path, &mut buffer)?;
                                 view_box.flush(
@@ -346,6 +349,7 @@ fn main() -> Result<()> {
                                     count,
                                     register_handler.get_curr_reg(),
                                     &path,
+                                    &git_hash,
                                     false,
                                 )?;
                             }
@@ -367,6 +371,8 @@ fn main() -> Result<()> {
                                 }
                                 path = Some(path_buf);
 
+                                git_hash = try_get_git_hash(&path);
+
                                 io::load_file(&path, &mut buffer)?;
                                 view_box.flush(
                                     &buffer,
@@ -376,6 +382,7 @@ fn main() -> Result<()> {
                                     count,
                                     register_handler.get_curr_reg(),
                                     &path,
+                                    &git_hash,
                                     false,
                                 )?;
 
@@ -498,6 +505,7 @@ fn main() -> Result<()> {
                 count,
                 register_handler.get_curr_reg(),
                 &path,
+                &git_hash,
                 adjusted,
             )?;
         }
