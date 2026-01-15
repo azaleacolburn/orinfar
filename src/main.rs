@@ -148,6 +148,16 @@ fn main() -> Result<()> {
         false,
     )?;
 
+    let git_hash = path.map(|path| {
+        path.read_dir()
+            .map(|iter| {
+                let t = iter
+                    .filter_map(|n| n.ok())
+                    .find(|dir| dir.file_name() == ".git");
+            })
+            .map(|t| t)
+    });
+
     'main: loop {
         buffer.update_list_reset();
 
