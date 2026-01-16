@@ -285,7 +285,7 @@ pub fn next_corresponding_bracket(buffer: &mut Buffer) {
     loop {
         if condition(buffer.cursor) {
             buffer.cursor =
-                usize::try_from((i32::try_from(buffer.cursor).unwrap() + direction)).unwrap();
+                usize::try_from(i32::try_from(buffer.cursor).unwrap() + direction).unwrap();
             c = buffer.get_curr_char();
         } else {
             buffer.cursor = anchor;

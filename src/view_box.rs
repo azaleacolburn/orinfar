@@ -79,8 +79,7 @@ impl ViewBox {
 
         assert!(lines.len() <= self.height.into());
         #[allow(clippy::cast_possible_wrap)]
-        #[allow(clippy::cast_possible_truncate)]
-        let len_lines = u16::try_from(lines.len()).unwrap() as u16;
+        let len_lines = u16::try_from(lines.len()).unwrap();
 
         execute!(stdout, Hide, MoveTo(0, 0))?;
         let mut padding_buffer = String::with_capacity(left_padding);
@@ -136,7 +135,7 @@ impl ViewBox {
 
         // This is for clearing trailing lines that we missed
         if len_lines < self.height {
-            execute!(stdout, MoveTo(0, len_lines as u16))?;
+            execute!(stdout, MoveTo(0, len_lines))?;
             (len_lines..self.height).for_each(|_| {
                 execute!(stdout, Clear(ClearType::CurrentLine), MoveDown(1))
                     .expect("Crossterm clearing trailing lines failed");
@@ -155,8 +154,8 @@ impl ViewBox {
         chained: &[char],
         count: u16,
         register: char,
-        path: &Option<PathBuf>,
-        git_hash: &Option<String>,
+        path: Option<&PathBuf>,
+        git_hash: Option<&str>,
         adjusted: bool,
     ) -> Result<()> {
         let mut stdout = stdout();
@@ -188,7 +187,7 @@ impl ViewBox {
                 };
                 let chained_str = chained.iter().collect::<String>();
 
-                let git_hash = git_hash.clone().unwrap_or_default();
+                let git_hash = git_hash.unwrap_or("");
 
                 let middle_buffer = (0..(self.width as usize)
                     - info_str.len()
@@ -230,17 +229,17 @@ impl ViewBox {
         execute!(
             stdout,
             SetForegroundColor(Color::White),
-            MoveTo(0, self.height as u16 + 1),
+            MoveTo(0, self.height + 1),
             Clear(ClearType::CurrentLine),
             Print(status_message)
         )?;
 
-        let (new_col, new_row) = if let Mode::Meta = mode {
-            (status_bar.idx() as u16, (self.height + 1) as u16)
+        let (new_col, new_row) = if matches!(mode, Mode::Meta) {
+            (status_bar.idx(), self.height + 1)
         } else {
             let row = row - self.top;
             let col = col - self.left + left_padding + 1;
-            (col as u16, row as u16)
+            (u16::try_from(col).unwrap(), u16::try_from(row).unwrap())
         };
         execute!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
         stdout.flush()?;

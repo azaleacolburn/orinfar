@@ -3,11 +3,13 @@
 // Needs to be defined first
 #[macro_use]
 mod utility;
+mod action;
 mod buffer;
 mod buffer_char;
 mod buffer_line;
 mod buffer_update;
 mod commands;
+mod meta_command;
 #[macro_use]
 mod io;
 mod mode;
@@ -21,12 +23,14 @@ mod view_box;
 mod view_command;
 
 use crate::{
+    action::{enumerate_normal_chars, match_action},
     buffer::Buffer,
     commands::{
         append, cut, first_row, insert, insert_new_line, insert_new_line_above, last_row, paste,
         replace, set_curr_register, undo,
     },
     io::{Cli, log, log_dir, log_file, try_get_git_hash},
+    meta_command::{attach_buffer, print_directories, substitute_cmd},
     mode::Mode,
     motion::{
         Motion, back, beginning_of_line, end_of_line, end_of_word, find, find_back, find_until,
@@ -48,11 +52,11 @@ use crossterm::{
     execute,
     terminal::size,
 };
-use ropey::Rope;
-use std::{io::stdout, path::PathBuf};
+use std::io::stdout;
 
 pub static mut DEBUG: bool = true;
 
+#[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
     panic_hook::add_panic_hook(&cleanup);
 
@@ -65,7 +69,6 @@ fn main() -> Result<()> {
     std::fs::File::create(log_file())?;
 
     let mut stdout = stdout();
-    let _leader = ' ';
 
     let mut undo_tree = UndoTree::new();
     let mut register_handler = RegisterHandler::new();
@@ -120,15 +123,7 @@ fn main() -> Result<()> {
     let mut next_operation: Option<&Operator> = None;
 
     // Used for not putting excluded chars in the chain
-    let command_chars = commands.iter().flat_map(|cmd| cmd.name.chars());
-    let operator_chars = operators.iter().flat_map(|cmd| cmd.name.chars());
-    let motion_chars = motions.iter().flat_map(|cmd| cmd.name.chars());
-    let view_command_chars = view_commands.iter().flat_map(|cmd| cmd.name.chars());
-    let all_normal_chars: Vec<char> = command_chars
-        .chain(operator_chars)
-        .chain(motion_chars)
-        .chain(view_command_chars)
-        .collect();
+    let all_normal_chars = enumerate_normal_chars(commands, operators, motions, view_commands);
 
     let (cols, rows) = size()?;
     let mut view_box: ViewBox = ViewBox::new(cols, rows);
@@ -153,8 +148,8 @@ fn main() -> Result<()> {
         &chained,
         count,
         register_handler.get_curr_reg(),
-        &path,
-        &git_hash,
+        path.as_ref(),
+        git_hash.as_deref(),
         false,
     )?;
 
@@ -164,7 +159,8 @@ fn main() -> Result<()> {
         if let Event::Key(event) = read()? {
             match (event.code, mode.clone()) {
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
-                    let c = c.to_digit(10).expect("Numeric digit not in base 10") as u16;
+                    let c = u16::try_from(c.to_digit(10).expect("Numeric digit not in base 10"))
+                        .unwrap();
                     if count == 1 {
                         count = 0;
                     }
@@ -177,90 +173,22 @@ fn main() -> Result<()> {
                 }
 
                 (KeyCode::Char(c), Mode::Normal) => {
-                    if !all_normal_chars.contains(&c) {
-                        continue;
-                    }
-                    chained.push(c);
-
-                    if let Some(command) = commands
-                        .iter()
-                        .find(|motion| motion.name == chained.iter().collect::<String>())
-                    {
-                        command.execute(
-                            &mut buffer,
-                            &mut register_handler,
-                            &mut mode,
-                            &mut undo_tree,
-                        );
-                        chained.clear();
-                    } else if let Some(command) = commands
-                        .iter()
-                        .find(|motion| motion.name == chained.last().unwrap_or(&' ').to_string())
-                    {
-                        (0..count).for_each(|_| {
-                            command.execute(
-                                &mut buffer,
-                                &mut register_handler,
-                                &mut mode,
-                                &mut undo_tree,
-                            );
-                        });
-                        count = 1;
-                        chained.clear();
-                        next_operation = None;
-                    } else if let Some(view_command) = view_commands
-                        .iter()
-                        .find(|command| command.name == chained.iter().collect::<String>())
-                    {
-                        view_command.execute(&mut buffer, &mut view_box);
-                        chained.clear();
-                    } else if let Some(operation) = next_operation {
-                        if let Some(motion) = motions.iter().find(|motion| {
-                            motion.name.chars().next().expect("No chars in motion") == c
-                        }) {
-                            (0..count).for_each(|_| {
-                                operation.execute(
-                                    motion,
-                                    &mut buffer,
-                                    &mut register_handler,
-                                    &mut mode,
-                                    &mut undo_tree,
-                                );
-                            });
-                            chained.clear();
-                            count = 1;
-                            next_operation = None;
-                        } else if c
-                            == operation
-                                .name
-                                .chars()
-                                .next()
-                                .expect("No chars in operation")
-                        {
-                            operation.entire_line(
-                                &mut buffer,
-                                &mut register_handler,
-                                &mut mode,
-                                &mut undo_tree,
-                            );
-                            chained.clear();
-                            count = 1;
-                            next_operation = None;
-                        }
-                    } else if chained.len() == 1
-                        && let Some(motion) = motions.iter().find(|motion| {
-                            motion.name.chars().next().expect("No chars in motion") == c
-                        })
-                    {
-                        motion.apply(&mut buffer);
-                        chained.clear();
-                    }
-                    if let Some(operator) = operators
-                        .iter()
-                        .find(|operator| operator.name == chained.iter().collect::<String>())
-                    {
-                        next_operation = Some(operator);
-                    }
+                    match_action(
+                        c,
+                        &mut chained,
+                        &mut next_operation,
+                        &mut count,
+                        &mut buffer,
+                        &mut register_handler,
+                        &mut undo_tree,
+                        &mut view_box,
+                        &mut mode,
+                        commands,
+                        operators,
+                        motions,
+                        view_commands,
+                        &all_normal_chars,
+                    );
                 }
 
                 (KeyCode::Esc, Mode::Normal) => {
@@ -276,28 +204,7 @@ fn main() -> Result<()> {
                     execute!(stdout, SetCursorStyle::SteadyBlock)?;
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
-                    if buffer.cursor == 0 {
-                        continue;
-                    }
-                    buffer.cursor -= 1;
-                    let char = buffer.get_curr_char();
-
-                    // Handles deleting 4 spaces or up to the alignment of 4 spaces if possible
-                    let space_count = buffer.count_spaces_backwards();
-
-                    if space_count > 1 {
-                        let deleted = buffer.delete_to_4_spaces_alignment(space_count);
-
-                        let action = Action::delete(buffer.cursor, &deleted);
-                        undo_tree.new_action_merge(action);
-                    } else {
-                        // In most cases, when there's just one character to delete
-                        buffer.delete_curr_char();
-                        buffer.update_list_use_current_line();
-
-                        let action = Action::delete(buffer.cursor, &char);
-                        undo_tree.new_action_merge(action);
-                    }
+                    buffer.backspace(&mut undo_tree);
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
                     buffer.insert_char(c);
@@ -348,30 +255,19 @@ fn main() -> Result<()> {
                                     &chained,
                                     count,
                                     register_handler.get_curr_reg(),
-                                    &path,
-                                    &git_hash,
+                                    path.as_ref(),
+                                    git_hash.as_deref(),
                                     false,
                                 )?;
                             }
                             'o' => {
-                                if status_bar.len() == i + 1 {
-                                    break;
-                                }
-                                let path_buf = PathBuf::from(
-                                    status_bar[i + 1..].iter().collect::<String>().trim(),
+                                attach_buffer(
+                                    &mut buffer,
+                                    &status_bar,
+                                    i,
+                                    &mut path,
+                                    &mut git_hash,
                                 );
-                                log!("Set path to equal: {}", path_buf.to_string_lossy());
-                                // If we already have a file, we don't want to write the contents
-                                // to a new empty file
-                                if let Some(_path) = path {
-                                    buffer.rope = Rope::new();
-                                    buffer.cursor = 0;
-                                    buffer.lines_for_updating = Vec::new();
-                                    buffer.has_changed = true;
-                                }
-                                path = Some(path_buf);
-
-                                git_hash = try_get_git_hash(path.as_ref());
 
                                 io::load_file(path.as_ref(), &mut buffer)?;
                                 view_box.flush(
@@ -381,34 +277,14 @@ fn main() -> Result<()> {
                                     &chained,
                                     count,
                                     register_handler.get_curr_reg(),
-                                    &path,
-                                    &git_hash,
+                                    path.as_ref(),
+                                    git_hash.as_deref(),
                                     false,
                                 )?;
-
                                 break;
                             }
-                            // Print Directories
                             'd' => {
-                                let path = match path.clone() {
-                                    Some(mut p) => {
-                                        p.pop();
-                                        p
-                                    }
-                                    None => PathBuf::from("./"),
-                                };
-                                let dir = std::fs::read_dir(path)?;
-                                let contents = dir
-                                    .filter_map(std::result::Result::ok)
-                                    .map(|item| {
-                                        let mut path =
-                                            item.file_name().to_string_lossy().to_string();
-                                        path.push('\n');
-                                        path
-                                    })
-                                    .collect::<String>();
-
-                                buffer.replace_contents(contents, &mut undo_tree);
+                                print_directories(&mut buffer, &mut undo_tree, path.clone())?;
                             }
                             // Print Registers
                             'r' => {
@@ -416,39 +292,7 @@ fn main() -> Result<()> {
                                 buffer.replace_contents(contents, &mut undo_tree);
                             }
                             's' => {
-                                if status_bar[i..].len() == 1 {
-                                    break;
-                                }
-                                let substitution: Vec<&[char]> =
-                                    status_bar[i + 1..].split(|c| *c == '/').collect();
-
-                                if substitution.len() != 3 || !substitution[0].is_empty() {
-                                    log!(
-                                        "Malformed substitution meta-command: {:?}. Should be in the form: s/[orig]/[new]",
-                                        substitution
-                                    );
-
-                                    break;
-                                }
-
-                                let original = substitution[1];
-                                let new: String = substitution[2].iter().collect();
-
-                                log!("Substition\n\toriginal: {:?}\n\tnew: {}", original, new);
-
-                                let idxs_of_substitution = buffer.find_occurences(original);
-                                log!("idxs of sub: {:?}", idxs_of_substitution);
-
-                                buffer.replace_text(
-                                    &new,
-                                    &original.iter().collect::<String>(),
-                                    &idxs_of_substitution,
-                                    &mut undo_tree,
-                                    false,
-                                );
-
-                                buffer.update_list_set(.., true);
-                                buffer.has_changed = true;
+                                substitute_cmd(&mut buffer, &status_bar, &mut undo_tree, i);
                                 break;
                             }
                             n if n.is_numeric() => {
@@ -504,8 +348,8 @@ fn main() -> Result<()> {
                 &chained,
                 count,
                 register_handler.get_curr_reg(),
-                &path,
-                &git_hash,
+                path.as_ref(),
+                git_hash.as_deref(),
                 adjusted,
             )?;
         }
@@ -514,6 +358,8 @@ fn main() -> Result<()> {
     cleanup()
 }
 
+/// # Errors
+/// - I/O error if `crossterm::events::read()` fails
 pub fn on_next_input_buffer_only(
     buffer: &mut Buffer,
     closure: fn(KeyCode, &mut Buffer),

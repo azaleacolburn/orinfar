@@ -13,8 +13,8 @@ impl StatusBar {
         }
     }
 
-    pub const fn idx(&self) -> usize {
-        self.idx
+    pub fn idx(&self) -> u16 {
+        u16::try_from(self.idx).unwrap()
     }
 
     pub fn buffer(&self) -> String {

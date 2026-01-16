@@ -1,4 +1,4 @@
-use std::{i32, iter::once};
+use std::iter::once;
 
 use crate::{
     DEBUG,
@@ -226,9 +226,8 @@ impl Buffer {
         undo_tree: &mut UndoTree,
         undoing: bool,
     ) {
-        assert!(new.len() <= i32::MAX as usize && original.len() <= i32::MAX as usize);
-
         let offset = i32::try_from(new.len()).unwrap() - i32::try_from(original.len()).unwrap();
+
         for (i, end_idx) in idxs_of_substitution.iter().enumerate() {
             let offset = i32::try_from(i).unwrap() * offset;
             let end_idx = i32::try_from(*end_idx).unwrap();
@@ -246,7 +245,7 @@ impl Buffer {
 
             self.rope
                 .remove(start_idx..usize::try_from(end_idx + offset).unwrap());
-            self.rope.insert(start_idx, &new);
+            self.rope.insert(start_idx, new);
 
             if !undoing {
                 let action = Action::replace(vec![start_idx + new.len()], &original, &new);
@@ -256,6 +255,31 @@ impl Buffer {
 
         if self.cursor > self.rope.len_chars() {
             self.cursor = self.rope.len_chars();
+        }
+    }
+
+    pub fn backspace(&mut self, undo_tree: &mut UndoTree) {
+        if self.cursor == 0 {
+            return;
+        }
+        self.cursor -= 1;
+        let char = self.get_curr_char();
+
+        // Handles deleting 4 spaces or up to the alignment of 4 spaces if possible
+        let space_count = self.count_spaces_backwards();
+
+        if space_count > 1 {
+            let deleted = self.delete_to_4_spaces_alignment(space_count);
+
+            let action = Action::delete(self.cursor, &deleted);
+            undo_tree.new_action_merge(action);
+        } else {
+            // In most cases, when there's just one character to delete
+            self.delete_curr_char();
+            self.update_list_use_current_line();
+
+            let action = Action::delete(self.cursor, &char);
+            undo_tree.new_action_merge(action);
         }
     }
 }

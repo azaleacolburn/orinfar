@@ -170,12 +170,10 @@ pub fn set_curr_register(
     _mode: &mut Mode,
     _undo_tree: &mut UndoTree,
 ) {
-    if let Event::Key(event) = read().expect("Could not read character from stdin") {
-        if let KeyCode::Char(reg_name) = event.code {
-            register_handler.current_register = reg_name;
-        } else {
-            return;
-        }
+    if let Event::Key(event) = read().expect("Could not read character from stdin")
+        && let KeyCode::Char(reg_name) = event.code
+    {
+        register_handler.current_register = reg_name;
     }
 }
 
