@@ -30,7 +30,7 @@ use crate::{
         replace, set_curr_register, undo,
     },
     io::{Cli, log, log_dir, log_file, try_get_git_hash},
-    meta_command::{attach_buffer, print_directories, substitute_cmd},
+    meta_command::match_meta_command,
     mode::Mode,
     motion::{
         Motion, back, beginning_of_line, end_of_line, end_of_word, find, find_back, find_until,
@@ -52,11 +52,13 @@ use crossterm::{
     execute,
     terminal::size,
 };
-use std::io::stdout;
+use std::{
+    io::{Stdout, stdout},
+    path::PathBuf,
+};
 
 pub static mut DEBUG: bool = true;
 
-#[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
     panic_hook::add_panic_hook(&cleanup);
 
@@ -153,6 +155,53 @@ fn main() -> Result<()> {
         false,
     )?;
 
+    program_loop(
+        commands,
+        operators,
+        motions,
+        view_commands,
+        &mut count,
+        &mut chained,
+        &mut next_operation,
+        &all_normal_chars,
+        &mut path,
+        &mut git_hash,
+        &mut stdout,
+        &mut buffer,
+        &mut status_bar,
+        &mut register_handler,
+        &mut undo_tree,
+        &mut view_box,
+        &mut mode,
+    )?;
+
+    cleanup()
+}
+
+#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments)]
+fn program_loop<'a>(
+    commands: &[Cmd],
+    operators: &'a [Operator<'a>],
+    motions: &[Motion],
+    view_commands: &[ViewCommand],
+
+    count: &mut u16,
+    chained: &mut Vec<char>,
+    next_operation: &mut Option<&'a Operator<'a>>,
+    all_normal_chars: &[char],
+
+    path: &mut Option<PathBuf>,
+    git_hash: &mut Option<String>,
+    stdout: &mut Stdout,
+
+    buffer: &mut Buffer,
+    status_bar: &mut StatusBar,
+    register_handler: &mut RegisterHandler,
+    undo_tree: &mut UndoTree,
+    view_box: &mut ViewBox,
+    mode: &mut Mode,
+) -> Result<()> {
     'main: loop {
         buffer.update_list_reset();
 
@@ -161,50 +210,50 @@ fn main() -> Result<()> {
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
                     let c = u16::try_from(c.to_digit(10).expect("Numeric digit not in base 10"))
                         .unwrap();
-                    if count == 1 {
-                        count = 0;
+                    if *count == 1 {
+                        *count = 0;
                     }
-                    count *= 10;
-                    count += c;
+                    *count *= 10;
+                    *count += c;
                 }
                 (KeyCode::Char(':'), Mode::Normal) => {
-                    mode = Mode::Meta;
+                    *mode = Mode::Meta;
                     status_bar.push(':');
                 }
 
                 (KeyCode::Char(c), Mode::Normal) => {
                     match_action(
                         c,
-                        &mut chained,
-                        &mut next_operation,
-                        &mut count,
-                        &mut buffer,
-                        &mut register_handler,
-                        &mut undo_tree,
-                        &mut view_box,
-                        &mut mode,
+                        chained,
+                        next_operation,
+                        count,
+                        buffer,
+                        register_handler,
+                        undo_tree,
+                        view_box,
+                        mode,
                         commands,
                         operators,
                         motions,
                         view_commands,
-                        &all_normal_chars,
+                        all_normal_chars,
                     );
                 }
 
                 (KeyCode::Esc, Mode::Normal) => {
                     chained.clear();
-                    count = 1;
-                    next_operation = None;
+                    *count = 1;
+                    *next_operation = None;
                 }
                 (KeyCode::Esc, Mode::Insert) => {
                     if buffer.cursor != buffer.get_start_of_line() {
                         buffer.cursor -= 1;
                     }
-                    mode = Mode::Normal;
+                    *mode = Mode::Normal;
                     execute!(stdout, SetCursorStyle::SteadyBlock)?;
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
-                    buffer.backspace(&mut undo_tree);
+                    buffer.backspace(undo_tree);
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
                     buffer.insert_char(c);
@@ -235,88 +284,23 @@ fn main() -> Result<()> {
                     status_bar.push(c);
                 }
                 (KeyCode::Enter, Mode::Meta) => {
-                    for (i, command) in status_bar.iter().enumerate().skip(1) {
-                        match command {
-                            'w' => match &path {
-                                Some(path) => {
-                                    io::write(path.clone(), &buffer)?;
-                                }
-                                None => log!("WARNING: Cannot Write Unattached Buffer"),
-                            },
-                            'u' => {
-                                path = None;
-                            }
-                            'l' => {
-                                io::load_file(path.as_ref(), &mut buffer)?;
-                                view_box.flush(
-                                    &buffer,
-                                    &status_bar,
-                                    &mode,
-                                    &chained,
-                                    count,
-                                    register_handler.get_curr_reg(),
-                                    path.as_ref(),
-                                    git_hash.as_deref(),
-                                    false,
-                                )?;
-                            }
-                            'o' => {
-                                attach_buffer(
-                                    &mut buffer,
-                                    &status_bar,
-                                    i,
-                                    &mut path,
-                                    &mut git_hash,
-                                );
-
-                                io::load_file(path.as_ref(), &mut buffer)?;
-                                view_box.flush(
-                                    &buffer,
-                                    &status_bar,
-                                    &mode,
-                                    &chained,
-                                    count,
-                                    register_handler.get_curr_reg(),
-                                    path.as_ref(),
-                                    git_hash.as_deref(),
-                                    false,
-                                )?;
-                                break;
-                            }
-                            'd' => {
-                                print_directories(&mut buffer, &mut undo_tree, path.clone())?;
-                            }
-                            // Print Registers
-                            'r' => {
-                                let contents = register_handler.to_string();
-                                buffer.replace_contents(contents, &mut undo_tree);
-                            }
-                            's' => {
-                                substitute_cmd(&mut buffer, &status_bar, &mut undo_tree, i);
-                                break;
-                            }
-                            n if n.is_numeric() => {
-                                let num_str = status_bar[i..].iter().collect::<String>();
-                                let num: usize = match num_str.parse() {
-                                    Ok(n) => n,
-                                    Err(err) => {
-                                        log!("Failed to parse number: {} ({})", num_str, err);
-                                        break;
-                                    }
-                                };
-
-                                buffer.set_row(num + 1);
-                            }
-                            'q' => break 'main,
-                            c => log!("Unknown Meta-Command: {}", c),
-                        }
+                    if match_meta_command(
+                        buffer,
+                        status_bar,
+                        view_box,
+                        register_handler,
+                        undo_tree,
+                        mode,
+                        chained,
+                        *count,
+                        git_hash,
+                        path,
+                    )? {
+                        break 'main;
                     }
-
-                    mode = Mode::Normal;
-                    status_bar.clear();
                 }
                 (KeyCode::Esc, Mode::Meta) => {
-                    mode = Mode::Normal;
+                    *mode = Mode::Normal;
                     status_bar.clear();
                 }
                 (KeyCode::Backspace, Mode::Meta) => {
@@ -332,21 +316,21 @@ fn main() -> Result<()> {
                     buffer.next_char();
                 }
                 (KeyCode::Up, _) => {
-                    prev_row(&mut buffer);
+                    prev_row(buffer);
                 }
                 (KeyCode::Down, _) => {
-                    next_row(&mut buffer);
+                    next_row(buffer);
                 }
                 _ => continue,
             }
 
-            let adjusted = view_box.adjust(&mut buffer);
+            let adjusted = view_box.adjust(buffer);
             view_box.flush(
-                &buffer,
-                &status_bar,
-                &mode,
-                &chained,
-                count,
+                buffer,
+                status_bar,
+                mode,
+                chained,
+                *count,
                 register_handler.get_curr_reg(),
                 path.as_ref(),
                 git_hash.as_deref(),
@@ -355,7 +339,7 @@ fn main() -> Result<()> {
         }
     }
 
-    cleanup()
+    Ok(())
 }
 
 /// # Errors
