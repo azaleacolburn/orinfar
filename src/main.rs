@@ -178,6 +178,15 @@ fn main() -> Result<()> {
     cleanup()
 }
 
+// TODO
+// I'm pretty sure this function can just consume all its arguments
+// But I wasn't thinking about it at the time and now I'm too lazy to change it
+//
+/// The main loop of Orinfar
+/// Essentially just waits for a keypress, matches on it, then updates the state of the editor in
+/// accordance with the action taken.
+/// # Arguments
+/// This function essentially consumes every relevant piece of data in the program
 #[allow(clippy::too_many_lines)]
 #[allow(clippy::too_many_arguments)]
 fn program_loop<'a>(
