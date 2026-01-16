@@ -18,7 +18,7 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn parse_path() -> Result<(Cli, Option<PathBuf>)> {
+    pub fn parse_path() -> Result<(Self, Option<PathBuf>)> {
         let cli = Self::parse();
 
         match cli.file_name {
@@ -41,12 +41,13 @@ impl Cli {
     }
 }
 
-pub fn try_get_git_hash(path: &Option<PathBuf>) -> Option<String> {
+pub fn try_get_git_hash(path: Option<&PathBuf>) -> Option<String> {
     let mut git_hash: Option<String> = None;
     if let Some(path) = path {
-        let path = match path.is_dir() {
-            true => path,
-            false => path.parent().unwrap(),
+        let path = if path.is_dir() {
+            path
+        } else {
+            path.parent().unwrap()
         }
         .to_str()
         .unwrap();
@@ -54,25 +55,25 @@ pub fn try_get_git_hash(path: &Option<PathBuf>) -> Option<String> {
         let git_stem = if path.is_empty() {
             String::from(".git")
         } else {
-            format!("{}/.git", path)
+            format!("{path}/.git")
         };
 
-        let head_path = format!("{}/HEAD", git_stem);
+        let head_path = format!("{git_stem}/HEAD");
 
         if let Ok(head_str) = std::fs::read_to_string(head_path).map(|s| s.trim().to_string()) {
-            let head = head_str.split(" ").collect::<Vec<&str>>()[1];
+            let head = head_str.split(' ').collect::<Vec<&str>>()[1];
 
             let ref_path = format!("{git_stem}/{head}");
             git_hash = std::fs::read_to_string(ref_path)
                 .ok()
                 .map(|s| s.trim().chars().take(7).collect::<String>());
-        };
-    };
+        }
+    }
 
     git_hash
 }
 
-pub fn load_file(path: &Option<PathBuf>, buffer: &mut Buffer) -> Result<()> {
+pub fn load_file(path: Option<&PathBuf>, buffer: &mut Buffer) -> Result<()> {
     if let Some(path) = path {
         if !std::fs::exists(path)? {
             std::fs::write(path, buffer.rope.to_string())?;
@@ -90,7 +91,7 @@ pub fn load_file(path: &Option<PathBuf>, buffer: &mut Buffer) -> Result<()> {
     Ok(())
 }
 
-pub fn write(path: PathBuf, buffer: Buffer) -> Result<()> {
+pub fn write(path: PathBuf, buffer: &Buffer) -> Result<()> {
     std::fs::write(path, buffer.to_string())?;
 
     Ok(())
@@ -108,7 +109,7 @@ pub fn log_file() -> PathBuf {
         .join(".orinfar/log")
 }
 
-pub fn log(contents: impl ToString) {
+pub fn log(contents: &impl ToString) {
     let mut file = OpenOptions::new()
         .append(true)
         .open(log_file())
@@ -123,7 +124,7 @@ pub fn log(contents: impl ToString) {
 macro_rules! log {
     ($($arg:tt)*) => {
         if unsafe { DEBUG } {
-            log(format!($($arg)*))
+            log(&format!($($arg)*))
         }
     };
 }

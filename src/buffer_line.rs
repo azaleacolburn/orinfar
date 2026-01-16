@@ -17,7 +17,7 @@ impl Buffer {
 
         let start_index = self.get_start_of_n_line(line_idx);
         let end_index = self.get_end_of_n_line(line_idx);
-        self.rope.remove(start_index..=end_index)
+        self.rope.remove(start_index..=end_index);
     }
 
     /// Returns the number of lines in the buffer
@@ -142,7 +142,7 @@ impl Buffer {
             self.update_list_add(0);
         }
 
-        let action = Action::insert(0, contents.clone());
+        let action = Action::insert(0, &contents);
         undo_tree.new_action(action);
 
         self.rope = Rope::from(contents);

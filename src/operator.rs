@@ -41,7 +41,7 @@ impl<'a> Operator<'a> {
     ) {
         let mut end = motion.evaluate(buffer);
         if !motion.inclusive && end != buffer.get_end_of_line() {
-            end = usize::max(end, 1) - 1
+            end = usize::max(end, 1) - 1;
         }
 
         (self.command)(end, buffer, register_handler, mode, undo_tree);
@@ -62,7 +62,7 @@ impl<'a> Operator<'a> {
         if reg_before != register_handler.get_reg()
             && register_handler.get_reg().chars().last().unwrap_or('\n') != '\n'
         {
-            register_handler.push_reg("\n");
+            register_handler.push_reg(&'\n');
         }
     }
 }
@@ -108,13 +108,13 @@ pub fn iterate_range(
     ),
 ) {
     let anchor = buffer.cursor;
-    let count = (end as isize - anchor as isize).abs();
+    let count = (i32::try_from(end).unwrap() - i32::try_from(anchor).unwrap()).abs();
     initial_callback(register_handler, buffer, mode);
     (0..=count).for_each(|_| iter_callback(register_handler, buffer));
     after_callback(anchor, register_handler, buffer, mode);
 }
 
-fn noop(
+const fn noop(
     _start: usize,
     _register_handler: &mut RegisterHandler,
     _buffer: &mut Buffer,
@@ -122,13 +122,13 @@ fn noop(
 ) {
 }
 
-fn reset_position(
+const fn reset_position(
     start: usize,
     _register_handler: &mut RegisterHandler,
     buffer: &mut Buffer,
     _mode: &mut Mode,
 ) {
-    buffer.cursor = start
+    buffer.cursor = start;
 }
 
 fn insert(
@@ -148,7 +148,7 @@ fn delete_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
     if buffer.rope.len_chars() <= buffer.cursor {
         return;
     }
-    register_handler.push_reg(buffer.get_curr_char().to_string());
+    register_handler.push_reg(&buffer.get_curr_char());
     buffer.delete_curr_char();
 }
 pub fn delete(
@@ -177,12 +177,12 @@ pub fn delete(
     buffer.update_list_use_current_line();
 
     let text = register_handler.get_reg();
-    let action = Action::delete(buffer.cursor, text);
+    let action = Action::delete(buffer.cursor, &text);
     undo_tree.new_action(action);
 }
 
 fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
-    register_handler.push_reg(buffer.get_curr_char().to_string());
+    register_handler.push_reg(&buffer.get_curr_char());
     if buffer.cursor + 1 < buffer.rope.len_chars() {
         buffer.next_char();
     }
@@ -239,6 +239,6 @@ pub fn change(
     buffer.update_list_use_current_line();
 
     let text = register_handler.get_reg();
-    let action = Action::delete(buffer.cursor, text);
+    let action = Action::delete(buffer.cursor, &text);
     undo_tree.new_action(action);
 }

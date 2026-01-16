@@ -2,7 +2,7 @@ use ropey::Rope;
 use std::fmt::Display;
 
 // The cursor is always guaranteed to be within the bounds of the buffer
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Buffer {
     pub has_changed: bool,
     pub lines_for_updating: Vec<bool>,
@@ -17,8 +17,8 @@ impl Default for Buffer {
 }
 
 impl Buffer {
-    pub fn new() -> Buffer {
-        Buffer {
+    pub fn new() -> Self {
+        Self {
             has_changed: true,
             lines_for_updating: vec![true],
             rope: Rope::from(""),

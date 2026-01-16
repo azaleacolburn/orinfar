@@ -1,4 +1,4 @@
-use std::iter::once;
+use std::{i32, iter::once};
 
 use crate::{
     DEBUG,
@@ -49,7 +49,7 @@ impl Buffer {
         self.update_list_add_current();
         self.rope.insert_char(self.cursor, '\n');
         self.cursor += 1;
-        self.insert_char_n_times(' ', first_col as u8);
+        self.insert_char_n_times(' ', first_col);
         self.cursor += first_col;
 
         once('\n')
@@ -57,7 +57,7 @@ impl Buffer {
             .collect::<String>()
     }
 
-    pub fn insert_char_n_times(&mut self, c: char, n: u8) {
+    pub fn insert_char_n_times(&mut self, c: char, n: usize) {
         if c == '\n' {
             (0..n).for_each(|_| self.update_list_add_current());
         }
@@ -84,7 +84,7 @@ impl Buffer {
         if self.cursor <= self.rope.len_chars() {
             self.cursor += 1;
             return Some(self.rope.char(self.cursor));
-        };
+        }
 
         None
     }
@@ -169,7 +169,7 @@ impl Buffer {
         let mut deleted = String::with_capacity(4);
         let mut leftover = space_count % 4;
         if leftover == 0 {
-            leftover = 4
+            leftover = 4;
         }
         assert!(space_count >= leftover);
 
@@ -220,27 +220,32 @@ impl Buffer {
     // new action.
     pub fn replace_text(
         &mut self,
-        new: String,
-        original: String,
+        new: &str,
+        original: &str,
         idxs_of_substitution: &[usize],
         undo_tree: &mut UndoTree,
         undoing: bool,
     ) {
-        let offset = new.len() as i32 - original.len() as i32;
+        assert!(new.len() <= i32::MAX as usize && original.len() <= i32::MAX as usize);
+
+        let offset = i32::try_from(new.len()).unwrap() - i32::try_from(original.len()).unwrap();
         for (i, end_idx) in idxs_of_substitution.iter().enumerate() {
-            let offset = i as i32 * offset;
+            let offset = i32::try_from(i).unwrap() * offset;
+            let end_idx = i32::try_from(*end_idx).unwrap();
+            let original_len = i32::try_from(original.len()).unwrap();
+
             assert!(
-                *end_idx as i32 >= original.len() as i32 + offset,
+                end_idx >= original_len + offset,
                 "end_idx {} original len {} offset {}",
                 end_idx,
                 original.len(),
                 offset
             );
-            let start_idx = (*end_idx as i32 - original.len() as i32 + offset) as usize;
+            let start_idx = usize::try_from(end_idx - original_len + offset).unwrap();
             log!("start_idx: {} offset {}", start_idx, offset);
 
             self.rope
-                .remove(start_idx..(*end_idx as i32 + offset) as usize);
+                .remove(start_idx..usize::try_from(end_idx + offset).unwrap());
             self.rope.insert(start_idx, &new);
 
             if !undoing {

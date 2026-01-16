@@ -19,15 +19,15 @@ pub enum Action {
 }
 
 impl Action {
-    pub fn delete(final_position: usize, text: impl ToString) -> Self {
-        Action::Delete {
+    pub fn delete(final_position: usize, text: &impl ToString) -> Self {
+        Self::Delete {
             position: final_position,
             text: text.to_string(),
         }
     }
 
-    pub fn insert(initial_position: usize, text: impl ToString) -> Self {
-        Action::Insert {
+    pub fn insert(initial_position: usize, text: &impl ToString) -> Self {
+        Self::Insert {
             position: initial_position,
             text: text.to_string(),
         }
@@ -36,10 +36,10 @@ impl Action {
     // Original and new must be of the same length
     pub fn replace(
         initial_positions: Vec<usize>,
-        original: impl ToString,
-        new: impl ToString,
+        original: &impl ToString,
+        new: &impl ToString,
     ) -> Self {
-        Action::Replace {
+        Self::Replace {
             positions: initial_positions,
             original: original.to_string(),
             new: new.to_string(),
@@ -63,16 +63,15 @@ impl Default for UndoTree {
 }
 
 impl UndoTree {
-    pub fn new() -> Self {
-        UndoTree {
+    pub const fn new() -> Self {
+        Self {
             actions: Vec::new(),
         }
     }
 
     pub fn undo(&mut self, buffer: &mut Buffer) {
-        let action = match self.actions.pop() {
-            Some(prev_state) => prev_state,
-            None => return,
+        let Some(action) = self.actions.pop() else {
+            return;
         };
 
         match action {
@@ -96,7 +95,7 @@ impl UndoTree {
                     original,
                     positions
                 );
-                buffer.replace_text(original, new, &positions, self, true);
+                buffer.replace_text(&original, &new, &positions, self, true);
             }
         }
 
@@ -118,7 +117,7 @@ impl UndoTree {
                 {
                     text.push_str(last_text);
                     self.actions.pop();
-                    action = Action::insert(*last_position, text);
+                    action = Action::insert(*last_position, &text);
                 }
             }
             Action::Delete { text, position } => {
@@ -131,7 +130,7 @@ impl UndoTree {
                 {
                     text.push_str(last_text);
                     self.actions.pop();
-                    action = Action::delete(*position, text);
+                    action = Action::delete(*position, &text);
                 }
             }
             Action::Replace {
@@ -150,12 +149,12 @@ impl UndoTree {
                 {
                     let mut positions: Vec<usize> =
                         positions.iter().chain(last_positions).copied().collect();
-                    positions.sort();
+                    positions.sort_unstable();
                     self.actions.pop();
                     action = Action::replace(positions, original, new);
                 }
             }
-        };
+        }
 
         self.actions.push(action);
     }

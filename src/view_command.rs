@@ -11,12 +11,12 @@ impl<'a> ViewCommand<'a> {
     }
 
     pub fn execute(&self, buffer: &mut Buffer, view_box: &mut ViewBox) {
-        (self.command)(buffer, view_box)
+        (self.command)(buffer, view_box);
     }
 }
 
 pub fn center_viewbox_on_cursor(buffer: &mut Buffer, view_box: &mut ViewBox) {
-    let half_height = view_box.height() / 2;
+    let half_height = view_box.height() as usize / 2;
     let row = buffer.get_row();
     if row < half_height {
         return;

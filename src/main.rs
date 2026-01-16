@@ -143,8 +143,8 @@ fn main() -> Result<()> {
         DEBUG = cli.debug;
     }
 
-    let mut git_hash = try_get_git_hash(&path);
-    io::load_file(&path, &mut buffer)?;
+    let mut git_hash = try_get_git_hash(path.as_ref());
+    io::load_file(path.as_ref(), &mut buffer)?;
 
     view_box.flush(
         &buffer,
@@ -179,7 +179,7 @@ fn main() -> Result<()> {
                 (KeyCode::Char(c), Mode::Normal) => {
                     if !all_normal_chars.contains(&c) {
                         continue;
-                    };
+                    }
                     chained.push(c);
 
                     if let Some(command) = commands
@@ -288,14 +288,14 @@ fn main() -> Result<()> {
                     if space_count > 1 {
                         let deleted = buffer.delete_to_4_spaces_alignment(space_count);
 
-                        let action = Action::delete(buffer.cursor, deleted);
+                        let action = Action::delete(buffer.cursor, &deleted);
                         undo_tree.new_action_merge(action);
                     } else {
                         // In most cases, when there's just one character to delete
                         buffer.delete_curr_char();
                         buffer.update_list_use_current_line();
 
-                        let action = Action::delete(buffer.cursor, char);
+                        let action = Action::delete(buffer.cursor, &char);
                         undo_tree.new_action_merge(action);
                     }
                 }
@@ -304,7 +304,7 @@ fn main() -> Result<()> {
                     buffer.cursor += 1;
                     buffer.update_list_use_current_line();
 
-                    let action = Action::insert(buffer.cursor - 1, c);
+                    let action = Action::insert(buffer.cursor - 1, &c);
                     undo_tree.new_action_merge(action);
                 }
                 (KeyCode::Tab, Mode::Insert) => {
@@ -320,7 +320,7 @@ fn main() -> Result<()> {
                 (KeyCode::Enter, Mode::Insert) => {
                     let newline = buffer.insert_newline();
 
-                    let action = Action::insert(buffer.cursor - newline.len(), newline);
+                    let action = Action::insert(buffer.cursor - newline.len(), &newline);
                     undo_tree.new_action(action);
                 }
 
@@ -332,7 +332,7 @@ fn main() -> Result<()> {
                         match command {
                             'w' => match &path {
                                 Some(path) => {
-                                    io::write(path.to_path_buf(), buffer.clone())?;
+                                    io::write(path.clone(), &buffer)?;
                                 }
                                 None => log!("WARNING: Cannot Write Unattached Buffer"),
                             },
@@ -340,7 +340,7 @@ fn main() -> Result<()> {
                                 path = None;
                             }
                             'l' => {
-                                io::load_file(&path, &mut buffer)?;
+                                io::load_file(path.as_ref(), &mut buffer)?;
                                 view_box.flush(
                                     &buffer,
                                     &status_bar,
@@ -371,9 +371,9 @@ fn main() -> Result<()> {
                                 }
                                 path = Some(path_buf);
 
-                                git_hash = try_get_git_hash(&path);
+                                git_hash = try_get_git_hash(path.as_ref());
 
-                                io::load_file(&path, &mut buffer)?;
+                                io::load_file(path.as_ref(), &mut buffer)?;
                                 view_box.flush(
                                     &buffer,
                                     &status_bar,
@@ -399,7 +399,7 @@ fn main() -> Result<()> {
                                 };
                                 let dir = std::fs::read_dir(path)?;
                                 let contents = dir
-                                    .filter_map(|item| item.ok())
+                                    .filter_map(std::result::Result::ok)
                                     .map(|item| {
                                         let mut path =
                                             item.file_name().to_string_lossy().to_string();
@@ -440,8 +440,8 @@ fn main() -> Result<()> {
                                 log!("idxs of sub: {:?}", idxs_of_substitution);
 
                                 buffer.replace_text(
-                                    new,
-                                    original.iter().collect(),
+                                    &new,
+                                    &original.iter().collect::<String>(),
                                     &idxs_of_substitution,
                                     &mut undo_tree,
                                     false,
@@ -494,7 +494,7 @@ fn main() -> Result<()> {
                     next_row(&mut buffer);
                 }
                 _ => continue,
-            };
+            }
 
             let adjusted = view_box.adjust(&mut buffer);
             view_box.flush(
@@ -528,6 +528,8 @@ pub fn on_next_input_buffer_only(
     Ok(())
 }
 
+/// # Errors
+/// - I/O error if `crossterm::events::read()` fails
 pub fn on_next_input(
     buffer: &mut Buffer,
     mode: &mut Mode,

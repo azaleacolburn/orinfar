@@ -65,7 +65,7 @@ pub fn prev_row(buffer: &mut Buffer) {
     } else {
         0
     };
-    buffer.set_col(col)
+    buffer.set_col(col);
 }
 
 pub fn next_char(buffer: &mut Buffer) {
@@ -84,20 +84,14 @@ pub fn word(buffer: &mut Buffer) {
         while is_symbol(c) && buffer.cursor < last_legal_char {
             c = unwrap_or_break!(buffer.next_and_char());
         }
-        while c.is_whitespace() && buffer.cursor < last_legal_char {
-            c = unwrap_or_break!(buffer.next_and_char());
-        }
     } else if c.is_alphanumeric() || c == '_' {
         while (c.is_alphanumeric() || c == '_') && buffer.cursor < last_legal_char {
             c = unwrap_or_break!(buffer.next_and_char());
         }
-        while c.is_whitespace() && buffer.cursor < last_legal_char {
-            c = unwrap_or_break!(buffer.next_and_char());
-        }
-    } else {
-        while c.is_whitespace() && buffer.cursor < last_legal_char {
-            c = unwrap_or_break!(buffer.next_and_char());
-        }
+    }
+
+    while c.is_whitespace() && buffer.cursor < last_legal_char {
+        c = unwrap_or_break!(buffer.next_and_char());
     }
 }
 
@@ -195,7 +189,7 @@ pub fn find(buffer: &mut Buffer) {
                 buffer.cursor += 1;
             }
 
-            buffer.cursor = anchor
+            buffer.cursor = anchor;
         }
     }
 
@@ -220,7 +214,7 @@ pub fn find_until(buffer: &mut Buffer) {
                 buffer.cursor += 1;
             }
 
-            buffer.cursor = anchor
+            buffer.cursor = anchor;
         }
     }
 
@@ -242,7 +236,7 @@ pub fn find_back(buffer: &mut Buffer) {
                 buffer.cursor -= 1;
             }
 
-            buffer.cursor = anchor
+            buffer.cursor = anchor;
         }
     }
 
@@ -284,13 +278,14 @@ pub fn next_corresponding_bracket(buffer: &mut Buffer) {
     // There's probably a better way to do this
     let condition: Box<dyn Fn(usize) -> bool> = match direction {
         1 => Box::new(|cursor: usize| end_of_file > cursor + 1),
-        -1 => Box::new(|cursor: usize| cursor as i32 > 0),
+        -1 => Box::new(|cursor: usize| i32::try_from(cursor).unwrap() > 0),
         _ => unreachable!(),
     };
 
     loop {
         if condition(buffer.cursor) {
-            buffer.cursor = (buffer.cursor as i32 + direction) as usize;
+            buffer.cursor =
+                usize::try_from((i32::try_from(buffer.cursor).unwrap() + direction)).unwrap();
             c = buffer.get_curr_char();
         } else {
             buffer.cursor = anchor;
@@ -302,9 +297,8 @@ pub fn next_corresponding_bracket(buffer: &mut Buffer) {
         } else if c == search_character {
             if count == 0 {
                 break;
-            } else {
-                count -= 1;
             }
+            count -= 1;
         }
     }
 }

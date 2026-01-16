@@ -18,20 +18,20 @@ pub struct ViewBox {
     // The topmost row of the buffer being displayed (zero-indexed)
     pub top: usize,
     // The height in rows of the entire view box (minus the status bar)
-    height: usize,
+    height: u16,
     // The leftmost row of the buffer being displayed (zero-indexed)
     pub left: usize,
     // The width in rows of the entire view box
-    width: usize,
+    width: u16,
 }
 
 impl ViewBox {
-    pub fn new(cols: u16, rows: u16) -> Self {
-        ViewBox {
+    pub const fn new(cols: u16, rows: u16) -> Self {
+        Self {
             top: 0,
-            height: rows as usize - 1, // Reserve one for the status bar
+            height: rows - 1, // Reserve one for the status bar
             left: 0,
-            width: cols as usize - 1,
+            width: cols - 1,
         }
     }
 
@@ -43,16 +43,16 @@ impl ViewBox {
         if self.top > row {
             self.top = row;
             adjusted = true;
-        } else if self.top + self.height <= row {
-            self.top = row - self.height + 1;
+        } else if self.top + self.height as usize <= row {
+            self.top = row - self.height as usize + 1;
             adjusted = true;
         }
 
         if self.left > col {
             self.left = col;
             adjusted = true;
-        } else if self.left + self.width < col {
-            self.left = col - self.width;
+        } else if self.left + (self.width as usize) < col {
+            self.left = col - self.width as usize;
             adjusted = true;
         }
 
@@ -75,8 +75,12 @@ impl ViewBox {
             .zip(buffer.lines_for_updating.iter())
             .enumerate()
             .skip(self.top)
-            .take(self.height);
-        let len_lines = lines.len();
+            .take(self.height.into());
+
+        assert!(lines.len() <= self.height.into());
+        #[allow(clippy::cast_possible_wrap)]
+        #[allow(clippy::cast_possible_truncate)]
+        let len_lines = u16::try_from(lines.len()).unwrap() as u16;
 
         execute!(stdout, Hide, MoveTo(0, 0))?;
         let mut padding_buffer = String::with_capacity(left_padding);
@@ -107,10 +111,10 @@ impl ViewBox {
                 return;
             }
 
-            let last_col = usize::min(self.left + self.width, len);
+            let last_col = usize::min(self.left + self.width as usize, len);
             log!(
                 "eos {} len {} last_col {} left {}",
-                self.left + self.width,
+                self.left + self.width as usize,
                 len,
                 last_col,
                 self.left
@@ -135,9 +139,9 @@ impl ViewBox {
             execute!(stdout, MoveTo(0, len_lines as u16))?;
             (len_lines..self.height).for_each(|_| {
                 execute!(stdout, Clear(ClearType::CurrentLine), MoveDown(1))
-                    .expect("Crossterm clearing trailing lines failed")
+                    .expect("Crossterm clearing trailing lines failed");
             });
-        };
+        }
 
         Ok(())
     }
@@ -156,7 +160,7 @@ impl ViewBox {
         adjusted: bool,
     ) -> Result<()> {
         let mut stdout = stdout();
-        let left_padding = (self.top + self.height).to_string().len();
+        let left_padding = (self.top + self.height as usize).to_string().len();
 
         if buffer.has_changed || adjusted {
             self.write_buffer(buffer, &mut stdout, left_padding)?;
@@ -180,13 +184,13 @@ impl ViewBox {
                 let reg_str = if register == '\"' {
                     String::new()
                 } else {
-                    format!("\"{}", register)
+                    format!("\"{register}")
                 };
                 let chained_str = chained.iter().collect::<String>();
 
                 let git_hash = git_hash.clone().unwrap_or_default();
 
-                let middle_buffer = (0..self.width
+                let middle_buffer = (0..(self.width as usize)
                     - info_str.len()
                     - path.len()
                     - 2 // For the 2 quotations
@@ -214,7 +218,7 @@ impl ViewBox {
                 let reg_str = if register == '\"' {
                     String::new()
                 } else {
-                    format!("\"{}", register)
+                    format!("\"{register}")
                 };
                 let chained_str = chained.iter().collect::<String>();
 
@@ -231,13 +235,12 @@ impl ViewBox {
             Print(status_message)
         )?;
 
-        let (new_col, new_row) = match mode {
-            Mode::Meta => (status_bar.idx() as u16, (self.height + 1) as u16),
-            _ => {
-                let row = row - self.top;
-                let col = col - self.left + left_padding + 1;
-                (col as u16, row as u16)
-            }
+        let (new_col, new_row) = if let Mode::Meta = mode {
+            (status_bar.idx() as u16, (self.height + 1) as u16)
+        } else {
+            let row = row - self.top;
+            let col = col - self.left + left_padding + 1;
+            (col as u16, row as u16)
         };
         execute!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
         stdout.flush()?;
@@ -245,11 +248,11 @@ impl ViewBox {
         Ok(())
     }
 
-    pub fn height(&self) -> usize {
+    pub const fn height(&self) -> u16 {
         self.height
     }
 
-    pub fn _width(&self) -> usize {
+    pub const fn _width(&self) -> u16 {
         self.width
     }
 }

@@ -6,14 +6,14 @@ pub struct StatusBar {
 }
 
 impl StatusBar {
-    pub fn new() -> Self {
-        StatusBar {
+    pub const fn new() -> Self {
+        Self {
             buffer: vec![],
             idx: 0,
         }
     }
 
-    pub fn idx(&self) -> usize {
+    pub const fn idx(&self) -> usize {
         self.idx
     }
 

@@ -2,16 +2,16 @@ use crate::{DEBUG, buffer::Buffer, log};
 use std::{ops::RangeBounds, slice::SliceIndex};
 
 impl Buffer {
-    /// Updates the has_changed list when a `\n` character is removed
+    /// Updates the `has_changed` list when a `\n` character is removed
     pub fn update_list_remove_current(&mut self) {
         let current_line = self.get_row();
         self.update_list_remove(current_line);
         self.update_list_set(usize::max(current_line, 1) - 1.., true);
         self.has_changed = true;
-        log!("update_list: {:?}", self.lines_for_updating)
+        log!("update_list: {:?}", self.lines_for_updating);
     }
 
-    /// Updates the has_changed list when a `\n` character is added
+    /// Updates the `has_changed` list when a `\n` character is added
     pub fn update_list_add_current(&mut self) {
         let current_line = self.get_row();
         self.lines_for_updating.insert(current_line, true);
@@ -19,7 +19,7 @@ impl Buffer {
         self.has_changed = true;
     }
 
-    /// Updates the has_changed list when a `\n` character is removed at the given line number
+    /// Updates the `has_changed` list when a `\n` character is removed at the given line number
     pub fn update_list_remove(&mut self, idx: usize) {
         self.lines_for_updating.remove(idx);
         self.update_list_set(idx.., true);

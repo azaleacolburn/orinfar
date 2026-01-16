@@ -9,3 +9,8 @@ anyhow = "1.0.98"
 clap = { version = "4.5.42", features = ["derive"] }
 crossterm = "0.29.0"
 ropey = "1.6.1"
+
+[lints.clippy] # come at me, clippy
+pedantic      = { level = "deny", priority = -1 }
+nursery       = { level = "deny", priority = -1 }
+# unwrap_used   = "deny"

@@ -12,13 +12,13 @@ pub struct RegisterHandler {
 
 impl RegisterHandler {
     pub fn new() -> Self {
-        RegisterHandler {
+        Self {
             registers: HashMap::new(),
             current_register: 'a',
         }
     }
 
-    pub fn init_reg(&mut self, reg: char, value: impl ToString) {
+    pub fn init_reg(&mut self, reg: char, value: &impl ToString) {
         self.current_register = reg;
         self.set_reg(value.to_string());
     }
@@ -31,7 +31,7 @@ impl RegisterHandler {
         self.registers.insert(self.current_register, String::new());
     }
 
-    pub fn push_reg(&mut self, append_value: impl ToString) {
+    pub fn push_reg(&mut self, append_value: &impl ToString) {
         let str = append_value.to_string();
         match self.registers.get_mut(&self.current_register) {
             Some(value) => {
@@ -44,19 +44,19 @@ impl RegisterHandler {
         }
     }
 
-    pub fn get_reg(&mut self) -> &str {
+    pub fn get_reg(&self) -> &str {
         match self.registers.get(&self.current_register) {
             Some(s) => s,
             None => "",
         }
     }
 
-    pub fn get_curr_reg(&mut self) -> char {
+    pub const fn get_curr_reg(&self) -> char {
         self.current_register
     }
 
-    pub fn reset_curr_register(&mut self) {
-        self.current_register = 'a'
+    pub const fn reset_curr_register(&mut self) {
+        self.current_register = 'a';
     }
 }
 

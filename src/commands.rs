@@ -43,7 +43,7 @@ impl<'a> Command<'a> {
         mode: &mut Mode,
         undo_tree: &mut UndoTree,
     ) {
-        (self.command)(buffer, register_handler, mode, undo_tree)
+        (self.command)(buffer, register_handler, mode, undo_tree);
     }
 }
 
@@ -88,7 +88,7 @@ pub fn cut(
         }
         buffer.update_list_use_current_line();
 
-        let action = Action::delete(anchor, c);
+        let action = Action::delete(anchor, &c);
         undo_tree.new_action(action);
     }
 }
@@ -106,7 +106,7 @@ pub fn insert_new_line(
     append(buffer, register_handler, mode, undo_tree);
     let newline = buffer.insert_newline();
 
-    let action = Action::insert(anchor, newline);
+    let action = Action::insert(anchor, &newline);
     undo_tree.new_action(action);
 }
 
@@ -125,7 +125,7 @@ pub fn insert_new_line_above(
     mode.insert();
     buffer.has_changed = true;
 
-    let action = Action::insert(first, '\n');
+    let action = Action::insert(first, &'\n');
     undo_tree.new_action(action);
 }
 
@@ -171,11 +171,11 @@ pub fn set_curr_register(
     _undo_tree: &mut UndoTree,
 ) {
     if let Event::Key(event) = read().expect("Could not read character from stdin") {
-        let reg_name = match event.code {
-            KeyCode::Char(c) => c,
-            _ => return,
-        };
-        register_handler.current_register = reg_name;
+        if let KeyCode::Char(reg_name) = event.code {
+            register_handler.current_register = reg_name;
+        } else {
+            return;
+        }
     }
 }
 
@@ -196,7 +196,7 @@ pub fn replace(
         let original_char = buffer.get_curr_char();
         buffer.replace_curr_char(c);
 
-        let action = Action::replace(vec![buffer.cursor + 1], original_char, c);
+        let action = Action::replace(vec![buffer.cursor + 1], &original_char, &c);
         undo_tree.new_action_merge(action);
     }
     execute!(stdout(), SetCursorStyle::SteadyBlock).expect("Crossterm steady block command failed");
