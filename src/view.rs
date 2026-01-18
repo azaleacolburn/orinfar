@@ -24,7 +24,7 @@ pub struct View {
 impl View {
     pub fn new(cols: u16, rows: u16) -> Self {
         Self {
-            boxes: vec![ViewBox::new(cols, rows, 0, 0)],
+            boxes: vec![ViewBox::new(cols, rows - 1, 0, 0)],
             cursor: 0,
             width: cols, // Don't subtract one because each viewbox handles line nums separately
             height: rows - 1,
@@ -137,7 +137,9 @@ impl View {
 
         Ok(())
     }
+}
 
+impl View {
     pub fn get_lower_right(&self) -> (u16, u16) {
         (self.width, self.height)
     }
@@ -156,52 +158,100 @@ impl View {
         self.boxes.iter().position(predicate)
     }
 
+    /// # Returns
+    /// The position (in self.boxes) of one view_box down, if it exists
+    pub fn position_view_box_down(&mut self) -> Option<usize> {
+        let view_box = self.get_view_box();
+
+        let (x, y) = view_box.get_lower_left();
+        let predicate = |view_box: &ViewBox| -> bool { view_box.x == x && view_box.y == y };
+
+        self.position_of_box(predicate)
+    }
+
+    pub fn position_view_box_up(&mut self) -> Option<usize> {
+        let view_box = self.get_view_box();
+
+        let (x, y) = (view_box.x, view_box.y);
+        log!("here");
+        let predicate = |view_box: &ViewBox| -> bool {
+            log!(
+                "vbx {} vby {} vbh {} y {} x {}",
+                view_box.x,
+                view_box.y,
+                view_box.height,
+                y,
+                x
+            );
+            view_box.x == x && view_box.y + view_box.height == y
+        };
+
+        self.position_of_box(predicate)
+    }
+
+    pub fn delete_curr_view_box(&mut self) {
+        let mut down = self.position_view_box_down();
+        let mut up = self.position_view_box_up();
+
+        let view_box = self.boxes.remove(self.cursor);
+        if let Some(ref mut down) = down
+            && *down > self.cursor
+        {
+            *down -= 1;
+        }
+        if let Some(ref mut up) = up
+            && *up > self.cursor
+        {
+            *up -= 1;
+        }
+
+        self.cursor = usize::max(self.cursor, 1) - 1;
+
+        match (down, up) {
+            (_, Some(up_i)) => {
+                let up_box = &mut self.boxes[up_i];
+                up_box.height += view_box.height;
+                self.cursor = up_i;
+            }
+            (Some(down_i), None) => {
+                let down_box = &mut self.boxes[down_i];
+                down_box.y = view_box.y;
+                down_box.height += view_box.height;
+                self.cursor = down_i;
+            }
+            (None, None) => {}
+        }
+
+        let view_box = self.get_view_box();
+        view_box.buffer.has_changed = true;
+    }
+
     pub fn split_view_box_vertical(&mut self, idx: usize) {
         let view_box = &mut self.boxes[idx];
-        let original_height = view_box.height;
 
         let half_height = view_box.height / 2;
         let half_y = half_height + view_box.y;
 
-        let new_view_box = ViewBox::new(view_box.width, half_height, view_box.x, half_y);
+        let mut new_view_box = ViewBox::new(view_box.width, half_height, view_box.x, half_y);
 
-        view_box.height /= 2;
-        if original_height % 2 == 0 {
-            view_box.height += 1;
+        let original_height = view_box.height;
+        log!(
+            "half_height {} original_height {}",
+            half_height,
+            original_height
+        );
+
+        view_box.height = half_height;
+        if original_height % 2 != 0 {
+            new_view_box.height += 1;
         }
+        log!("new height {}", new_view_box.height);
 
         self.boxes.push(new_view_box);
     }
+}
 
-    pub fn add_view_box_arbitrary(&mut self, x: u16, y: u16, height: u16, width: u16) {
-        let new_view_box = ViewBox::new(width, height, x, y);
-        // let horizontal_new = x..x + width;
-        // let vertical_new = y..y + height;
-
-        assert!(x + width < self.width && y + height < self.height);
-
-        self.boxes
-            .iter_mut()
-            // .filter(|view_box| {
-            //     let horizontal_old = view_box.x..view_box.x + view_box.width();
-            //     let vertical_old = view_box.y..view_box.y + view_box.height();
-            //
-            //     ranges_overlap(&horizontal_new, &horizontal_old)
-            //         && ranges_overlap(&vertical_new, &vertical_old)
-            // })
-            .for_each(|view_box| {
-                if view_box.x == new_view_box.x && view_box.y == new_view_box.y {
-                    view_box.x += new_view_box.width;
-                    view_box.y += new_view_box.height;
-                } else {
-                    view_box.width = self.width - new_view_box.width;
-                    view_box.height = self.height - new_view_box.height;
-                }
-            });
-
-        self.boxes.push(new_view_box);
-    }
-
+impl View {
     pub fn replace_buffer_contents(
         &mut self,
         contents: impl ToString,

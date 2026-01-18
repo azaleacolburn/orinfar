@@ -42,10 +42,12 @@ impl ViewBox {
             x,
             y,
             top: 0,
-            height: rows - 1, // Reserve one for the status bar
+            height: rows,
             left: 0,
-            // No need to reserve one for the status bar, since that's at the very end
-            width: cols,
+            // Reserve one for line numbers
+            // TODO
+            // Have option to not have line nums
+            width: cols - 1,
         }
     }
 

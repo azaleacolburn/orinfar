@@ -35,17 +35,6 @@ pub fn match_action<'a>(
         let buffer = view.get_buffer();
         command.execute(buffer, register_handler, mode, undo_tree);
         chained.clear();
-    } else if let Some(command) = commands
-        .iter()
-        .find(|motion| motion.name == chained.last().unwrap_or(&' ').to_string())
-    {
-        let buffer = view.get_buffer();
-        (0..*count).for_each(|_| {
-            command.execute(buffer, register_handler, mode, undo_tree);
-        });
-        *count = 1;
-        chained.clear();
-        *next_operation = None;
     } else if let Some(view_command) = view_commands
         .iter()
         .find(|command| command.name == chained.iter().collect::<String>())

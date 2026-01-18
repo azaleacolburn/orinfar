@@ -32,12 +32,16 @@ pub fn center_viewbox_on_cursor(view: &mut View) {
 }
 
 pub fn move_down_one_view_box(view: &mut View) {
-    let view_box = view.get_view_box();
-    let (x, y) = view_box.get_lower_left();
-    let predicate = |view_box: &ViewBox| -> bool { view_box.x == x && view_box.y == y };
-
-    if let Some(i) = view.position_of_box(predicate) {
-        log!("Found lower view box");
+    if let Some(i) = view.position_view_box_down() {
         view.cursor = i;
     }
+}
+pub fn move_up_one_view_box(view: &mut View) {
+    log!("here");
+    if let Some(i) = view.position_view_box_up() {
+        view.cursor = i;
+    }
+}
+pub fn delete_curr_view_box(view: &mut View) {
+    view.delete_curr_view_box()
 }

@@ -44,7 +44,10 @@ use crate::{
     undo::{Action, UndoTree},
     view::View,
     view_box::{cleanup, setup},
-    view_command::{ViewCommand, center_viewbox_on_cursor, move_down_one_view_box},
+    view_command::{
+        ViewCommand, center_viewbox_on_cursor, delete_curr_view_box, move_down_one_view_box,
+        move_up_one_view_box,
+    },
 };
 use anyhow::Result;
 use commands::Command as Cmd;
@@ -81,6 +84,8 @@ fn main() -> Result<()> {
     let view_commands: &[ViewCommand] = &[
         ViewCommand::new("zz", center_viewbox_on_cursor),
         ViewCommand::new("zd", move_down_one_view_box),
+        ViewCommand::new("zu", move_up_one_view_box),
+        ViewCommand::new("zx", delete_curr_view_box),
     ];
     let commands: &[Cmd] = &[
         // Insert
