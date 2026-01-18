@@ -1,23 +1,25 @@
-use crate::{buffer::Buffer, view_box::ViewBox};
+use crate::{buffer::Buffer, view::View, view_box::ViewBox};
 
 pub struct ViewCommand<'a> {
     pub name: &'a str,
-    command: fn(buffer: &mut Buffer, view_box: &mut ViewBox),
+    command: fn(view: &mut View),
 }
 
 impl<'a> ViewCommand<'a> {
-    pub fn new(name: &'a str, command: fn(buffer: &mut Buffer, view_box: &mut ViewBox)) -> Self {
+    pub fn new(name: &'a str, command: fn(view: &mut View)) -> Self {
         ViewCommand { name, command }
     }
 
-    pub fn execute(&self, buffer: &mut Buffer, view_box: &mut ViewBox) {
-        (self.command)(buffer, view_box);
+    pub fn execute(&self, view: &mut View) {
+        (self.command)(view);
     }
 }
 
-pub fn center_viewbox_on_cursor(buffer: &mut Buffer, view_box: &mut ViewBox) {
+pub fn center_viewbox_on_cursor(view: &mut View) {
+    let view_box = view.get_view_box();
+
     let half_height = view_box.height() as usize / 2;
-    let row = buffer.get_row();
+    let row = view_box.buffer.get_row();
     if row < half_height {
         return;
     }
@@ -25,6 +27,6 @@ pub fn center_viewbox_on_cursor(buffer: &mut Buffer, view_box: &mut ViewBox) {
     let new_top = row - half_height;
     view_box.top = new_top;
 
-    buffer.update_list_set(.., true);
-    buffer.has_changed = true;
+    view_box.buffer.update_list_set(.., true);
+    view_box.buffer.has_changed = true;
 }

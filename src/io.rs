@@ -4,7 +4,7 @@ use std::{env, fs::OpenOptions, io::Write, path::PathBuf};
 
 use clap::Parser;
 
-use crate::{buffer::Buffer, mode::Mode};
+use crate::{buffer::Buffer, mode::Mode, view::View};
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -73,7 +73,9 @@ pub fn try_get_git_hash(path: Option<&PathBuf>) -> Option<String> {
     git_hash
 }
 
-pub fn load_file(path: Option<&PathBuf>, buffer: &mut Buffer) -> Result<()> {
+pub fn load_file(path: Option<&PathBuf>, view: &mut View) -> Result<()> {
+    let buffer = view.get_buffer();
+
     if let Some(path) = path {
         if !std::fs::exists(path)? {
             std::fs::write(path, buffer.rope.to_string())?;

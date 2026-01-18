@@ -1,6 +1,7 @@
 use crate::{
     buffer::Buffer, commands::Command, mode::Mode, motion::Motion, operator::Operator,
-    register::RegisterHandler, undo::UndoTree, view_box::ViewBox, view_command::ViewCommand,
+    register::RegisterHandler, undo::UndoTree, view::View, view_box::ViewBox,
+    view_command::ViewCommand,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -10,11 +11,9 @@ pub fn match_action<'a>(
     next_operation: &mut Option<&'a Operator<'a>>,
     count: &mut u16,
 
-    buffer: &mut Buffer,
-
     register_handler: &mut RegisterHandler,
     undo_tree: &mut UndoTree,
-    view_box: &mut ViewBox,
+    view: &mut View,
     mode: &mut Mode,
 
     commands: &[Command],
@@ -33,12 +32,14 @@ pub fn match_action<'a>(
         .iter()
         .find(|motion| motion.name == chained.iter().collect::<String>())
     {
+        let buffer = view.get_buffer();
         command.execute(buffer, register_handler, mode, undo_tree);
         chained.clear();
     } else if let Some(command) = commands
         .iter()
         .find(|motion| motion.name == chained.last().unwrap_or(&' ').to_string())
     {
+        let buffer = view.get_buffer();
         (0..*count).for_each(|_| {
             command.execute(buffer, register_handler, mode, undo_tree);
         });
@@ -49,13 +50,14 @@ pub fn match_action<'a>(
         .iter()
         .find(|command| command.name == chained.iter().collect::<String>())
     {
-        view_command.execute(buffer, view_box);
+        view_command.execute(view);
         chained.clear();
     } else if let Some(operation) = next_operation {
         if let Some(motion) = motions
             .iter()
             .find(|motion| motion.name.chars().next().expect("No chars in motion") == c)
         {
+            let buffer = view.get_buffer();
             (0..*count).for_each(|_| {
                 operation.execute(motion, buffer, register_handler, mode, undo_tree);
             });
@@ -69,6 +71,7 @@ pub fn match_action<'a>(
                 .next()
                 .expect("No chars in operation")
         {
+            let buffer = view.get_buffer();
             operation.entire_line(buffer, register_handler, mode, undo_tree);
             chained.clear();
             *count = 1;
@@ -79,6 +82,7 @@ pub fn match_action<'a>(
             .iter()
             .find(|motion| motion.name.chars().next().expect("No chars in motion") == c)
     {
+        let buffer = view.get_buffer();
         motion.apply(buffer);
         chained.clear();
     }

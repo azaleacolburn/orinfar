@@ -142,9 +142,9 @@ fn main() -> Result<()> {
     }
 
     let mut git_hash = try_get_git_hash(path.as_ref());
-    io::load_file(path.as_ref(), &mut view_box.buffer)?;
+    io::load_file(path.as_ref(), &mut view)?;
 
-    view_box.flush(
+    view.flush(
         &status_bar,
         &mode,
         &chained,
@@ -235,10 +235,9 @@ fn program_loop<'a>(
                         chained,
                         next_operation,
                         count,
-                        buffer,
                         register_handler,
                         undo_tree,
-                        view.get_view_box(),
+                        view,
                         mode,
                         commands,
                         operators,
@@ -293,14 +292,11 @@ fn program_loop<'a>(
                 }
                 (KeyCode::Enter, Mode::Meta) => {
                     if match_meta_command(
-                        buffer,
                         status_bar,
-                        view_box,
+                        view,
                         register_handler,
                         undo_tree,
                         mode,
-                        chained,
-                        *count,
                         git_hash,
                         path,
                     )? {
@@ -332,9 +328,8 @@ fn program_loop<'a>(
                 _ => continue,
             }
 
-            let adjusted = view_box.adjust(buffer);
-            view_box.flush(
-                buffer,
+            let adjusted = view.adjust();
+            view.flush(
                 status_bar,
                 mode,
                 chained,

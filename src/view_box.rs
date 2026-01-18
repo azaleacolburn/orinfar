@@ -169,6 +169,10 @@ impl ViewBox {
         (self.top + self.height as usize).to_string().len()
     }
 
+    pub fn get_lower_right(&self) -> (u16, u16) {
+        (self.x + self.width, self.y + self.height)
+    }
+
     pub fn new_cursor_position(&self) -> (u16, u16) {
         let left_padding = self.left_padding();
         let col = self.buffer.get_col();

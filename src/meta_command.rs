@@ -7,7 +7,7 @@ use crate::{
     register::RegisterHandler,
     status_bar::StatusBar,
     undo::UndoTree,
-    view_box::ViewBox,
+    view::View,
 };
 use anyhow::Result;
 use ropey::Rope;
@@ -17,15 +17,11 @@ use std::path::PathBuf;
 /// # Returns
 /// A boolean indicating whether to break from the main program loop
 pub fn match_meta_command(
-    buffer: &mut Buffer,
     status_bar: &mut StatusBar,
-    view_box: &ViewBox,
+    view: &mut View,
     register_handler: &RegisterHandler,
     undo_tree: &mut UndoTree,
     mode: &mut Mode,
-
-    chained: &[char],
-    count: u16,
 
     git_hash: &mut Option<String>,
     path: &mut Option<PathBuf>,
@@ -34,6 +30,7 @@ pub fn match_meta_command(
         match command {
             'w' => match &path {
                 Some(path) => {
+                    let buffer = view.get_buffer();
                     io::write(path.clone(), buffer)?;
                 }
                 None => log!("WARNING: Cannot Write Unattached Buffer"),
@@ -42,45 +39,33 @@ pub fn match_meta_command(
                 *path = None;
             }
             'l' => {
-                io::load_file(path.as_ref(), buffer)?;
-                view_box.flush(
-                    buffer,
-                    status_bar,
-                    mode,
-                    chained,
-                    count,
-                    register_handler.get_curr_reg(),
-                    path.as_ref(),
-                    git_hash.as_deref(),
-                    false,
-                )?;
+                io::load_file(path.as_ref(), view)?;
+                let view_box = view.get_view_box();
+                view_box.flush(false)?;
             }
             'o' => {
+                let buffer = view.get_buffer();
                 attach_buffer(buffer, status_bar, i, path, git_hash);
 
-                io::load_file(path.as_ref(), buffer)?;
-                view_box.flush(
-                    buffer,
-                    status_bar,
-                    mode,
-                    chained,
-                    count,
-                    register_handler.get_curr_reg(),
-                    path.as_ref(),
-                    git_hash.as_deref(),
-                    false,
-                )?;
+                io::load_file(path.as_ref(), view)?;
+                let view_box = view.get_view_box();
+                view_box.flush(false)?;
                 break;
             }
             'd' => {
+                let buffer = view.get_buffer();
                 print_directories(buffer, undo_tree, path.clone())?;
             }
             // Print Registers
             'r' => {
                 let registers = register_handler.to_string();
-                buffer.replace_contents(registers, undo_tree);
+                view.split_view_box_vertical(view.cursor);
+
+                let last_idx = view.boxes_len() - 1;
+                view.replace_buffer_contents(registers, last_idx, undo_tree);
             }
             's' => {
+                let buffer = view.get_buffer();
                 substitute_cmd(buffer, status_bar, undo_tree, i);
                 break;
             }
@@ -94,6 +79,7 @@ pub fn match_meta_command(
                     }
                 };
 
+                let buffer = view.get_buffer();
                 buffer.set_row(num + 1);
             }
             'q' => return Ok(true),

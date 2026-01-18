@@ -1,14 +1,4 @@
-use std::io::{Write, stdout};
-
-use crate::{
-    buffer::Buffer,
-    mode::Mode,
-    register::{self, RegisterHandler},
-    status_bar::{self, StatusBar},
-    utility::ranges_overlap,
-    view,
-    view_box::ViewBox,
-};
+use crate::{buffer::Buffer, mode::Mode, status_bar::StatusBar, undo::UndoTree, view_box::ViewBox};
 use anyhow::Result;
 use crossterm::{
     cursor::{MoveTo, MoveToColumn, MoveToRow, Show},
@@ -16,11 +6,12 @@ use crossterm::{
     style::{Color, Print, SetForegroundColor},
     terminal::{Clear, ClearType},
 };
+use std::io::{Write, stdout};
 
 pub struct View {
     boxes: Vec<ViewBox>,
     // represents which index of the view box the cursor is in
-    cursor: usize,
+    pub cursor: usize,
     width: u16,
     height: u16,
 }
@@ -54,9 +45,10 @@ impl View {
         git_hash: Option<&str>,
         adjusted: bool,
     ) -> Result<()> {
-        self.boxes.iter().for_each(|f| {
-            f.flush(adjusted);
-        });
+        let errors = self.boxes.iter().filter_map(|f| f.flush(adjusted).err());
+        if let Some(err) = errors.last() {
+            return Err(err);
+        }
 
         let status_message = match (mode, path) {
             (Mode::Meta, _) => status_bar.buffer(),
@@ -137,28 +129,87 @@ impl View {
         Ok(())
     }
 
-    pub fn add_view_box(&mut self, x: u16, y: u16, height: u16, width: u16) {
+    pub fn get_lower_right(&self) -> (u16, u16) {
+        (self.width, self.height)
+    }
+
+    pub fn split_view_box_vertical(&mut self, idx: usize) {
+        let view_box = &mut self.boxes[idx];
+        let original_height = view_box.height;
+
+        let half_height = view_box.height / 2;
+        let half_y = half_height + view_box.x;
+
+        let new_view_box = ViewBox::new(view_box.x, half_y, half_height, view_box.width);
+
+        view_box.height /= 2;
+        if original_height % 2 == 0 {
+            view_box.height += 1;
+        }
+
+        self.boxes.push(new_view_box);
+    }
+
+    pub fn add_view_box_arbitrary(&mut self, x: u16, y: u16, height: u16, width: u16) {
         let new_view_box = ViewBox::new(width, height, x, y);
-        let horizontal_new = x..x + width;
-        let vertical_new = y..y + height;
+        // let horizontal_new = x..x + width;
+        // let vertical_new = y..y + height;
+
+        assert!(x + width < self.width && y + height < self.height);
 
         self.boxes
             .iter_mut()
-            .filter(|view_box| {
-                let horizontal_old = view_box.x..view_box.x + view_box.width();
-                let vertical_old = view_box.y..view_box.y + view_box.height();
-
-                ranges_overlap(&horizontal_new, &horizontal_old)
-                    && ranges_overlap(&vertical_new, &vertical_old)
-            })
+            // .filter(|view_box| {
+            //     let horizontal_old = view_box.x..view_box.x + view_box.width();
+            //     let vertical_old = view_box.y..view_box.y + view_box.height();
+            //
+            //     ranges_overlap(&horizontal_new, &horizontal_old)
+            //         && ranges_overlap(&vertical_new, &vertical_old)
+            // })
             .for_each(|view_box| {
-                if view_box.x <= new_view_box.x {
-                    view_box.x = new_view_box.x + new_view_box.width()
-                } else if view_box.x > new_view_box.x {
-                    view_box.x = new_view_box.x + new_view_box.width()
+                if view_box.x == new_view_box.x && view_box.y == new_view_box.y {
+                    view_box.x += new_view_box.width;
+                    view_box.y += new_view_box.height;
+                } else {
+                    view_box.width = self.width - new_view_box.width;
+                    view_box.height = self.height - new_view_box.height;
                 }
             });
 
         self.boxes.push(new_view_box);
+    }
+
+    pub fn replace_buffer_contents(
+        &mut self,
+        contents: impl ToString,
+        cursor: usize,
+        undo_tree: &mut UndoTree,
+    ) {
+        let str = contents.to_string();
+
+        let anchor = self.cursor;
+        self.cursor = cursor;
+
+        let buffer = self.get_buffer();
+        buffer.replace_contents(str, undo_tree);
+
+        self.cursor = anchor;
+    }
+
+    pub fn adjust(&mut self) -> bool {
+        let view_box = self.get_view_box();
+        view_box.adjust()
+    }
+
+    pub fn cursor_to_last(&mut self) {
+        self.set_cursor(self.boxes_len() - 1);
+    }
+
+    pub fn boxes_len(&self) -> usize {
+        self.boxes.len()
+    }
+
+    pub fn set_cursor(&mut self, new: usize) {
+        self.cursor = new;
     }
 }
