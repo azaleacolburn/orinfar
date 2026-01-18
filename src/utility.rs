@@ -1,3 +1,5 @@
+use std::ops::{Bound, Range, RangeBounds};
+
 macro_rules! unwrap_or_return {
     ( $e:expr ) => {
         match $e {
@@ -19,4 +21,8 @@ macro_rules! unwrap_or_break {
 pub fn is_symbol(c: char) -> bool {
     let symbols = "$`\'\":~()\\+-=$#^[&]*<@%!{|}>/?.,";
     symbols.contains(c)
+}
+
+pub fn ranges_overlap<T: Ord>(a: &Range<T>, b: &Range<T>) -> bool {
+    a.start <= b.end && b.start <= a.end
 }

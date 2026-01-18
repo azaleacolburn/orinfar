@@ -15,19 +15,31 @@ use std::{
 };
 
 pub struct ViewBox {
+    pub buffer: Buffer,
+    // The x and y corrdinates of the upper right hand corner of where the buffer will be displayed
+    pub x: u16,
+    pub y: u16,
     // The topmost row of the buffer being displayed (zero-indexed)
     pub top: usize,
     // The height in rows of the entire view box (minus the status bar)
-    height: u16,
+    pub height: u16,
     // The leftmost row of the buffer being displayed (zero-indexed)
     pub left: usize,
     // The width in rows of the entire view box
-    width: u16,
+    pub width: u16,
 }
 
 impl ViewBox {
-    pub const fn new(cols: u16, rows: u16) -> Self {
+    /// # Arguments
+    /// - cols: the number of cols this view box has
+    /// - rows: the number of rows this view box has
+    /// - x: the x position of the upper right hand corner of this view box
+    /// - y: the y position of the upper right hand corner of this view box
+    pub fn new(cols: u16, rows: u16, x: u16, y: u16) -> Self {
         Self {
+            buffer: Buffer::new(),
+            x,
+            y,
             top: 0,
             height: rows - 1, // Reserve one for the status bar
             left: 0,
@@ -35,9 +47,9 @@ impl ViewBox {
         }
     }
 
-    pub fn adjust(&mut self, buffer: &mut Buffer) -> bool {
-        let col = buffer.get_col();
-        let row = buffer.get_row();
+    pub fn adjust(&mut self) -> bool {
+        let col = self.buffer.get_col();
+        let row = self.buffer.get_row();
         let mut adjusted = false;
 
         if self.top > row {
@@ -57,22 +69,18 @@ impl ViewBox {
         }
 
         if adjusted {
-            buffer.update_list_set(.., true);
+            self.buffer.update_list_set(.., true);
         }
 
         adjusted
     }
 
-    fn write_buffer(
-        &self,
-        buffer: &Buffer,
-        stdout: &mut Stdout,
-        left_padding: usize,
-    ) -> Result<()> {
-        let lines = buffer
+    fn write_buffer(&self, stdout: &mut Stdout, left_padding: usize) -> Result<()> {
+        let lines = self
+            .buffer
             .rope
             .lines()
-            .zip(buffer.lines_for_updating.iter())
+            .zip(self.buffer.lines_for_updating.iter())
             .enumerate()
             .skip(self.top)
             .take(self.height.into());
@@ -81,7 +89,7 @@ impl ViewBox {
         #[allow(clippy::cast_possible_wrap)]
         let len_lines = u16::try_from(lines.len()).unwrap();
 
-        execute!(stdout, Hide, MoveTo(0, 0))?;
+        execute!(stdout, Hide, MoveTo(self.x, self.y))?;
         let mut padding_buffer = String::with_capacity(left_padding);
 
         lines.for_each(|(i, (line, should_update))| {
@@ -128,14 +136,14 @@ impl ViewBox {
                 stdout,
                 SetForegroundColor(Color::Blue),
                 Print(line),
-                MoveToColumn(0)
+                MoveToColumn(self.x)
             )
             .expect("Crossterm print line command failed");
         });
 
         // This is for clearing trailing lines that we missed
         if len_lines < self.height {
-            execute!(stdout, MoveTo(0, len_lines))?;
+            execute!(stdout, MoveTo(self.x, self.y + len_lines))?;
             (len_lines..self.height).for_each(|_| {
                 execute!(stdout, Clear(ClearType::CurrentLine), MoveDown(1))
                     .expect("Crossterm clearing trailing lines failed");
@@ -146,113 +154,41 @@ impl ViewBox {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn flush(
-        &self,
-        buffer: &Buffer,
-        status_bar: &StatusBar,
-        mode: &Mode,
-        chained: &[char],
-        count: u16,
-        register: char,
-        path: Option<&PathBuf>,
-        git_hash: Option<&str>,
-        adjusted: bool,
-    ) -> Result<()> {
+    pub fn flush(&self, adjusted: bool) -> Result<()> {
         let mut stdout = stdout();
-        let left_padding = (self.top + self.height as usize).to_string().len();
+        let left_padding = self.left_padding();
 
-        if buffer.has_changed || adjusted {
-            self.write_buffer(buffer, &mut stdout, left_padding)?;
+        if self.buffer.has_changed || adjusted {
+            self.write_buffer(&mut stdout, left_padding)?;
         }
 
-        let col = buffer.get_col();
-        let row = buffer.get_row();
-
-        let status_message = match (mode, path) {
-            (Mode::Meta, _) => status_bar.buffer(),
-            (Mode::Normal, Some(path)) => {
-                let info_str = "Editing File: ".to_string();
-                let file_size = std::fs::read(path)?.len();
-                let path = path.to_string_lossy();
-
-                let count_str = if count == 1 {
-                    String::new()
-                } else {
-                    count.to_string()
-                };
-                let reg_str = if register == '\"' {
-                    String::new()
-                } else {
-                    format!("\"{register}")
-                };
-                let chained_str = chained.iter().collect::<String>();
-
-                let git_hash = git_hash.unwrap_or("");
-
-                let middle_buffer = (0..(self.width as usize)
-                    - info_str.len()
-                    - path.len()
-                    - 2 // For the 2 quotations
-                    - 3 // For the 3 spaces
-                    - file_size.checked_ilog10().unwrap_or(1) as usize
-                    - reg_str.len()
-                    - count_str.len()
-                    - chained_str.len()
-                    - git_hash.len())
-                    .map(|_| " ")
-                    .collect::<String>();
-
-                format!(
-                    "{info_str}\"{path}\" {file_size}b {reg_str}{count_str} {chained_str}{middle_buffer}{git_hash}",
-                )
-            }
-            (Mode::Normal, None) => {
-                let info_str = "-- Unattached Buffer -- ".to_string();
-
-                let count_str = if count == 1 {
-                    String::new()
-                } else {
-                    count.to_string()
-                };
-                let reg_str = if register == '\"' {
-                    String::new()
-                } else {
-                    format!("\"{register}")
-                };
-                let chained_str = chained.iter().collect::<String>();
-
-                format!("{info_str}{count_str}{reg_str}{chained_str}")
-            }
-            (Mode::Insert, _) => "-- INSERT --".into(),
-            (Mode::Visual, _) => "-- VISUAL --".into(),
-        };
-        execute!(
-            stdout,
-            SetForegroundColor(Color::White),
-            MoveTo(0, self.height + 1),
-            Clear(ClearType::CurrentLine),
-            Print(status_message)
-        )?;
-
-        let (new_col, new_row) = if matches!(mode, Mode::Meta) {
-            (status_bar.idx(), self.height + 1)
-        } else {
-            let row = row - self.top;
-            let col = col - self.left + left_padding + 1;
-            (u16::try_from(col).unwrap(), u16::try_from(row).unwrap())
-        };
-        execute!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
-        stdout.flush()?;
-
         Ok(())
+    }
+
+    pub fn left_padding(&self) -> usize {
+        (self.top + self.height as usize).to_string().len()
+    }
+
+    pub fn new_cursor_position(&self) -> (u16, u16) {
+        let left_padding = self.left_padding();
+        let col = self.buffer.get_col();
+        let row = self.buffer.get_row();
+
+        let row = row - self.top;
+        let col = col - self.left + left_padding + 1;
+        (u16::try_from(col).unwrap(), u16::try_from(row).unwrap())
     }
 
     pub const fn height(&self) -> u16 {
         self.height
     }
 
-    pub const fn _width(&self) -> u16 {
+    pub const fn width(&self) -> u16 {
         self.width
+    }
+
+    pub fn buffer(&mut self) -> &mut Buffer {
+        &mut self.buffer
     }
 }
 

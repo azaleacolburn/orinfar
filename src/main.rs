@@ -10,6 +10,7 @@ mod buffer_line;
 mod buffer_update;
 mod commands;
 mod meta_command;
+mod view;
 #[macro_use]
 mod io;
 mod mode;
@@ -41,6 +42,7 @@ use crate::{
     register::RegisterHandler,
     status_bar::StatusBar,
     undo::{Action, UndoTree},
+    view::View,
     view_box::{ViewBox, cleanup, setup},
     view_command::{ViewCommand, center_viewbox_on_cursor},
 };
@@ -74,7 +76,6 @@ fn main() -> Result<()> {
 
     let mut undo_tree = UndoTree::new();
     let mut register_handler = RegisterHandler::new();
-    let mut buffer: Buffer = Buffer::new();
     let mut status_bar: StatusBar = StatusBar::new();
 
     let view_commands: &[ViewCommand] = &[ViewCommand::new("zz", center_viewbox_on_cursor)];
@@ -128,7 +129,7 @@ fn main() -> Result<()> {
     let all_normal_chars = enumerate_normal_chars(commands, operators, motions, view_commands);
 
     let (cols, rows) = size()?;
-    let mut view_box: ViewBox = ViewBox::new(cols, rows);
+    let mut view: View = View::new(cols, rows);
     setup(rows, cols)?;
 
     let mut mode = Mode::Normal;
@@ -141,10 +142,9 @@ fn main() -> Result<()> {
     }
 
     let mut git_hash = try_get_git_hash(path.as_ref());
-    io::load_file(path.as_ref(), &mut buffer)?;
+    io::load_file(path.as_ref(), &mut view_box.buffer)?;
 
     view_box.flush(
-        &buffer,
         &status_bar,
         &mode,
         &chained,
@@ -167,11 +167,10 @@ fn main() -> Result<()> {
         &mut path,
         &mut git_hash,
         &mut stdout,
-        &mut buffer,
         &mut status_bar,
         &mut register_handler,
         &mut undo_tree,
-        &mut view_box,
+        &mut view,
         &mut mode,
     )?;
 
@@ -204,14 +203,14 @@ fn program_loop<'a>(
     git_hash: &mut Option<String>,
     stdout: &mut Stdout,
 
-    buffer: &mut Buffer,
     status_bar: &mut StatusBar,
     register_handler: &mut RegisterHandler,
     undo_tree: &mut UndoTree,
-    view_box: &mut ViewBox,
+    view: &mut View,
     mode: &mut Mode,
 ) -> Result<()> {
     'main: loop {
+        let buffer = view.get_buffer();
         buffer.update_list_reset();
 
         if let Event::Key(event) = read()? {
@@ -239,7 +238,7 @@ fn program_loop<'a>(
                         buffer,
                         register_handler,
                         undo_tree,
-                        view_box,
+                        view.get_view_box(),
                         mode,
                         commands,
                         operators,
