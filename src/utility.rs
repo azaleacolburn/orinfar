@@ -1,4 +1,7 @@
-use std::ops::{Bound, Range, RangeBounds};
+use crate::buffer::Buffer;
+use anyhow::Result;
+use crossterm::event::{Event, KeyCode, read};
+use std::ops::{Range, RangeBounds};
 
 macro_rules! unwrap_or_return {
     ( $e:expr ) => {
@@ -23,6 +26,18 @@ pub fn is_symbol(c: char) -> bool {
     symbols.contains(c)
 }
 
-pub fn ranges_overlap<T: Ord>(a: &Range<T>, b: &Range<T>) -> bool {
-    a.start <= b.end && b.start <= a.end
+/// # Errors
+/// - I/O error if `crossterm::events::read()` fails
+pub fn on_next_input_buffer_only(
+    buffer: &mut Buffer,
+    closure: fn(KeyCode, &mut Buffer),
+) -> Result<()> {
+    loop {
+        if let Event::Key(event) = read()? {
+            closure(event.code, buffer);
+            break;
+        }
+    }
+
+    Ok(())
 }

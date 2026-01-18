@@ -1,7 +1,7 @@
-use crate::{DEBUG, Mode, buffer::Buffer, log, status_bar::StatusBar};
+use crate::{DEBUG, buffer::Buffer, log};
 use anyhow::Result;
 use crossterm::{
-    cursor::{Hide, MoveDown, MoveTo, MoveToColumn, MoveToRow, SetCursorStyle, Show},
+    cursor::{Hide, MoveDown, MoveTo, MoveToColumn, MoveToRow, SetCursorStyle},
     execute,
     style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{
@@ -9,10 +9,7 @@ use crossterm::{
         enable_raw_mode,
     },
 };
-use std::{
-    io::{Stdout, Write, stdout},
-    path::PathBuf,
-};
+use std::io::{Stdout, Write, stdout};
 
 #[derive(Debug)]
 pub struct ViewBox {
@@ -173,11 +170,11 @@ impl ViewBox {
         (self.top + self.height as usize).to_string().len()
     }
 
-    pub fn get_lower_right(&self) -> (u16, u16) {
+    pub const fn get_lower_right(&self) -> (u16, u16) {
         (self.x + self.width, self.y + self.height)
     }
 
-    pub fn get_lower_left(&self) -> (u16, u16) {
+    pub const fn get_lower_left(&self) -> (u16, u16) {
         (self.x, self.y + self.height)
     }
 
@@ -194,15 +191,7 @@ impl ViewBox {
         (col, row)
     }
 
-    pub const fn height(&self) -> u16 {
-        self.height
-    }
-
-    pub const fn width(&self) -> u16 {
-        self.width
-    }
-
-    pub fn buffer(&mut self) -> &mut Buffer {
+    pub const fn buffer(&mut self) -> &mut Buffer {
         &mut self.buffer
     }
 }

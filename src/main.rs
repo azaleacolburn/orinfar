@@ -368,24 +368,3 @@ pub fn on_next_input_buffer_only(
 
     Ok(())
 }
-
-/// # Errors
-/// - I/O error if `crossterm::events::read()` fails
-pub fn on_next_input(
-    buffer: &mut Buffer,
-    mode: &mut Mode,
-    register_handler: &mut RegisterHandler,
-    count: &mut usize,
-    chained: &mut Vec<char>,
-
-    closure: fn(KeyCode, &mut Buffer, &mut Mode, &mut RegisterHandler, &mut usize, &mut Vec<char>),
-) -> Result<()> {
-    loop {
-        if let Event::Key(event) = read()? {
-            closure(event.code, buffer, mode, register_handler, count, chained);
-            break;
-        }
-    }
-
-    Ok(())
-}

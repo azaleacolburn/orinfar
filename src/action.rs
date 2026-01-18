@@ -1,6 +1,6 @@
 use crate::{
-    buffer::Buffer, commands::Command, mode::Mode, motion::Motion, operator::Operator,
-    register::RegisterHandler, undo::UndoTree, view::View, view_box::ViewBox,
+    commands::Command, mode::Mode, motion::Motion, operator::Operator,
+    register::RegisterHandler, undo::UndoTree, view::View,
     view_command::ViewCommand,
 };
 

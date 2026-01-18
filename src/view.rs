@@ -9,7 +9,6 @@ use crossterm::{
     style::{Color, Print, SetForegroundColor},
     terminal::{Clear, ClearType},
 };
-use ropey::iter;
 use std::io::{Write, stdout};
 
 #[derive(Debug)]
@@ -39,6 +38,7 @@ impl View {
         &mut self.boxes[self.cursor]
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn flush(
         &self,
         status_bar: &StatusBar,
@@ -50,12 +50,11 @@ impl View {
         git_hash: Option<&str>,
         adjusted: bool,
     ) -> Result<()> {
-        log!("View Boxes: {:?}", self.boxes);
-        let errors = self.boxes.iter().enumerate().filter_map(|(i, view_box)| {
+        let mut errors = self.boxes.iter().enumerate().filter_map(|(i, view_box)| {
             let adjusted = adjusted && i == self.cursor;
             view_box.flush(adjusted).err()
         });
-        if let Some(err) = errors.last() {
+        if let Some(err) = errors.next() {
             return Err(err);
         }
 
@@ -140,7 +139,7 @@ impl View {
 }
 
 impl View {
-    pub fn get_lower_right(&self) -> (u16, u16) {
+    pub const fn get_lower_right(&self) -> (u16, u16) {
         (self.width, self.height)
     }
 
@@ -159,7 +158,7 @@ impl View {
     }
 
     /// # Returns
-    /// The position (in self.boxes) of one view_box down, if it exists
+    /// The position (in `self.boxes`) of one `view_box` down, if it exists
     pub fn position_view_box_down(&mut self) -> Option<usize> {
         let view_box = self.get_view_box();
 
@@ -242,7 +241,7 @@ impl View {
         );
 
         view_box.height = half_height;
-        if original_height % 2 != 0 {
+        if !original_height.is_multiple_of(2) {
             new_view_box.height += 1;
         }
         log!("new height {}", new_view_box.height);
@@ -254,7 +253,7 @@ impl View {
 impl View {
     pub fn replace_buffer_contents(
         &mut self,
-        contents: impl ToString,
+        contents: &impl ToString,
         cursor: usize,
         undo_tree: &mut UndoTree,
     ) {
@@ -274,15 +273,15 @@ impl View {
         view_box.adjust()
     }
 
-    pub fn cursor_to_last(&mut self) {
+    pub const fn cursor_to_last(&mut self) {
         self.set_cursor(self.boxes_len() - 1);
     }
 
-    pub fn boxes_len(&self) -> usize {
+    pub const fn boxes_len(&self) -> usize {
         self.boxes.len()
     }
 
-    pub fn set_cursor(&mut self, new: usize) {
+    pub const fn set_cursor(&mut self, new: usize) {
         self.cursor = new;
     }
 }

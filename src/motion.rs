@@ -1,4 +1,7 @@
-use crate::{buffer::Buffer, on_next_input_buffer_only, utility::is_symbol};
+use crate::{
+    buffer::Buffer,
+    utility::{is_symbol, on_next_input_buffer_only},
+};
 use crossterm::event::KeyCode;
 
 pub struct Motion<'a> {

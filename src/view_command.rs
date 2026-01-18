@@ -1,4 +1,4 @@
-use crate::{DEBUG, buffer::Buffer, log, view::View, view_box::ViewBox};
+use crate::view::View;
 
 pub struct ViewCommand<'a> {
     pub name: &'a str,
@@ -18,7 +18,7 @@ impl<'a> ViewCommand<'a> {
 pub fn center_viewbox_on_cursor(view: &mut View) {
     let view_box = view.get_view_box();
 
-    let half_height = view_box.height() as usize / 2;
+    let half_height = view_box.height as usize / 2;
     let row = view_box.buffer.get_row();
     if row < half_height {
         return;
@@ -37,11 +37,10 @@ pub fn move_down_one_view_box(view: &mut View) {
     }
 }
 pub fn move_up_one_view_box(view: &mut View) {
-    log!("here");
     if let Some(i) = view.position_view_box_up() {
         view.cursor = i;
     }
 }
 pub fn delete_curr_view_box(view: &mut View) {
-    view.delete_curr_view_box()
+    view.delete_curr_view_box();
 }
