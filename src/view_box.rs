@@ -14,6 +14,7 @@ use std::{
     path::PathBuf,
 };
 
+#[derive(Debug)]
 pub struct ViewBox {
     pub buffer: Buffer,
     // The x and y corrdinates of the upper right hand corner of where the buffer will be displayed
@@ -43,7 +44,8 @@ impl ViewBox {
             top: 0,
             height: rows - 1, // Reserve one for the status bar
             left: 0,
-            width: cols - 1,
+            // No need to reserve one for the status bar, since that's at the very end
+            width: cols,
         }
     }
 
@@ -173,14 +175,21 @@ impl ViewBox {
         (self.x + self.width, self.y + self.height)
     }
 
-    pub fn new_cursor_position(&self) -> (u16, u16) {
+    pub fn get_lower_left(&self) -> (u16, u16) {
+        (self.x, self.y + self.height)
+    }
+
+    /// # Returns
+    /// The current cursor position on the absolute screen
+    /// Given that the cursor is in the given view box
+    pub fn cursor_position(&self) -> (u16, u16) {
         let left_padding = self.left_padding();
         let col = self.buffer.get_col();
         let row = self.buffer.get_row();
 
-        let row = row - self.top;
-        let col = col - self.left + left_padding + 1;
-        (u16::try_from(col).unwrap(), u16::try_from(row).unwrap())
+        let row = self.y + u16::try_from(row - self.top).unwrap();
+        let col = self.x + u16::try_from(col - self.left + left_padding + 1).unwrap();
+        (col, row)
     }
 
     pub const fn height(&self) -> u16 {

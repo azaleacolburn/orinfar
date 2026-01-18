@@ -64,6 +64,10 @@ pub fn match_meta_command(
                 let last_idx = view.boxes_len() - 1;
                 view.replace_buffer_contents(registers, last_idx, undo_tree);
             }
+            // Split buffer
+            't' => {
+                view.split_view_box_vertical(view.cursor);
+            }
             's' => {
                 let buffer = view.get_buffer();
                 substitute_cmd(buffer, status_bar, undo_tree, i);

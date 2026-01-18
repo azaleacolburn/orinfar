@@ -43,8 +43,8 @@ use crate::{
     status_bar::StatusBar,
     undo::{Action, UndoTree},
     view::View,
-    view_box::{ViewBox, cleanup, setup},
-    view_command::{ViewCommand, center_viewbox_on_cursor},
+    view_box::{cleanup, setup},
+    view_command::{ViewCommand, center_viewbox_on_cursor, move_down_one_view_box},
 };
 use anyhow::Result;
 use commands::Command as Cmd;
@@ -78,7 +78,10 @@ fn main() -> Result<()> {
     let mut register_handler = RegisterHandler::new();
     let mut status_bar: StatusBar = StatusBar::new();
 
-    let view_commands: &[ViewCommand] = &[ViewCommand::new("zz", center_viewbox_on_cursor)];
+    let view_commands: &[ViewCommand] = &[
+        ViewCommand::new("zz", center_viewbox_on_cursor),
+        ViewCommand::new("zd", move_down_one_view_box),
+    ];
     let commands: &[Cmd] = &[
         // Insert
         Cmd::new("i", insert),

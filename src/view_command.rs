@@ -1,4 +1,4 @@
-use crate::{buffer::Buffer, view::View, view_box::ViewBox};
+use crate::{DEBUG, buffer::Buffer, log, view::View, view_box::ViewBox};
 
 pub struct ViewCommand<'a> {
     pub name: &'a str,
@@ -29,4 +29,15 @@ pub fn center_viewbox_on_cursor(view: &mut View) {
 
     view_box.buffer.update_list_set(.., true);
     view_box.buffer.has_changed = true;
+}
+
+pub fn move_down_one_view_box(view: &mut View) {
+    let view_box = view.get_view_box();
+    let (x, y) = view_box.get_lower_left();
+    let predicate = |view_box: &ViewBox| -> bool { view_box.x == x && view_box.y == y };
+
+    if let Some(i) = view.position_of_box(predicate) {
+        log!("Found lower view box");
+        view.cursor = i;
+    }
 }

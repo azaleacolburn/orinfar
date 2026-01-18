@@ -1,4 +1,7 @@
-use crate::{buffer::Buffer, mode::Mode, status_bar::StatusBar, undo::UndoTree, view_box::ViewBox};
+use crate::{
+    DEBUG, buffer::Buffer, log, mode::Mode, status_bar::StatusBar, undo::UndoTree,
+    view_box::ViewBox,
+};
 use anyhow::Result;
 use crossterm::{
     cursor::{MoveTo, MoveToColumn, MoveToRow, Show},
@@ -6,8 +9,10 @@ use crossterm::{
     style::{Color, Print, SetForegroundColor},
     terminal::{Clear, ClearType},
 };
+use ropey::iter;
 use std::io::{Write, stdout};
 
+#[derive(Debug)]
 pub struct View {
     boxes: Vec<ViewBox>,
     // represents which index of the view box the cursor is in
@@ -45,7 +50,11 @@ impl View {
         git_hash: Option<&str>,
         adjusted: bool,
     ) -> Result<()> {
-        let errors = self.boxes.iter().filter_map(|f| f.flush(adjusted).err());
+        log!("View Boxes: {:?}", self.boxes);
+        let errors = self.boxes.iter().enumerate().filter_map(|(i, view_box)| {
+            let adjusted = adjusted && i == self.cursor;
+            view_box.flush(adjusted).err()
+        });
         if let Some(err) = errors.last() {
             return Err(err);
         }
@@ -121,7 +130,7 @@ impl View {
             (status_bar.idx(), self.height + 1)
         } else {
             let view_box = &self.boxes[self.cursor];
-            view_box.new_cursor_position()
+            view_box.cursor_position()
         };
         execute!(stdout(), MoveToColumn(new_col), MoveToRow(new_row), Show)?;
         stdout().flush()?;
@@ -133,14 +142,28 @@ impl View {
         (self.width, self.height)
     }
 
+    pub fn find_box<P>(&self, predicate: P) -> Option<&ViewBox>
+    where
+        P: FnMut(&&ViewBox) -> bool,
+    {
+        self.boxes.iter().find(predicate)
+    }
+
+    pub fn position_of_box<P>(&self, predicate: P) -> Option<usize>
+    where
+        P: FnMut(&ViewBox) -> bool,
+    {
+        self.boxes.iter().position(predicate)
+    }
+
     pub fn split_view_box_vertical(&mut self, idx: usize) {
         let view_box = &mut self.boxes[idx];
         let original_height = view_box.height;
 
         let half_height = view_box.height / 2;
-        let half_y = half_height + view_box.x;
+        let half_y = half_height + view_box.y;
 
-        let new_view_box = ViewBox::new(view_box.x, half_y, half_height, view_box.width);
+        let new_view_box = ViewBox::new(view_box.width, half_height, view_box.x, half_y);
 
         view_box.height /= 2;
         if original_height % 2 == 0 {
