@@ -93,6 +93,8 @@ impl ViewBox {
         execute!(stdout, Hide, MoveTo(self.x, self.y))?;
         let mut padding_buffer = String::with_capacity(left_padding);
 
+        let clear_str: String = (0..self.width).map(|_| ' ').collect();
+
         lines.for_each(|(i, (line, should_update))| {
             if !should_update {
                 execute!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
@@ -105,10 +107,13 @@ impl ViewBox {
             }
             padding_buffer.push_str(&i_str);
             padding_buffer.push(' ');
+
+            execute!(stdout, Print(&clear_str)).unwrap();
+
             execute!(
                 stdout,
-                Clear(ClearType::CurrentLine),
                 SetForegroundColor(Color::DarkGrey),
+                MoveToColumn(self.x),
                 Print(padding_buffer.clone()),
             )
             .expect("Crossterm padding buffer print failed");
@@ -146,7 +151,7 @@ impl ViewBox {
         if len_lines < self.height {
             execute!(stdout, MoveTo(self.x, self.y + len_lines))?;
             (len_lines..self.height).for_each(|_| {
-                execute!(stdout, Clear(ClearType::CurrentLine), MoveDown(1))
+                execute!(stdout, MoveToColumn(self.x), Print(&clear_str), MoveDown(1))
                     .expect("Crossterm clearing trailing lines failed");
             });
         }
@@ -166,6 +171,13 @@ impl ViewBox {
         Ok(())
     }
 
+    pub fn clear_view_box_line(&self) -> Result<()> {
+        let str: String = (0..self.width).map(|_| ' ').collect();
+        execute!(stdout(), Print(str))?;
+
+        Ok(())
+    }
+
     pub fn left_padding(&self) -> usize {
         (self.top + self.height as usize).to_string().len()
     }
@@ -176,6 +188,10 @@ impl ViewBox {
 
     pub const fn get_lower_left(&self) -> (u16, u16) {
         (self.x, self.y + self.height)
+    }
+
+    pub const fn get_upper_right(&self) -> (u16, u16) {
+        (self.x + self.width, self.y)
     }
 
     /// # Returns

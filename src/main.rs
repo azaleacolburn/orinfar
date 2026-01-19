@@ -46,7 +46,8 @@ use crate::{
     view_box::{cleanup, setup},
     view_command::{
         ViewCommand, center_viewbox_on_cursor, delete_curr_view_box, move_down_one_view_box,
-        move_up_one_view_box,
+        move_left_one_view_box, move_right_one_view_box, move_up_one_view_box,
+        split_curr_view_box_horizontal, split_curr_view_box_vertical,
     },
 };
 use anyhow::Result;
@@ -83,10 +84,16 @@ fn main() -> Result<()> {
 
     let view_commands: &[ViewCommand] = &[
         ViewCommand::new("zz", center_viewbox_on_cursor),
+        // View Box related
         ViewCommand::new("zd", move_down_one_view_box),
         ViewCommand::new("zu", move_up_one_view_box),
+        ViewCommand::new("zl", move_left_one_view_box),
+        ViewCommand::new("zr", move_right_one_view_box),
         ViewCommand::new("zx", delete_curr_view_box),
+        ViewCommand::new("zv", split_curr_view_box_vertical),
+        ViewCommand::new("zh", split_curr_view_box_horizontal),
     ];
+
     let commands: &[Cmd] = &[
         // Insert
         Cmd::new("i", insert),

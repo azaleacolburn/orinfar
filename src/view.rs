@@ -188,6 +188,44 @@ impl View {
         self.position_of_box(predicate)
     }
 
+    pub fn position_view_box_left(&mut self) -> Option<usize> {
+        let view_box = self.get_view_box();
+
+        let (x, y) = (view_box.x, view_box.y);
+        let predicate = |view_box: &ViewBox| -> bool {
+            log!(
+                "vbx {} vby {} vbh {} y {} x {}",
+                view_box.x,
+                view_box.y,
+                view_box.height,
+                y,
+                x
+            );
+            view_box.y == y && view_box.x + view_box.width == x
+        };
+
+        self.position_of_box(predicate)
+    }
+
+    pub fn position_view_box_right(&mut self) -> Option<usize> {
+        let view_box = self.get_view_box();
+
+        let (x, y) = view_box.get_upper_right();
+        let predicate = |view_box: &ViewBox| -> bool {
+            log!(
+                "vbx {} vby {} vbh {} y {} x {}",
+                view_box.x,
+                view_box.y,
+                view_box.height,
+                y,
+                x
+            );
+            view_box.y == y && view_box.x == x
+        };
+
+        self.position_of_box(predicate)
+    }
+
     pub fn delete_curr_view_box(&mut self) {
         let mut down = self.position_view_box_down();
         let mut up = self.position_view_box_up();
@@ -245,6 +283,30 @@ impl View {
             new_view_box.height += 1;
         }
         log!("new height {}", new_view_box.height);
+
+        self.boxes.push(new_view_box);
+    }
+
+    pub fn split_view_box_horizontal(&mut self, idx: usize) {
+        let view_box = &mut self.boxes[idx];
+
+        let half_width = view_box.width / 2;
+        let half_x = half_width + view_box.x;
+
+        let mut new_view_box = ViewBox::new(half_width, view_box.height, half_x, view_box.y);
+
+        let original_width = view_box.width;
+        log!(
+            "half_width {} original_width {}",
+            half_width,
+            original_width
+        );
+
+        view_box.width = half_width;
+        if !original_width.is_multiple_of(2) {
+            new_view_box.width += 1;
+        }
+        log!("new width {}", new_view_box.width);
 
         self.boxes.push(new_view_box);
     }
