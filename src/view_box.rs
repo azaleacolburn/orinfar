@@ -9,11 +9,18 @@ use crossterm::{
         enable_raw_mode,
     },
 };
-use std::io::{Stdout, Write, stdout};
+use std::{
+    io::{Stdout, stdout},
+    path::PathBuf,
+};
 
 #[derive(Debug)]
 pub struct ViewBox {
+    // Components inherant to the view box
     pub buffer: Buffer,
+    pub path: Option<PathBuf>,
+    pub git_hash: Option<String>,
+
     // The x and y corrdinates of the upper right hand corner of where the buffer will be displayed
     pub x: u16,
     pub y: u16,
@@ -36,6 +43,9 @@ impl ViewBox {
     pub fn new(cols: u16, rows: u16, x: u16, y: u16) -> Self {
         Self {
             buffer: Buffer::new(),
+            path: None,
+            git_hash: None,
+
             x,
             y,
             top: 0,
@@ -112,7 +122,7 @@ impl ViewBox {
 
             execute!(
                 stdout,
-                SetForegroundColor(Color::DarkGrey),
+                SetForegroundColor(Color::Grey),
                 MoveToColumn(self.x),
                 Print(padding_buffer.clone()),
             )

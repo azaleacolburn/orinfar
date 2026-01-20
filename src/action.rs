@@ -1,7 +1,6 @@
 use crate::{
-    commands::Command, mode::Mode, motion::Motion, operator::Operator,
-    register::RegisterHandler, undo::UndoTree, view::View,
-    view_command::ViewCommand,
+    commands::Command, mode::Mode, motion::Motion, operator::Operator, register::RegisterHandler,
+    undo::UndoTree, view::View, view_command::ViewCommand,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -32,7 +31,7 @@ pub fn match_action<'a>(
         .iter()
         .find(|motion| motion.name == chained.iter().collect::<String>())
     {
-        let buffer = view.get_buffer();
+        let buffer = view.get_buffer_mut();
         command.execute(buffer, register_handler, mode, undo_tree);
         chained.clear();
     } else if let Some(view_command) = view_commands
@@ -46,7 +45,7 @@ pub fn match_action<'a>(
             .iter()
             .find(|motion| motion.name.chars().next().expect("No chars in motion") == c)
         {
-            let buffer = view.get_buffer();
+            let buffer = view.get_buffer_mut();
             (0..*count).for_each(|_| {
                 operation.execute(motion, buffer, register_handler, mode, undo_tree);
             });
@@ -60,7 +59,7 @@ pub fn match_action<'a>(
                 .next()
                 .expect("No chars in operation")
         {
-            let buffer = view.get_buffer();
+            let buffer = view.get_buffer_mut();
             operation.entire_line(buffer, register_handler, mode, undo_tree);
             chained.clear();
             *count = 1;
@@ -71,7 +70,7 @@ pub fn match_action<'a>(
             .iter()
             .find(|motion| motion.name.chars().next().expect("No chars in motion") == c)
     {
-        let buffer = view.get_buffer();
+        let buffer = view.get_buffer_mut();
         motion.apply(buffer);
         chained.clear();
     }

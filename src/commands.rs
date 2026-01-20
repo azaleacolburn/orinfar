@@ -29,7 +29,6 @@ impl<'a> Command<'a> {
             buffer: &mut Buffer,
             register_handler: &mut RegisterHandler,
             mode: &mut Mode,
-
             undo_tree: &mut UndoTree,
         ),
     ) -> Self {

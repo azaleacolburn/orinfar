@@ -73,32 +73,6 @@ pub fn try_get_git_hash(path: Option<&PathBuf>) -> Option<String> {
     git_hash
 }
 
-pub fn load_file(path: Option<&PathBuf>, view: &mut View) -> Result<()> {
-    let buffer = view.get_buffer();
-
-    if let Some(path) = path {
-        if !std::fs::exists(path)? {
-            std::fs::write(path, buffer.rope.to_string())?;
-            return Ok(());
-        }
-
-        let contents = std::fs::read_to_string(path)?;
-        buffer.rope = Rope::from(contents);
-
-        buffer.lines_for_updating = (0..buffer.len()).map(|_| true).collect::<Vec<bool>>();
-        buffer.cursor = usize::min(buffer.cursor, buffer.rope.len_chars());
-        buffer.has_changed = true;
-    }
-
-    Ok(())
-}
-
-pub fn write(path: PathBuf, buffer: &Buffer) -> Result<()> {
-    std::fs::write(path, buffer.to_string())?;
-
-    Ok(())
-}
-
 pub fn log_dir() -> PathBuf {
     env::home_dir()
         .expect("Failed to get home dir")

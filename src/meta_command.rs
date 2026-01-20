@@ -1,13 +1,7 @@
 use crate::{
-    DEBUG,
-    buffer::Buffer,
-    io::{self, try_get_git_hash},
-    log,
-    mode::Mode,
-    register::RegisterHandler,
-    status_bar::StatusBar,
-    undo::UndoTree,
-    view::View,
+    DEBUG, buffer::Buffer, io::try_get_git_hash, log, mode::Mode, register::RegisterHandler,
+    status_bar::StatusBar, undo::UndoTree, view::View, view_box::ViewBox,
+    view_command::split_curr_view_box_vertical,
 };
 use anyhow::Result;
 use ropey::Rope;
@@ -22,39 +16,29 @@ pub fn match_meta_command(
     register_handler: &RegisterHandler,
     undo_tree: &mut UndoTree,
     mode: &mut Mode,
-
-    git_hash: &mut Option<String>,
-    path: &mut Option<PathBuf>,
 ) -> Result<bool> {
     for (i, command) in status_bar.iter().enumerate().skip(1) {
         match command {
-            'w' => match &path {
-                Some(path) => {
-                    let buffer = view.get_buffer();
-                    io::write(path.clone(), buffer)?;
-                }
-                None => log!("WARNING: Cannot Write Unattached Buffer"),
-            },
+            'w' => view.write()?,
             'u' => {
-                *path = None;
+                view.set_path(None);
             }
             'l' => {
-                io::load_file(path.as_ref(), view)?;
+                view.load_file()?;
                 let view_box = view.get_view_box();
                 view_box.flush(false)?;
             }
             'o' => {
-                let buffer = view.get_buffer();
-                attach_buffer(buffer, status_bar, i, path, git_hash);
+                attach_buffer(status_bar, i, view.get_view_box());
+                view.load_file()?;
 
-                io::load_file(path.as_ref(), view)?;
                 let view_box = view.get_view_box();
                 view_box.flush(false)?;
                 break;
             }
             'd' => {
-                let buffer = view.get_buffer();
-                print_directories(buffer, undo_tree, path.clone())?;
+                split_curr_view_box_vertical(view);
+                print_directories(view, undo_tree)?;
             }
             // Print Registers
             'r' => {
@@ -66,7 +50,7 @@ pub fn match_meta_command(
             }
 
             's' => {
-                let buffer = view.get_buffer();
+                let buffer = view.get_buffer_mut();
                 substitute_cmd(buffer, status_bar, undo_tree, i);
                 break;
             }
@@ -80,7 +64,7 @@ pub fn match_meta_command(
                     }
                 };
 
-                let buffer = view.get_buffer();
+                let buffer = view.get_buffer_mut();
                 buffer.set_row(num + 1);
             }
             'q' => return Ok(true),
@@ -134,14 +118,11 @@ pub fn substitute_cmd(
     buffer.has_changed = true;
 }
 
-pub fn print_directories(
-    buffer: &mut Buffer,
-    undo_tree: &mut UndoTree,
-    path: Option<PathBuf>,
-) -> Result<()> {
-    let path = path.map_or_else(
+pub fn print_directories(view: &mut View, undo_tree: &mut UndoTree) -> Result<()> {
+    let path = view.get_path().map_or_else(
         || PathBuf::from("./"),
-        |mut p| {
+        |p| {
+            let mut p = p.clone();
             p.pop();
             p
         },
@@ -157,18 +138,12 @@ pub fn print_directories(
         })
         .collect::<String>();
 
-    buffer.replace_contents(contents, undo_tree);
+    view.get_buffer_mut().replace_contents(contents, undo_tree);
 
     Ok(())
 }
 
-pub fn attach_buffer(
-    buffer: &mut Buffer,
-    status_bar: &StatusBar,
-    i: usize,
-    path: &mut Option<PathBuf>,
-    git_hash: &mut Option<String>,
-) {
+pub fn attach_buffer(status_bar: &StatusBar, i: usize, view_box: &mut ViewBox) {
     if status_bar.len() == i + 1 {
         return;
     }
@@ -176,13 +151,12 @@ pub fn attach_buffer(
     log!("Set path to equal: {}", path_buf.to_string_lossy());
     // If we already have a file, we don't want to write the contents
     // to a new empty file
-    if let Some(_path) = path {
-        buffer.rope = Rope::new();
-        buffer.cursor = 0;
-        buffer.lines_for_updating = Vec::new();
-        buffer.has_changed = true;
+    if let Some(_path) = &view_box.path {
+        view_box.buffer.rope = Rope::new();
+        view_box.buffer.cursor = 0;
+        view_box.buffer.lines_for_updating = Vec::new();
+        view_box.buffer.has_changed = true;
     }
-    *path = Some(path_buf);
-
-    *git_hash = try_get_git_hash(path.as_ref());
+    view_box.path = Some(path_buf);
+    view_box.git_hash = try_get_git_hash(view_box.path.as_ref());
 }

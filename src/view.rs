@@ -1,6 +1,6 @@
 use crate::{
-    DEBUG, buffer::Buffer, log, mode::Mode, status_bar::StatusBar, undo::UndoTree,
-    view_box::ViewBox,
+    DEBUG, buffer::Buffer, io::try_get_git_hash, log, mode::Mode, status_bar::StatusBar,
+    undo::UndoTree, view_box::ViewBox,
 };
 use anyhow::Result;
 use crossterm::{
@@ -9,7 +9,11 @@ use crossterm::{
     style::{Color, Print, SetForegroundColor},
     terminal::{Clear, ClearType},
 };
-use std::io::{Write, stdout};
+use ropey::Rope;
+use std::{
+    io::{Write, stdout},
+    path::PathBuf,
+};
 
 #[derive(Debug)]
 pub struct View {
@@ -30,8 +34,12 @@ impl View {
         }
     }
 
-    pub fn get_buffer(&mut self) -> &mut Buffer {
+    pub fn get_buffer_mut(&mut self) -> &mut Buffer {
         &mut self.boxes[self.cursor].buffer
+    }
+
+    pub fn get_buffer(&self) -> &Buffer {
+        &self.boxes[self.cursor].buffer
     }
 
     pub fn get_view_box(&mut self) -> &mut ViewBox {
@@ -46,8 +54,6 @@ impl View {
         chained: &[char],
         count: u16,
         register: char,
-        path: Option<&std::path::PathBuf>,
-        git_hash: Option<&str>,
         adjusted: bool,
     ) -> Result<()> {
         let mut errors = self.boxes.iter().enumerate().filter_map(|(i, view_box)| {
@@ -58,11 +64,11 @@ impl View {
             return Err(err);
         }
 
-        let status_message = match (mode, path) {
+        let status_message = match (mode, self.get_path()) {
             (Mode::Meta, _) => status_bar.buffer(),
             (Mode::Normal, Some(path)) => {
                 let info_str = "Editing File: ".to_string();
-                let file_size = std::fs::read(path)?.len();
+                let file_size = std::fs::read(path)?.len().to_string();
                 let path = path.to_string_lossy();
 
                 let count_str = if count == 1 {
@@ -77,19 +83,20 @@ impl View {
                 };
                 let chained_str = chained.iter().collect::<String>();
 
-                let git_hash = git_hash.unwrap_or("");
+                let git_hash = self.get_git_hash().unwrap_or("");
 
                 let middle_buffer = (0..(self.width as usize)
                     - info_str.len()
                     - path.len()
                     - 2 // For the 2 quotations
                     - 3 // For the 3 spaces
-                    - file_size.checked_ilog10().unwrap_or(1) as usize
+                    - 1 // For 'b'
+                    - file_size.len()
                     - reg_str.len()
                     - count_str.len()
                     - chained_str.len()
                     - git_hash.len())
-                    .map(|_| " ")
+                    .map(|_| ' ')
                     .collect::<String>();
 
                 format!(
@@ -116,6 +123,8 @@ impl View {
             (Mode::Insert, _) => "-- INSERT --".into(),
             (Mode::Visual, _) => "-- VISUAL --".into(),
         };
+
+        log!("status message:{}", status_message);
         execute!(
             stdout(),
             SetForegroundColor(Color::White),
@@ -324,10 +333,40 @@ impl View {
         let anchor = self.cursor;
         self.cursor = cursor;
 
-        let buffer = self.get_buffer();
+        let buffer = self.get_buffer_mut();
         buffer.replace_contents(str, undo_tree);
 
         self.cursor = anchor;
+    }
+
+    pub fn load_file(&mut self) -> Result<()> {
+        if let Some(path) = self.get_path().cloned() {
+            let buffer = self.get_buffer_mut();
+            if !std::fs::exists(&path)? {
+                std::fs::write(path, buffer.rope.to_string())?;
+                return Ok(());
+            }
+
+            let contents = std::fs::read_to_string(path)?;
+            buffer.rope = Rope::from(contents);
+
+            buffer.lines_for_updating = (0..buffer.len()).map(|_| true).collect::<Vec<bool>>();
+            buffer.cursor = usize::min(buffer.cursor, buffer.rope.len_chars());
+            buffer.has_changed = true;
+        }
+
+        Ok(())
+    }
+
+    pub fn write(&self) -> Result<()> {
+        let buffer = self.get_buffer().to_string();
+        if let Some(path) = self.get_path() {
+            std::fs::write(path, buffer)?;
+        } else {
+            log!("WARNING: Cannot Write Unattached Buffer");
+        }
+
+        Ok(())
     }
 
     pub fn adjust(&mut self) -> bool {
@@ -345,5 +384,25 @@ impl View {
 
     pub const fn set_cursor(&mut self, new: usize) {
         self.cursor = new;
+    }
+
+    pub fn set_path(&mut self, path: Option<PathBuf>) {
+        let git_hash = try_get_git_hash(path.as_ref());
+        let view_box = &mut self.boxes[self.cursor];
+
+        view_box.git_hash = git_hash;
+        view_box.path = path;
+    }
+
+    pub fn get_path(&self) -> Option<&PathBuf> {
+        let view_box = &self.boxes[self.cursor];
+
+        view_box.path.as_ref()
+    }
+
+    pub fn get_git_hash(&self) -> Option<&str> {
+        let view_box = &self.boxes[self.cursor];
+
+        view_box.git_hash.as_deref()
     }
 }

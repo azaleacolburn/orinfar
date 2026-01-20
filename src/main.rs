@@ -30,7 +30,7 @@ use crate::{
         append, cut, first_row, insert, insert_new_line, insert_new_line_above, last_row, paste,
         replace, set_curr_register, undo,
     },
-    io::{Cli, log, log_dir, log_file, try_get_git_hash},
+    io::{Cli, log, log_dir, log_file},
     meta_command::match_meta_command,
     mode::Mode,
     motion::{
@@ -58,10 +58,7 @@ use crossterm::{
     execute,
     terminal::size,
 };
-use std::{
-    io::{Stdout, stdout},
-    path::PathBuf,
-};
+use std::io::{Stdout, stdout};
 
 pub static mut DEBUG: bool = true;
 
@@ -151,13 +148,13 @@ fn main() -> Result<()> {
     let mut count: u16 = 1;
     let mut chained: Vec<char> = vec![];
 
-    let (cli, mut path) = Cli::parse_path()?;
+    let (cli, path) = Cli::parse_path()?;
     unsafe {
         DEBUG = cli.debug;
     }
 
-    let mut git_hash = try_get_git_hash(path.as_ref());
-    io::load_file(path.as_ref(), &mut view)?;
+    view.set_path(path);
+    view.load_file()?;
 
     view.flush(
         &status_bar,
@@ -165,8 +162,6 @@ fn main() -> Result<()> {
         &chained,
         count,
         register_handler.get_curr_reg(),
-        path.as_ref(),
-        git_hash.as_deref(),
         false,
     )?;
 
@@ -179,8 +174,6 @@ fn main() -> Result<()> {
         &mut chained,
         &mut next_operation,
         &all_normal_chars,
-        &mut path,
-        &mut git_hash,
         &mut stdout,
         &mut status_bar,
         &mut register_handler,
@@ -214,8 +207,6 @@ fn program_loop<'a>(
     next_operation: &mut Option<&'a Operator<'a>>,
     all_normal_chars: &[char],
 
-    path: &mut Option<PathBuf>,
-    git_hash: &mut Option<String>,
     stdout: &mut Stdout,
 
     status_bar: &mut StatusBar,
@@ -225,7 +216,7 @@ fn program_loop<'a>(
     mode: &mut Mode,
 ) -> Result<()> {
     'main: loop {
-        let buffer = view.get_buffer();
+        let buffer = view.get_buffer_mut();
         buffer.update_list_reset();
 
         if let Event::Key(event) = read()? {
@@ -306,15 +297,7 @@ fn program_loop<'a>(
                     status_bar.push(c);
                 }
                 (KeyCode::Enter, Mode::Meta) => {
-                    if match_meta_command(
-                        status_bar,
-                        view,
-                        register_handler,
-                        undo_tree,
-                        mode,
-                        git_hash,
-                        path,
-                    )? {
+                    if match_meta_command(status_bar, view, register_handler, undo_tree, mode)? {
                         break 'main;
                     }
                 }
@@ -350,8 +333,6 @@ fn program_loop<'a>(
                 chained,
                 *count,
                 register_handler.get_curr_reg(),
-                path.as_ref(),
-                git_hash.as_deref(),
                 adjusted,
             )?;
         }
