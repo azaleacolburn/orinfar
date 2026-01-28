@@ -343,13 +343,10 @@ fn program_loop<'a>(
 
 /// # Errors
 /// - I/O error if `crossterm::events::read()` fails
-pub fn on_next_input_buffer_only(
-    buffer: &mut Buffer,
-    closure: fn(KeyCode, &mut Buffer),
-) -> Result<()> {
+pub fn on_next_input(buffer: &mut Buffer, callback: fn(KeyCode, &mut Buffer)) -> Result<()> {
     loop {
         if let Event::Key(event) = read()? {
-            closure(event.code, buffer);
+            callback(event.code, buffer);
             break;
         }
     }

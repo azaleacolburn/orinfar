@@ -81,12 +81,7 @@ pub fn word(buffer: &mut Buffer) {
     }
     let mut c = buffer.get_curr_char();
 
-    if c == '\n' && buffer.cursor < buffer.len() - 1 {
-        buffer.cursor += 1;
-        return;
-    }
-
-    let last_legal_char = buffer.len() - 1;
+    let last_legal_char = buffer.rope.len_chars() - 1;
 
     if is_symbol(c) {
         while is_symbol(c) && buffer.cursor < last_legal_char {
@@ -99,6 +94,12 @@ pub fn word(buffer: &mut Buffer) {
     }
 
     while c.is_whitespace() && buffer.cursor < last_legal_char {
+        if c == '\n' {
+            if buffer.cursor < last_legal_char {
+                buffer.cursor += 1;
+            }
+            return;
+        }
         c = unwrap_or_break!(buffer.next_and_char());
     }
 }
@@ -148,16 +149,13 @@ pub fn end_of_word(buffer: &mut Buffer) {
         return;
     }
 
-    let last_legal_char = buffer.len() - 1;
-    if buffer.get_curr_char() == '\n' && buffer.cursor < last_legal_char {
-        buffer.cursor += 1;
-        return;
-    }
-
+    let last_legal_char = buffer.rope.len_chars() - 1;
     let mut next_char = unwrap_or_return!(buffer.get_next_char());
 
-    if buffer.get_curr_char() == '\n' && buffer.cursor < last_legal_char {
-        buffer.cursor += 1;
+    if next_char == '\n' {
+        if buffer.cursor < last_legal_char {
+            buffer.cursor += 2;
+        }
         return;
     }
 

@@ -41,3 +41,16 @@ pub fn on_next_input_buffer_only(
 
     Ok(())
 }
+
+/// # Errors
+/// - I/O error if `crossterm::events::read()` fails
+pub fn on_next_input(buffer: &mut Buffer, callback: fn(KeyCode, &mut Buffer)) -> Result<()> {
+    loop {
+        if let Event::Key(event) = read()? {
+            callback(event.code, buffer);
+            break;
+        }
+    }
+
+    Ok(())
+}
