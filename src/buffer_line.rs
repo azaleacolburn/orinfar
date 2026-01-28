@@ -2,6 +2,7 @@ use crate::{
     DEBUG,
     buffer::Buffer,
     log,
+    motion::end_of_line,
     undo::{Action, UndoTree},
 };
 use ropey::{Rope, RopeSlice};
@@ -39,9 +40,12 @@ impl Buffer {
 
     pub fn get_first_non_whitespace_col(&self) -> usize {
         let mut start_of_line = self.get_start_of_line();
+        let end_of_line = self.get_end_of_line();
         let anchor = start_of_line;
+
         while let Some(c) = self.rope.get_char(start_of_line)
             && c.is_whitespace()
+            && start_of_line < end_of_line
         {
             start_of_line += 1;
         }

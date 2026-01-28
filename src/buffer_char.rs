@@ -33,16 +33,16 @@ impl Buffer {
         self.rope.insert_char(self.cursor, c);
     }
 
-    // Inserts a newline at the current position, then adds spaces to the new line until the last
-    // non-whitespace column lines up
-    //
-    // Increments cursor accordingly
-    //
-    // # Returns
-    // The contents of the newline including the newline character but not including the contents
-    // moved from the previous line
-    //
-    // It returns the contents inserted into the buffer
+    /// Inserts a newline at the current position, then adds spaces to the new line until the last
+    /// non-whitespace column lines up
+    ///
+    /// Increments cursor accordingly
+    ///
+    /// # Returns
+    /// The contents of the newline including the newline character but not including the contents
+    /// moved from the previous line
+    ///
+    /// It returns the contents inserted into the buffer
     pub fn insert_newline(&mut self) -> String {
         let first_col = self.get_first_non_whitespace_col();
         log!("first_col {}", first_col);
