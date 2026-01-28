@@ -18,7 +18,7 @@ use std::{
 #[derive(Debug)]
 pub struct View {
     boxes: Vec<ViewBox>,
-    // represents which index of the view box the cursor is in
+    // Represents which index of the view box the cursor is in
     pub cursor: usize,
     width: u16,
     height: u16,

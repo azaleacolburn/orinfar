@@ -28,6 +28,7 @@ The editor is inspired by Vi, but has a few key differences, so you should read 
 Please read the [user manual](https://github.com/azaleacolburn/orinfar/tree/main/docs/MANUAL.md) before trying to edit text with Orinfar. While this text editor is mostly a subset of Vi, there are plenty of differences, both subtle and unsubtle.
 
 # Implementation
+Eventually I'll get around to writing developer facing documentation.
 
 # Roadmap
 
@@ -41,6 +42,7 @@ I'll specify and revise this list when I get around to specific things and I hav
     - [x] Minimal Register System (not yet documented)
     - [ ] Robust Register System (idk what that means exactly)
     - [ ] Mark System
+    - [x] Multiple View Boxes
     - [ ] Text Objects
 - [ ] Advanced Features
     - [ ] Syntax Highlighting (tree-sitter)

@@ -1,7 +1,7 @@
 use crate::buffer::Buffer;
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, read};
-use std::ops::{Range, RangeBounds};
+use std::ops::RangeBounds;
 
 macro_rules! unwrap_or_return {
     ( $e:expr ) => {

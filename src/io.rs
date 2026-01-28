@@ -1,10 +1,9 @@
 use anyhow::{Result, bail};
-use ropey::Rope;
 use std::{env, fs::OpenOptions, io::Write, path::PathBuf};
 
 use clap::Parser;
 
-use crate::{buffer::Buffer, mode::Mode, view::View};
+use crate::mode::Mode;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]

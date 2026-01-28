@@ -2,7 +2,6 @@ use crate::{
     DEBUG,
     buffer::Buffer,
     log,
-    motion::end_of_line,
     undo::{Action, UndoTree},
 };
 use ropey::{Rope, RopeSlice};
