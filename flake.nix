@@ -3,39 +3,62 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    systems.url = "github:nix-systems/default";
     rust-overlay.url = "github:oxalica/rust-overlay";
-    flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs =
     {
+      self,
       nixpkgs,
-      flake-utils,
+      systems,
       rust-overlay,
-      ...
     }:
-    flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        overlays = [ (import rust-overlay) ];
-        pkgs = import nixpkgs {
-          inherit system overlays;
+    let
+      inherit (nixpkgs) lib;
+      forEachPkgs =
+        f:
+        lib.genAttrs (import systems) (
+          system:
+          f (
+            import nixpkgs {
+              inherit system;
+              overlays = [ (import rust-overlay) ];
+            }
+          )
+        );
+    in
+    {
+      devShells = forEachPkgs (pkgs: {
+        default = pkgs.mkShell {
+          buildInputs = [
+            pkgs.rust-bin.nightly.latest.default
+          ];
         };
-      in
-      {
-        devShells.default =
-          with pkgs;
-          mkShell {
-            # For `nix fmt`
-            buildInputs = [
-              # cargo
-              # clippy
-              # rustup
-              # toolchain
-              rust-bin.nightly.latest.default
-            ];
-          };
-      }
+      });
 
-    );
+      packages = forEachPkgs (pkgs: {
+        default =
+          let
+            p = (lib.importTOML ./Cargo.toml).package;
+            rustPlatform = pkgs.makeRustPlatform {
+              cargo = pkgs.rust-bin.nightly.latest.default;
+              rustc = pkgs.rust-bin.nightly.latest.default;
+            };
+          in
+          rustPlatform.buildRustPackage {
+            pname = p.name;
+            inherit (p) version;
+
+            src = ./.;
+
+            cargoLock.lockFile = ./Cargo.lock;
+
+            meta = {
+              mainProgram = "orinfar";
+              license = lib.licenses.mit;
+            };
+          };
+      });
+    };
 }
