@@ -134,7 +134,7 @@ impl ViewBox {
                 return;
             }
 
-            let last_col = usize::min(self.left + self.width as usize, len);
+            let last_col = usize::min(self.left + self.width as usize - padding_buffer.len(), len);
             log!(
                 "eos {} len {} last_col {} left {}",
                 self.left + self.width as usize,
@@ -213,7 +213,11 @@ impl ViewBox {
         let row = self.buffer.get_row();
 
         let row = self.y + u16::try_from(row - self.top).unwrap();
-        let col = self.x + u16::try_from(col - self.left + left_padding + 1).unwrap();
+        let col = self.x
+            + u16::min(
+                u16::try_from(col - self.left + left_padding + 1).unwrap(),
+                self.width,
+            );
         (col, row)
     }
 
