@@ -96,8 +96,6 @@ impl ViewBox {
             .skip(self.top)
             .take(self.height.into());
 
-        assert!(lines.len() <= self.height.into());
-        #[allow(clippy::cast_possible_wrap)]
         let len_lines = u16::try_from(lines.len()).unwrap();
 
         execute!(stdout, Hide, MoveTo(self.x, self.y))?;
@@ -105,17 +103,17 @@ impl ViewBox {
 
         let clear_str: String = (0..self.width).map(|_| ' ').collect();
 
-        lines.for_each(|(i, (line, should_update))| {
+        lines.for_each(|(line_num, (line, should_update))| {
             if !should_update {
                 execute!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
                 return;
             }
 
-            let i_str = i.to_string();
-            for _ in 0..left_padding - i_str.len() {
+            let line_num = line_num.to_string();
+            for _ in 0..left_padding - line_num.len() {
                 padding_buffer.push(' ');
             }
-            padding_buffer.push_str(&i_str);
+            padding_buffer.push_str(&line_num);
             padding_buffer.push(' ');
 
             execute!(stdout, Print(&clear_str)).unwrap();
@@ -127,23 +125,21 @@ impl ViewBox {
                 Print(padding_buffer.clone()),
             )
             .expect("Crossterm padding buffer print failed");
-            padding_buffer.clear();
 
-            let len = line.len_chars();
-            if len == 0 {
+            let total_line_len = line.len_chars();
+            if total_line_len == 0 {
                 return;
             }
 
-            let last_col = usize::min(self.left + self.width as usize - padding_buffer.len(), len);
-            log!(
-                "eos {} len {} last_col {} left {}",
-                self.left + self.width as usize,
-                len,
-                last_col,
-                self.left
-            );
+            // Number of characters that we're able to display in the current line
+            let display_line_len = self.width as usize - padding_buffer.len();
+            padding_buffer.clear();
+
+            // Last column in the buffer that's being rendered to the screen
+            let last_col = usize::min(self.left + display_line_len, total_line_len);
+
             let line = if self.left >= last_col {
-                String::from("\n")
+                String::from('\n')
             } else {
                 line.slice(self.left..last_col).to_string()
             };
