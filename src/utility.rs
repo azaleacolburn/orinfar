@@ -1,7 +1,6 @@
 use crate::buffer::Buffer;
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, read};
-use std::ops::RangeBounds;
 
 macro_rules! unwrap_or_return {
     ( $e:expr ) => {
@@ -22,7 +21,7 @@ macro_rules! unwrap_or_break {
 }
 
 pub fn is_symbol(c: char) -> bool {
-    let symbols = "$`\'\":~()\\+-=$#^[&]*<@%!{|}>/?.,";
+    let symbols = "$`\'\":;~()\\+-=$#^[&]*<@%!{|}>/?.,";
     symbols.contains(c)
 }
 
