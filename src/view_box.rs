@@ -1,13 +1,9 @@
-use crate::buffer::Buffer;
+use crate::{DEBUG, buffer::Buffer, log};
 use anyhow::Result;
 use crossterm::{
-    cursor::{Hide, MoveDown, MoveTo, MoveToColumn, MoveToRow, SetCursorStyle},
+    cursor::{Hide, MoveDown, MoveTo, MoveToColumn},
     execute,
-    style::{Color, Print, ResetColor, SetForegroundColor},
-    terminal::{
-        Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
-        enable_raw_mode,
-    },
+    style::{Color, Print, SetForegroundColor},
 };
 use std::{
     io::{Stdout, stdout},
@@ -157,9 +153,11 @@ impl ViewBox {
             } else {
                 line.slice(self.left..last_col)
                     .to_string()
-                    .trim()
+                    .trim_matches('\n')
                     .to_string()
             };
+
+            log!("line:{}", line);
 
             execute!(
                 stdout,
