@@ -46,6 +46,8 @@ This command can be entered by pressing `:`.
 # Actions
 Actions are Actions can be broadly separated into three categories:
 
+All commands may be prefixed by a number (any `n` where `n` fits within an unsigned 32-bit number). When a command is executed with a numerical prefix, the entire command is run that many times in sequence.
+
 ## Commands
 Commands are single or multi-character actions that do not wait for a motion to execute. In most cases, they immedianty execute, although some do wait for additional input.
 - `i`: The insert command. Enters the editor into Insert mode. Analogous to the `i` command in Vi.
@@ -91,7 +93,14 @@ The following descriptions of motions only describe the aforementioned independe
 # Non-actions
 ## Visual Commands
 These have no relation to normal mode. They operate in exactly the same way as normal Commands, however they do not affect the buffer, instead only affectly the current view box.
+All visual commands begin with the character `'z'`.
 - `zz`: The centering visual command. Centers the view box around the cursor position vertically. Analogous to the `zz` command in Vi.
+- `zh`: Splits the current view box horizontally, with the new (empty) view box being to the left side.
+- `zv`: Splits the current view box vertically, with the new (empty) view box being to the bottom side.
+- `zl`: Moves focus to the next view box directly to the left of the current one. Does nothing if one doesn't exist.
+- `zr`: Moves focus to the next view box directly to the right of the current one. Does nothing if one doesn't exist.
+- `zu`: Moves focus to the next view box directly above the current one. Does nothing if one doesn't exist.
+- `zd`: Moves focus to the next view box directly below the current one. Does nothing if one doesn't exist.
 
 ## Normal Mode
 - `:`: Enters Meta mode. 
@@ -117,6 +126,9 @@ These have no relation to normal mode. They operate in exactly the same way as n
 - `right`: Moves the cursor right one character (or column). Does not move on to the beginning of the next line or change the cursor's row at all.
 - `up`: Moves the cursor up one rw, keeping the column the same, unless the new current line is shorter, in which case it moves to the last column.
 - `down`: Moves the cursor down one row, keeping the column the same, unless the new current line is shorter, in which case it moves to the last column.
+
+# View Boxes
+A view box displays a left-pinned gutter containing line numbers. The
 
 # Definitions
 - "current character": The character which the cursor is on. When in normal mode, it is character which the solid cursor block appears over.

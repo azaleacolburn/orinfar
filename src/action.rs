@@ -32,14 +32,20 @@ pub fn match_action<'a>(
         .find(|motion| motion.name == chained.iter().collect::<String>())
     {
         let buffer = view.get_buffer_mut();
-        command.execute(buffer, register_handler, mode, undo_tree);
-        chained.clear();
+        (0..*count).for_each(|_| {
+            command.execute(buffer, register_handler, mode, undo_tree);
+        });
+
+        reset(chained, count, next_operation);
     } else if let Some(view_command) = view_commands
         .iter()
         .find(|command| command.name == chained.iter().collect::<String>())
     {
-        view_command.execute(view);
-        chained.clear();
+        (0..*count).for_each(|_| {
+            view_command.execute(view);
+        });
+
+        reset(chained, count, next_operation);
     } else if let Some(operation) = next_operation {
         if let Some(motion) = motions
             .iter()
@@ -49,9 +55,7 @@ pub fn match_action<'a>(
             (0..*count).for_each(|_| {
                 operation.execute(motion, buffer, register_handler, mode, undo_tree);
             });
-            chained.clear();
-            *count = 1;
-            *next_operation = None;
+            reset(chained, count, next_operation);
         } else if c
             == operation
                 .name
@@ -60,10 +64,12 @@ pub fn match_action<'a>(
                 .expect("No chars in operation")
         {
             let buffer = view.get_buffer_mut();
-            operation.entire_line(buffer, register_handler, mode, undo_tree);
-            chained.clear();
-            *count = 1;
-            *next_operation = None;
+
+            (0..*count).for_each(|_| {
+                operation.entire_line(buffer, register_handler, mode, undo_tree);
+            });
+
+            reset(chained, count, next_operation);
         }
     } else if chained.len() == 1
         && let Some(motion) = motions
@@ -71,8 +77,12 @@ pub fn match_action<'a>(
             .find(|motion| motion.name.chars().next().expect("No chars in motion") == c)
     {
         let buffer = view.get_buffer_mut();
-        motion.apply(buffer);
-        chained.clear();
+
+        (0..*count).for_each(|_| {
+            motion.apply(buffer);
+        });
+
+        reset(chained, count, next_operation);
     }
     if let Some(operator) = operators
         .iter()
@@ -80,6 +90,16 @@ pub fn match_action<'a>(
     {
         *next_operation = Some(operator);
     }
+}
+
+pub fn reset<'a>(
+    chained: &mut Vec<char>,
+    count: &mut u16,
+    next_operation: &mut Option<&'a Operator<'a>>,
+) {
+    chained.clear();
+    *count = 1;
+    *next_operation = None;
 }
 
 pub fn enumerate_normal_chars(
