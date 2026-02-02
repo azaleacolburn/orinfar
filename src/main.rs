@@ -42,8 +42,7 @@ use crate::{
     register::RegisterHandler,
     status_bar::StatusBar,
     undo::{Action, UndoTree},
-    view::View,
-    view_box::{cleanup, setup},
+    view::{View, cleanup, setup},
     view_command::{
         ViewCommand, center_viewbox_on_cursor, delete_curr_view_box, move_down_one_view_box,
         move_left_one_view_box, move_right_one_view_box, move_up_one_view_box,

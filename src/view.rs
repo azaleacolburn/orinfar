@@ -4,10 +4,13 @@ use crate::{
 };
 use anyhow::Result;
 use crossterm::{
-    cursor::{MoveTo, MoveToColumn, MoveToRow, Show},
+    cursor::{MoveTo, MoveToColumn, MoveToRow, SetCursorStyle, Show},
     execute,
-    style::{Color, Print, SetForegroundColor},
-    terminal::{Clear, ClearType},
+    style::{Color, Print, ResetColor, SetForegroundColor},
+    terminal::{
+        Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
+        enable_raw_mode,
+    },
 };
 use ropey::Rope;
 use std::{
@@ -405,4 +408,40 @@ impl View {
 
         view_box.git_hash.as_deref()
     }
+}
+
+pub fn cleanup() -> Result<()> {
+    disable_raw_mode()?;
+    execute!(
+        stdout(),
+        ResetColor,
+        Clear(ClearType::All),
+        SetCursorStyle::SteadyBlock,
+        LeaveAlternateScreen
+    )?;
+
+    Ok(())
+}
+
+pub fn setup(rows: u16, cols: u16) -> Result<()> {
+    execute!(
+        stdout(),
+        EnterAlternateScreen,
+        Clear(ClearType::All),
+        MoveToRow(0),
+        SetForegroundColor(Color::Blue),
+    )?;
+
+    // Fill entire screen with spaces with the background color
+    for row in 0..rows {
+        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+    }
+    execute!(stdout(), MoveTo(0, 0))?;
+    for row in 0..rows {
+        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+    }
+    execute!(stdout(), MoveTo(0, 0))?;
+    enable_raw_mode()?;
+
+    Ok(())
 }

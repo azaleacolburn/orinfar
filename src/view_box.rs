@@ -1,4 +1,4 @@
-use crate::{DEBUG, buffer::Buffer, log};
+use crate::buffer::Buffer;
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn, MoveToRow, SetCursorStyle},
@@ -110,7 +110,8 @@ impl ViewBox {
             }
 
             let line_num = line_num.to_string();
-            for _ in 0..left_padding - line_num.len() {
+            // `-1` for the last space character that gets pushed
+            for _ in 0..left_padding - line_num.len() - 1 {
                 padding_buffer.push(' ');
             }
             padding_buffer.push_str(&line_num);
@@ -125,30 +126,47 @@ impl ViewBox {
                 Print(padding_buffer.clone()),
             )
             .expect("Crossterm padding buffer print failed");
+            padding_buffer.clear();
 
-            let total_line_len = line.len_chars();
+            let mut total_line_len = line.len_chars();
+            if total_line_len > 0
+                && let Some(c) = line.get_char(total_line_len - 1)
+                && c == '\n'
+            {
+                total_line_len -= 1;
+            }
+
             if total_line_len == 0 {
+                execute!(stdout, MoveToColumn(self.x), MoveDown(1))
+                    .expect("Crossterm padding buffer print failed");
                 return;
             }
 
             // Number of characters that we're able to display in the current line
-            let display_line_len = self.width as usize - padding_buffer.len();
-            padding_buffer.clear();
+            let display_line_len = self.width as usize - left_padding;
 
             // Last column in the buffer that's being rendered to the screen
             let last_col = usize::min(self.left + display_line_len, total_line_len);
 
+            // NOTE
+            // What was happening here waswhen we cropped the line
+            // we also cropped the newline character at the
+            // end, meaning that we never moved down to the next row!
             let line = if self.left >= last_col {
-                String::from('\n')
+                String::new()
             } else {
-                line.slice(self.left..last_col).to_string()
+                line.slice(self.left..last_col)
+                    .to_string()
+                    .trim()
+                    .to_string()
             };
 
             execute!(
                 stdout,
                 SetForegroundColor(Color::Blue),
                 Print(line),
-                MoveToColumn(self.x)
+                MoveToColumn(self.x),
+                MoveDown(1)
             )
             .expect("Crossterm print line command failed");
         });
@@ -157,7 +175,7 @@ impl ViewBox {
         if len_lines < self.height {
             execute!(stdout, MoveTo(self.x, self.y + len_lines))?;
             (len_lines..self.height).for_each(|_| {
-                execute!(stdout, MoveToColumn(self.x), Print(&clear_str), MoveDown(1))
+                execute!(stdout, Print(&clear_str), MoveDown(1), MoveToColumn(self.x))
                     .expect("Crossterm clearing trailing lines failed");
             });
         }
@@ -177,18 +195,11 @@ impl ViewBox {
         Ok(())
     }
 
-    pub fn clear_view_box_line(&self) -> Result<()> {
-        let str: String = (0..self.width).map(|_| ' ').collect();
-        execute!(stdout(), Print(str))?;
-
-        Ok(())
-    }
-
     pub fn left_padding(&self) -> usize {
-        (self.top + self.height as usize).to_string().len()
+        (self.top + self.height as usize).to_string().len() + 1
     }
 
-    pub const fn get_lower_right(&self) -> (u16, u16) {
+    pub const fn _get_lower_right(&self) -> (u16, u16) {
         (self.x + self.width, self.y + self.height)
     }
 
@@ -211,49 +222,9 @@ impl ViewBox {
         let row = self.y + u16::try_from(row - self.top).unwrap();
         let col = self.x
             + u16::min(
-                u16::try_from(col - self.left + left_padding + 1).unwrap(),
+                u16::try_from(col - self.left + left_padding).unwrap(),
                 self.width,
             );
         (col, row)
     }
-
-    pub const fn buffer(&mut self) -> &mut Buffer {
-        &mut self.buffer
-    }
-}
-
-pub fn cleanup() -> Result<()> {
-    disable_raw_mode()?;
-    execute!(
-        stdout(),
-        ResetColor,
-        Clear(ClearType::All),
-        SetCursorStyle::SteadyBlock,
-        LeaveAlternateScreen
-    )?;
-
-    Ok(())
-}
-
-pub fn setup(rows: u16, cols: u16) -> Result<()> {
-    execute!(
-        stdout(),
-        EnterAlternateScreen,
-        Clear(ClearType::All),
-        MoveToRow(0),
-        SetForegroundColor(Color::Blue),
-    )?;
-
-    // Fill entire screen with spaces with the background color
-    for row in 0..rows {
-        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
-    }
-    execute!(stdout(), MoveTo(0, 0))?;
-    for row in 0..rows {
-        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
-    }
-    execute!(stdout(), MoveTo(0, 0))?;
-    enable_raw_mode()?;
-
-    Ok(())
 }
