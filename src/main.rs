@@ -107,11 +107,13 @@ fn main() -> Result<()> {
         Cmd::new("p", paste),
         Cmd::new("\"", set_curr_register),
     ];
+
     let operators: &[Operator] = &[
         Operator::new("d", delete),
         Operator::new("y", yank),
         Operator::new("c", change),
     ];
+
     let motions: &[Motion] = &[
         // HJKL
         Motion::inclusive("h", prev_char),
@@ -232,6 +234,11 @@ fn program_loop<'a>(
                     *count *= 10;
                     *count += c;
                 }
+                // TODO
+                // Make a type of action that takes a reference to the status bar, the buffer, the
+                // mode, and the search string
+                //
+                // Or find a better way of handling this
                 (KeyCode::Char(':'), Mode::Normal) => {
                     *mode = Mode::Meta;
                     status_bar.push(':');

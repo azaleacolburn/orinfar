@@ -1,9 +1,7 @@
-use anyhow::{Result, bail};
-use std::{env, fs::OpenOptions, io::Write, path::PathBuf};
-
-use clap::Parser;
-
 use crate::mode::Mode;
+use anyhow::{Result, bail};
+use clap::Parser;
+use std::{env, fs::OpenOptions, io::Write, path::PathBuf};
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
