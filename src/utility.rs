@@ -56,3 +56,7 @@ pub fn on_next_input_view_box(
 
     Ok(())
 }
+
+pub fn last_char(str: &str) -> char {
+    str.chars().last().unwrap()
+}

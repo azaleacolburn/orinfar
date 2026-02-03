@@ -220,6 +220,8 @@ fn program_loop<'a>(
     view: &mut View,
     mode: &mut Mode,
 ) -> Result<()> {
+    let mut last_count = 1;
+    let mut last_chained: Vec<char> = vec![];
     'main: loop {
         let buffer = view.get_buffer_mut();
         buffer.update_list_reset();
@@ -233,6 +235,7 @@ fn program_loop<'a>(
                     }
                     *count *= 10;
                     *count += c;
+                    log!("count: {}", count);
                 }
                 // TODO
                 // Make a type of action that takes a reference to the status bar, the buffer, the
@@ -248,13 +251,33 @@ fn program_loop<'a>(
                     status_bar.push('/');
                 }
                 (KeyCode::Char('n'), Mode::Normal) => buffer.goto_next_string(search_str),
-
+                (KeyCode::Char('.'), Mode::Normal) => match_action(
+                    chained,
+                    next_operation,
+                    count,
+                    &mut last_chained,
+                    &mut last_count,
+                    register_handler,
+                    undo_tree,
+                    view,
+                    mode,
+                    commands,
+                    operators,
+                    motions,
+                    view_commands,
+                ),
                 (KeyCode::Char(c), Mode::Normal) => {
+                    if !all_normal_chars.contains(&c) {
+                        continue;
+                    }
+                    chained.push(c);
+
                     match_action(
-                        c,
                         chained,
                         next_operation,
                         count,
+                        &mut last_chained,
+                        &mut last_count,
                         register_handler,
                         undo_tree,
                         view,
@@ -263,7 +286,6 @@ fn program_loop<'a>(
                         operators,
                         motions,
                         view_commands,
-                        all_normal_chars,
                     );
                 }
 

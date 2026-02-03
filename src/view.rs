@@ -127,7 +127,6 @@ impl View {
             (Mode::Visual, _) => "-- VISUAL --".into(),
         };
 
-        log!("status message:{}", status_message);
         execute!(
             stdout(),
             SetForegroundColor(Color::White),
@@ -184,18 +183,8 @@ impl View {
         let view_box = self.get_view_box();
 
         let (x, y) = (view_box.x, view_box.y);
-        log!("here");
-        let predicate = |view_box: &ViewBox| -> bool {
-            log!(
-                "vbx {} vby {} vbh {} y {} x {}",
-                view_box.x,
-                view_box.y,
-                view_box.height,
-                y,
-                x
-            );
-            view_box.x == x && view_box.y + view_box.height == y
-        };
+        let predicate =
+            |view_box: &ViewBox| -> bool { view_box.x == x && view_box.y + view_box.height == y };
 
         self.position_of_box(predicate)
     }
@@ -204,17 +193,8 @@ impl View {
         let view_box = self.get_view_box();
 
         let (x, y) = (view_box.x, view_box.y);
-        let predicate = |view_box: &ViewBox| -> bool {
-            log!(
-                "vbx {} vby {} vbh {} y {} x {}",
-                view_box.x,
-                view_box.y,
-                view_box.height,
-                y,
-                x
-            );
-            view_box.y == y && view_box.x + view_box.width == x
-        };
+        let predicate =
+            |view_box: &ViewBox| -> bool { view_box.y == y && view_box.x + view_box.width == x };
 
         self.position_of_box(predicate)
     }
@@ -223,17 +203,7 @@ impl View {
         let view_box = self.get_view_box();
 
         let (x, y) = view_box.get_upper_right();
-        let predicate = |view_box: &ViewBox| -> bool {
-            log!(
-                "vbx {} vby {} vbh {} y {} x {}",
-                view_box.x,
-                view_box.y,
-                view_box.height,
-                y,
-                x
-            );
-            view_box.y == y && view_box.x == x
-        };
+        let predicate = |view_box: &ViewBox| -> bool { view_box.y == y && view_box.x == x };
 
         self.position_of_box(predicate)
     }
@@ -284,17 +254,11 @@ impl View {
         let mut new_view_box = ViewBox::new(view_box.width, half_height, view_box.x, half_y);
 
         let original_height = view_box.height;
-        log!(
-            "half_height {} original_height {}",
-            half_height,
-            original_height
-        );
 
         view_box.height = half_height;
         if !original_height.is_multiple_of(2) {
             new_view_box.height += 1;
         }
-        log!("new height {}", new_view_box.height);
 
         self.boxes.push(new_view_box);
     }
@@ -308,17 +272,11 @@ impl View {
         let mut new_view_box = ViewBox::new(half_width, view_box.height, half_x, view_box.y);
 
         let original_width = view_box.width;
-        log!(
-            "half_width {} original_width {}",
-            half_width,
-            original_width
-        );
 
         view_box.width = half_width;
         if !original_width.is_multiple_of(2) {
             new_view_box.width += 1;
         }
-        log!("new width {}", new_view_box.width);
 
         self.boxes.push(new_view_box);
     }

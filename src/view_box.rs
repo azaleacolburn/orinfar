@@ -1,4 +1,4 @@
-use crate::{DEBUG, buffer::Buffer, log};
+use crate::buffer::Buffer;
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn},
@@ -156,8 +156,6 @@ impl ViewBox {
                     .trim_matches('\n')
                     .to_string()
             };
-
-            log!("line:{}", line);
 
             execute!(
                 stdout,
