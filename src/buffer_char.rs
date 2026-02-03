@@ -282,4 +282,30 @@ impl Buffer {
             undo_tree.new_action_merge(action);
         }
     }
+
+    pub fn goto_next_string(&mut self, str: &[char]) {
+        let mut i = 0;
+        let mut cursor = self.cursor;
+        if self
+            .rope
+            .slice(self.cursor..self.cursor + str.len())
+            .to_string()
+            == str.iter().collect::<String>()
+            && self.cursor < self.rope.len_chars()
+        {
+            cursor += 1;
+        }
+        while let Some(s) = self.rope.get_char(cursor + i) {
+            if s == str[i] {
+                i += 1;
+            } else {
+                cursor += 1;
+                i = 0;
+            }
+            if i == str.len() {
+                self.cursor = cursor;
+                return;
+            }
+        }
+    }
 }

@@ -68,7 +68,7 @@ impl View {
         }
 
         let status_message = match (mode, self.get_path()) {
-            (Mode::Meta, _) => status_bar.buffer(),
+            (Mode::Meta | Mode::Search, _) => status_bar.buffer(),
             (Mode::Normal, Some(path)) => {
                 let info_str = "Editing File: ".to_string();
                 let file_size = std::fs::read(path)?.len().to_string();
@@ -137,7 +137,7 @@ impl View {
         )?;
 
         // TODO Figure out what was going on here
-        let (new_col, new_row) = if matches!(mode, Mode::Meta) {
+        let (new_col, new_row) = if matches!(mode, Mode::Meta | Mode::Search) {
             (status_bar.idx(), self.height + 1)
         } else {
             let view_box = &self.boxes[self.cursor];

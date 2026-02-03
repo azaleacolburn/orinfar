@@ -1,4 +1,4 @@
-use crate::buffer::Buffer;
+use crate::{buffer::Buffer, view_box::ViewBox};
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, read};
 
@@ -43,10 +43,13 @@ pub fn on_next_input_buffer_only(
 
 /// # Errors
 /// - I/O error if `crossterm::events::read()` fails
-pub fn on_next_input(buffer: &mut Buffer, callback: fn(KeyCode, &mut Buffer)) -> Result<()> {
+pub fn on_next_input_view_box(
+    view_box: &mut ViewBox,
+    callback: fn(KeyCode, &mut ViewBox),
+) -> Result<()> {
     loop {
         if let Event::Key(event) = read()? {
-            callback(event.code, buffer);
+            callback(event.code, view_box);
             break;
         }
     }

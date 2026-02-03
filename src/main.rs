@@ -146,6 +146,7 @@ fn main() -> Result<()> {
     let mut mode = Mode::Normal;
     let mut count: u16 = 1;
     let mut chained: Vec<char> = vec![];
+    let mut search_str: Vec<char> = vec![];
 
     let (cli, path) = Cli::parse_path()?;
     unsafe {
@@ -173,6 +174,7 @@ fn main() -> Result<()> {
         &mut chained,
         &mut next_operation,
         &all_normal_chars,
+        &mut search_str,
         &mut stdout,
         &mut status_bar,
         &mut register_handler,
@@ -206,6 +208,8 @@ fn program_loop<'a>(
     next_operation: &mut Option<&'a Operator<'a>>,
     all_normal_chars: &[char],
 
+    search_str: &mut Vec<char>,
+
     stdout: &mut Stdout,
 
     status_bar: &mut StatusBar,
@@ -217,7 +221,6 @@ fn program_loop<'a>(
     'main: loop {
         let buffer = view.get_buffer_mut();
         buffer.update_list_reset();
-
         if let Event::Key(event) = read()? {
             match (event.code, mode.clone()) {
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
@@ -233,6 +236,11 @@ fn program_loop<'a>(
                     *mode = Mode::Meta;
                     status_bar.push(':');
                 }
+                (KeyCode::Char('/'), Mode::Normal) => {
+                    *mode = Mode::Search;
+                    status_bar.push('/');
+                }
+                (KeyCode::Char('n'), Mode::Normal) => buffer.goto_next_string(search_str),
 
                 (KeyCode::Char(c), Mode::Normal) => {
                     match_action(
@@ -292,24 +300,30 @@ fn program_loop<'a>(
                     undo_tree.new_action(action);
                 }
 
-                (KeyCode::Char(c), Mode::Meta) => {
-                    status_bar.push(c);
-                }
                 (KeyCode::Enter, Mode::Meta) => {
                     if match_meta_command(status_bar, view, register_handler, undo_tree, mode)? {
                         break 'main;
                     }
                 }
-                (KeyCode::Esc, Mode::Meta) => {
+
+                (KeyCode::Char(c), Mode::Meta | Mode::Search) => {
+                    status_bar.push(c);
+                }
+                (KeyCode::Esc, Mode::Meta | Mode::Search) => {
                     *mode = Mode::Normal;
                     status_bar.clear();
                 }
-                (KeyCode::Backspace, Mode::Meta) => {
+                (KeyCode::Backspace, Mode::Meta | Mode::Search) => {
                     status_bar.delete();
                 }
-                // TODO Update buffer-line
-                // Exists to prevent the arrow keys from working for now
                 (_, Mode::Meta) => {}
+
+                (KeyCode::Enter, Mode::Search) => {
+                    *search_str = status_bar.buffer().split_at(1).1.chars().collect();
+                    *mode = Mode::Normal;
+                    status_bar.clear();
+                }
+
                 (KeyCode::Left, _) => {
                     buffer.prev_char();
                 }

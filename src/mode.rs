@@ -9,6 +9,7 @@ pub enum Mode {
     Normal,
     Insert,
     Meta,
+    Search,
     Visual,
 }
 
@@ -24,6 +25,12 @@ impl Mode {
         execute!(stdout(), SetCursorStyle::SteadyBlock)
             .expect("Crossterm steady block command failed");
     }
+
+    pub fn search(&mut self) {
+        *self = Self::Search;
+        execute!(stdout(), SetCursorStyle::SteadyBlock)
+            .expect("Crossterm steady block command failed");
+    }
 }
 
 impl Display for Mode {
@@ -32,6 +39,7 @@ impl Display for Mode {
             Self::Normal => "normal",
             Self::Insert => "insert",
             Self::Meta => "meta",
+            Self::Search => "search",
             Self::Visual => "visual",
         };
 
