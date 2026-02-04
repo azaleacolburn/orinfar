@@ -1,4 +1,4 @@
-use crate::{DEBUG, buffer::Buffer, log};
+use crate::buffer::Buffer;
 use std::{ops::RangeBounds, slice::SliceIndex};
 
 impl Buffer {

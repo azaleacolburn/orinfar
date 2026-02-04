@@ -22,11 +22,10 @@ pub fn match_action<'a>(
     motions: &[Motion],
     view_commands: &[ViewCommand],
 ) {
-    let last = match chained.last() {
+    let last = *match chained.last() {
         Some(c) => c,
         None => return,
-    }
-    .clone();
+    };
     let buffer = view.get_buffer_mut();
 
     if let Some(command) = commands
@@ -87,7 +86,7 @@ pub fn reset<'a>(
     last_chained: &mut Vec<char>,
     last_count: &mut u16,
 ) {
-    *last_chained = chained.to_vec();
+    last_chained.clone_from(chained);
     *last_count = *count;
 
     chained.clear();

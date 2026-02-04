@@ -150,17 +150,6 @@ impl View {
 }
 
 impl View {
-    pub const fn get_lower_right(&self) -> (u16, u16) {
-        (self.width, self.height)
-    }
-
-    pub fn find_box<P>(&self, predicate: P) -> Option<&ViewBox>
-    where
-        P: FnMut(&&ViewBox) -> bool,
-    {
-        self.boxes.iter().find(predicate)
-    }
-
     pub fn position_of_box<P>(&self, predicate: P) -> Option<usize>
     where
         P: FnMut(&ViewBox) -> bool,
@@ -335,16 +324,8 @@ impl View {
         view_box.adjust()
     }
 
-    pub const fn cursor_to_last(&mut self) {
-        self.set_cursor(self.boxes_len() - 1);
-    }
-
     pub const fn boxes_len(&self) -> usize {
         self.boxes.len()
-    }
-
-    pub const fn set_cursor(&mut self, new: usize) {
-        self.cursor = new;
     }
 
     pub fn set_path(&mut self, path: Option<PathBuf>) {

@@ -52,12 +52,9 @@ use crate::{
 use anyhow::Result;
 use commands::Command as Cmd;
 use crossterm::{
-    cursor::SetCursorStyle,
     event::{Event, KeyCode, read},
-    execute,
     terminal::size,
 };
-use std::io::{Stdout, stdout};
 
 pub static mut DEBUG: bool = true;
 
@@ -71,8 +68,6 @@ fn main() -> Result<()> {
         return Err(err.into());
     }
     std::fs::File::create(log_file())?;
-
-    let mut stdout = stdout();
 
     let mut undo_tree = UndoTree::new();
     let mut register_handler = RegisterHandler::new();
@@ -177,7 +172,6 @@ fn main() -> Result<()> {
         &mut next_operation,
         &all_normal_chars,
         &mut search_str,
-        &mut stdout,
         &mut status_bar,
         &mut register_handler,
         &mut undo_tree,
@@ -212,8 +206,6 @@ fn program_loop<'a>(
 
     search_str: &mut Vec<char>,
 
-    stdout: &mut Stdout,
-
     status_bar: &mut StatusBar,
     register_handler: &mut RegisterHandler,
     undo_tree: &mut UndoTree,
@@ -242,7 +234,7 @@ fn program_loop<'a>(
                     status_bar.push(':');
                 }
                 (KeyCode::Char('/'), Mode::Normal) => {
-                    *mode = Mode::Search;
+                    mode.search();
                     status_bar.push('/');
                 }
                 (KeyCode::Char('n'), Mode::Normal) => buffer.goto_next_string(search_str),
@@ -293,8 +285,7 @@ fn program_loop<'a>(
                     if buffer.cursor != buffer.get_start_of_line() {
                         buffer.cursor -= 1;
                     }
-                    *mode = Mode::Normal;
-                    execute!(stdout, SetCursorStyle::SteadyBlock)?;
+                    mode.normal();
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
                     buffer.backspace(undo_tree);
@@ -334,7 +325,7 @@ fn program_loop<'a>(
                     status_bar.push(c);
                 }
                 (KeyCode::Esc, Mode::Meta | Mode::Search) => {
-                    *mode = Mode::Normal;
+                    mode.normal();
                     status_bar.clear();
                 }
                 (KeyCode::Backspace, Mode::Meta | Mode::Search) => {
@@ -344,7 +335,7 @@ fn program_loop<'a>(
 
                 (KeyCode::Enter, Mode::Search) => {
                     *search_str = status_bar.buffer().split_at(1).1.chars().collect();
-                    *mode = Mode::Normal;
+                    mode.normal();
                     status_bar.clear();
                 }
 

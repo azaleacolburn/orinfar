@@ -18,7 +18,7 @@ impl RegisterHandler {
         }
     }
 
-    pub fn init_reg(&mut self, reg: char, value: &impl ToString) {
+    pub fn _init_reg(&mut self, reg: char, value: &impl ToString) {
         self.current_register = reg;
         self.set_reg(value.to_string());
     }
@@ -55,7 +55,7 @@ impl RegisterHandler {
         self.current_register
     }
 
-    pub const fn reset_curr_register(&mut self) {
+    pub const fn _reset_curr_register(&mut self) {
         self.current_register = 'a';
     }
 }
