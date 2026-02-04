@@ -6,6 +6,7 @@ edition = "2024"
 description = "A Text Editor For Witches"
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/azaleacolburn/orinfar"
 authors = ["Azalea Colburn azaleacolburn@gmail.com"]
 keywords = ["text", "editor", "files", "vi", "vim"]
 
