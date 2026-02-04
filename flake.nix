@@ -32,7 +32,7 @@
       devShells = forEachPkgs (pkgs: {
         default = pkgs.mkShell {
           buildInputs = [
-            pkgs.rust-bin.nightly.latest.default
+            pkgs.rust-bin.stable.latest.default
           ];
         };
       });
@@ -42,8 +42,8 @@
           let
             p = (lib.importTOML ./Cargo.toml).package;
             rustPlatform = pkgs.makeRustPlatform {
-              cargo = pkgs.rust-bin.nightly.latest.default;
-              rustc = pkgs.rust-bin.nightly.latest.default;
+              cargo = pkgs.rust-bin.stable.latest.default;
+              rustc = pkgs.rust-bin.stable.latest.default;
             };
           in
           rustPlatform.buildRustPackage {

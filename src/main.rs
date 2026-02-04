@@ -1,6 +1,3 @@
-#![feature(panic_update_hook)]
-
-// Needs to be defined first
 #[macro_use]
 mod utility;
 mod action;
