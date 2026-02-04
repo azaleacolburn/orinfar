@@ -41,12 +41,26 @@ The meta-commands are as follows:
 - `s/[search]/[substitute]`: The substitute operator. Searches to current buffer for the given `[search]` string, then replaces each instance with the `[substitute]` string.
 - `d`: The directory operator. Clears the buffer, replacing its contents with a list of every item in the current directory (either the directory of the attatched file, or the directory where the program was run), delimited by newline characters. If the cursor is outside the bounds of the new buffer contents, the cursor is placed at the beginning of the buffer. This can be trivially undone (`u`) or the attatched file reloaded if applicable (`:l`).
 
-This command can be entered by pressing `:`.
+This mode can be entered by pressing `:` in Normal mode and exited to Normal mode by pressing `esc`.
+
+## Search
+This mode is very similar to Meta mode. In this mode, you can type a string that you want to search for into the status bar, in much the same way that you type meta-commands into the status bar in Meta mode.
+
+This mode can be entered by pressing `/` in Normal mode.
+
+When the `enter` key is pressed in this mode, the `search_string` is set and the editor is returned to Normal mode.
+To move your cursor to the first character of the next occurance of the current `search_string` in the current buffer, press `n` in Normal mode.
+
+This mode can be exited to Normal mode without setting the search string by pressing `esc`.
+
+> [!NOTE]
+> Search mode is for setting the text to be searched for, not for actually searching the buffer for text.
 
 # Actions
 Actions are Actions can be broadly separated into three categories:
 
 All commands may be prefixed by a number (any `n` where `n` fits within an unsigned 32-bit number). When a command is executed with a numerical prefix, the entire command is run that many times in sequence.
+The `.` key can be pressed to repeat the previous action. `.` itself it not an action and so will not repeat itself.
 
 ## Commands
 Commands are single or multi-character actions that do not wait for a motion to execute. In most cases, they immedianty execute, although some do wait for additional input.
@@ -104,31 +118,35 @@ All visual commands begin with the character `'z'`.
 
 ## Normal Mode
 - `:`: Enters Meta mode. 
-- `esc`: Clears the current chain of characters and sets the current count to 1. For example pressing `d`, `esc`, and then `d` will not delete the current line. Subsequently pressing `d` will delete the current line.
+- `/`: Enters Search mode.
+- `n`: Move the cursor to the first character of the next occurance of the `search_string` in the current buffer.
+- `[esc]`: Clears the current chain of characters and sets the current count to 1. For example pressing `d`, `esc`, and then `d` will not delete the current line. Subsequently pressing `d` will delete the current line.
 
 ## Insert Mode
-- `esc`: Enters Normal mode.
-- `enter`: Inserts a newline character to the current cursor position. In addition to this, it inserts spaces to the new line after the newline character but before the text pulled from the old line to the new line, such that the first non-whitespace column of the new line is the same as the first non-whitespace column of the old line.
-- `backspace`: Deletes the current character, moving back the cursor accordingly. If the deleted character is a space character (` `), then in addition to deleting it, subsequent (backwards) space characters will be deleted to align the number of spaces to 4 spaces. If a multiple of 4 spaces were present initially, 4 spaces will be deleted. For example, pressing delete when the following texts are before the cursor will lead to the following results: `hello world    ` (4 spaces)=> `hello world`; `hello world     ` (5 spaces) => `hello world    `. Where the arrows represent the backspace transformation.
-- `tab`: Inserts 4 spaces at the current cursor position, incrementing the cursor accordingly.
+- `[esc]`: Enters Normal mode.
+- `[enter]`: Inserts a newline character to the current cursor position. In addition to this, it inserts spaces to the new line after the newline character but before the text pulled from the old line to the new line, such that the first non-whitespace column of the new line is the same as the first non-whitespace column of the old line.
+- `[backspace]`: Deletes the current character, moving back the cursor accordingly. If the deleted character is a space character (` `), then in addition to deleting it, subsequent (backwards) space characters will be deleted to align the number of spaces to 4 spaces. If a multiple of 4 spaces were present initially, 4 spaces will be deleted. For example, pressing delete when the following texts are before the cursor will lead to the following results: `hello world    ` (4 spaces)=> `hello world`; `hello world     ` (5 spaces) => `hello world    `. Where the arrows represent the backspace transformation.
+- `[tab]`: Inserts 4 spaces at the current cursor position, incrementing the cursor accordingly.
 - `[c]`: (Any [character](https://doc.rust-lang.org/nightly/std/primitive.char.html)) Inserts that `[c]` into the buffer at the current cursor position, incrementing the cursor accordingly.
 
 ## Meta Mode
 - `[c]`: (Any [character](https://doc.rust-lang.org/nightly/std/primitive.char.html)) Inserts that `[c]` into the status line buffer at the current status line cursor position, incrementing the cursor accordingly.
-- `esc`: Enters Normal mode and clears the status bar buffer.
-- `enter`: Executes each command in the status line character by character, breaking as soom an a conclusive command is run. Then enters Normal mode and clears the status bar buffer.
-- `backspace`: Deletes the current character, moving back the cursor accordingly.
-- `left`: Moves the status line cursor left one character.
-- `right`: Moves the status line cursor right one character.
+- `[esc]`: Enters Normal mode and clears the status bar buffer.
+- `[enter]`: Executes each command in the status line character by character, breaking as soom an a conclusive command is run. Then enters Normal mode and clears the status bar buffer.
+- `[backspace]`: Deletes the current character, moving back the cursor accordingly.
+- `[left]`: Moves the status line cursor left one character.
+- `[right]`: Moves the status line cursor right one character.
 
 ## Normal, Insert
-- `left`: Moves the cursor left one character (or column). Does not move on to the end of the previous line or change the cursor's row at all.
-- `right`: Moves the cursor right one character (or column). Does not move on to the beginning of the next line or change the cursor's row at all.
-- `up`: Moves the cursor up one rw, keeping the column the same, unless the new current line is shorter, in which case it moves to the last column.
-- `down`: Moves the cursor down one row, keeping the column the same, unless the new current line is shorter, in which case it moves to the last column.
+- `[left]`: Moves the cursor left one character (or column). Does not move on to the end of the previous line or change the cursor's row at all.
+- `[right]`: Moves the cursor right one character (or column). Does not move on to the beginning of the next line or change the cursor's row at all.
+- `[up]`: Moves the cursor up one rw, keeping the column the same, unless the new current line is shorter, in which case it moves to the last column.
+- `[down]`: Moves the cursor down one row, keeping the column the same, unless the new current line is shorter, in which case it moves to the last column.
 
 # View Boxes
-A view box displays a left-pinned gutter containing line numbers. The
+A view box displays a left-pinned gutter containing line numbers. New view box can be created and moved between using some of the Visual commands.
+Each view box can be attached to a separate buffer.
+The status bar is shared between all view boxes.
 
 # Definitions
 - "current character": The character which the cursor is on. When in normal mode, it is character which the solid cursor block appears over.
