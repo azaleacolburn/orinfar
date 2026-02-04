@@ -235,13 +235,8 @@ fn program_loop<'a>(
                     }
                     *count *= 10;
                     *count += c;
-                    log!("count: {}", count);
                 }
-                // TODO
-                // Make a type of action that takes a reference to the status bar, the buffer, the
-                // mode, and the search string
-                //
-                // Or find a better way of handling this
+
                 (KeyCode::Char(':'), Mode::Normal) => {
                     *mode = Mode::Meta;
                     status_bar.push(':');

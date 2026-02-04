@@ -101,10 +101,10 @@ pub fn substitute_cmd(
     let original = substitution[1];
     let new: String = substitution[2].iter().collect();
 
-    log!("Substition\n\toriginal: {:?}\n\tnew: {}", original, new);
+    log!("Substition\n\tOriginal: {:?}\n\tNew: {}", original, new);
 
     let idxs_of_substitution = buffer.find_occurences(original);
-    log!("idxs of sub: {:?}", idxs_of_substitution);
+    log!("\tIndexes of Substitution: {:?}", idxs_of_substitution);
 
     buffer.replace_text(
         &new,

@@ -1,7 +1,6 @@
 use crate::{
-    DEBUG, commands::Command, log, mode::Mode, motion::Motion, operator::Operator,
-    register::RegisterHandler, undo::UndoTree, utility::last_char, view::View,
-    view_command::ViewCommand,
+    commands::Command, mode::Mode, motion::Motion, operator::Operator, register::RegisterHandler,
+    undo::UndoTree, utility::last_char, view::View, view_command::ViewCommand,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -23,8 +22,6 @@ pub fn match_action<'a>(
     motions: &[Motion],
     view_commands: &[ViewCommand],
 ) {
-    log!("count in match action: {}", count);
-
     let last = match chained.last() {
         Some(c) => c,
         None => return,
@@ -90,7 +87,6 @@ pub fn reset<'a>(
     last_chained: &mut Vec<char>,
     last_count: &mut u16,
 ) {
-    log!("resetting count: {}", count);
     *last_chained = chained.to_vec();
     *last_count = *count;
 

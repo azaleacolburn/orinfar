@@ -1,9 +1,7 @@
 use std::iter::once;
 
 use crate::{
-    DEBUG,
     buffer::Buffer,
-    log,
     undo::{Action, UndoTree},
 };
 
@@ -45,7 +43,6 @@ impl Buffer {
     /// It returns the contents inserted into the buffer
     pub fn insert_newline(&mut self) -> String {
         let first_col = self.get_first_non_whitespace_col();
-        log!("first_col {}", first_col);
         self.update_list_add_current();
         self.rope.insert_char(self.cursor, '\n');
         self.cursor += 1;
@@ -120,16 +117,8 @@ impl Buffer {
 
     // This is where we are
     pub fn set_col(&mut self, col: usize) {
-        log!("\nset_col cursor: {}", self.cursor);
         let start_idx = self.get_start_of_line();
         self.cursor = start_idx + col;
-        log!(
-            "start_of_line: {}\ncol: {}\nnew_cursor: {} len: {}\n",
-            start_idx,
-            col,
-            self.cursor,
-            self.rope.len_chars()
-        );
     }
 
     pub fn get_row(&self) -> usize {
@@ -241,7 +230,6 @@ impl Buffer {
                 offset
             );
             let start_idx = usize::try_from(end_idx - original_len + offset).unwrap();
-            log!("start_idx: {} offset {}", start_idx, offset);
 
             self.rope
                 .remove(start_idx..usize::try_from(end_idx + offset).unwrap());

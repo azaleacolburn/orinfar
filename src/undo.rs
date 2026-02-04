@@ -74,6 +74,8 @@ impl UndoTree {
             return;
         };
 
+        log!("Undoing Action: {:?}", action);
+
         match action {
             Action::Insert { text, position } => {
                 buffer.cursor = position;
@@ -88,13 +90,6 @@ impl UndoTree {
                 original,
                 new,
             } => {
-                log!(
-                    "un-replacing:\n\tcursor: {} new: {} old: {} positions {:?}",
-                    buffer.cursor,
-                    new,
-                    original,
-                    positions
-                );
                 buffer.replace_text(&original, &new, &positions, self, true);
             }
         }

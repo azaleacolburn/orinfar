@@ -1,7 +1,5 @@
 use crate::{
-    DEBUG,
     buffer::Buffer,
-    log,
     undo::{Action, UndoTree},
 };
 use ropey::{Rope, RopeSlice};
@@ -33,7 +31,6 @@ impl Buffer {
     /// Returns the first index (absolute) of the line where the given `char_idx` is located
     pub fn get_start_of_char_line(&self, char_idx: usize) -> usize {
         let line_idx = self.rope.char_to_line(char_idx);
-        log!("line idx: {} len: {}", line_idx, self.len());
         self.rope.line_to_char(line_idx)
     }
 
@@ -94,15 +91,12 @@ impl Buffer {
         assert!(self.cursor <= self.rope.len_chars());
 
         let line = self.rope.char_to_line(self.cursor);
-        log!("get_end_of(curr)_line: {}, line: {}", self.cursor, line);
         self.get_end_of_n_line(line)
     }
 
     /// Called by the '$' motion
     pub fn end_of_line(&mut self) {
         let end_of_line = self.get_end_of_line();
-        log!("end_of_line: {}", end_of_line);
-        log!("length of buffer: {}", self.rope.len_chars());
         self.cursor = end_of_line;
     }
 
@@ -133,7 +127,6 @@ impl Buffer {
 
     pub fn next_line(&mut self) {
         let line = self.get_row();
-        log!("next_line current_line: {}", line);
         self.set_row(line + 1);
     }
 

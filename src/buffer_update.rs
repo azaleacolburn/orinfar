@@ -8,7 +8,6 @@ impl Buffer {
         self.update_list_remove(current_line);
         self.update_list_set(usize::max(current_line, 1) - 1.., true);
         self.has_changed = true;
-        log!("update_list: {:?}", self.lines_for_updating);
     }
 
     /// Updates the `has_changed` list when a `\n` character is added
