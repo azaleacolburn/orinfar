@@ -21,8 +21,7 @@ macro_rules! unwrap_or_break {
 }
 
 pub fn is_symbol(c: char) -> bool {
-    let symbols = "$`\'\":;~()\\+-=$#^[&]*<@%!{|}>/?.,";
-    symbols.contains(c)
+    "$`\'\":;~()\\+-=$#^[&]*<@%!{|}>/?.,".contains(c)
 }
 
 /// # Errors

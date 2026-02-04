@@ -1,16 +1,22 @@
 [package]
 
 name = "orinfar"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2024"
+description = "A Text Editor For Witches"
+license = "MIT"
+readme = "README.md"
+authors = ["Azalea Colburn azaleacolburn@gmail.com"]
+keywords = ["text", "editor", "files", "vi", "vim"]
 
 [dependencies]
 anyhow = "1.0.98"
 clap = { version = "4.5.42", features = ["derive"] }
 crossterm = "0.29.0"
 ropey = "1.6.1"
+xdg = "3.0.0"
 
-[lints.clippy] # come at me, clippy
+[lints.clippy]
 pedantic      = { level = "deny", priority = -1 }
 nursery       = { level = "deny", priority = -1 }
 # unwrap_used   = "deny"

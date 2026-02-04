@@ -6,6 +6,7 @@ impl Buffer {
     pub fn update_list_remove_current(&mut self) {
         let current_line = self.get_row();
         self.update_list_remove(current_line);
+
         self.update_list_set(usize::max(current_line, 1) - 1.., true);
         self.has_changed = true;
     }
@@ -14,6 +15,7 @@ impl Buffer {
     pub fn update_list_add_current(&mut self) {
         let current_line = self.get_row();
         self.lines_for_updating.insert(current_line, true);
+
         self.update_list_set(current_line.., true);
         self.has_changed = true;
     }
@@ -21,12 +23,14 @@ impl Buffer {
     /// Updates the `has_changed` list when a `\n` character is removed at the given line number
     pub fn update_list_remove(&mut self, idx: usize) {
         self.lines_for_updating.remove(idx);
+
         self.update_list_set(idx.., true);
         self.has_changed = true;
     }
 
     pub fn update_list_add(&mut self, idx: usize) {
         self.lines_for_updating.insert(idx, true);
+
         self.update_list_set(idx.., true);
         self.has_changed = true;
     }

@@ -1,7 +1,7 @@
 use crate::mode::Mode;
 use anyhow::{Result, bail};
 use clap::Parser;
-use std::{env, fs::OpenOptions, io::Write, path::PathBuf};
+use std::{fs::OpenOptions, io::Write, path::PathBuf};
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -71,15 +71,12 @@ pub fn try_get_git_hash(path: Option<&PathBuf>) -> Option<String> {
 }
 
 pub fn log_dir() -> PathBuf {
-    env::home_dir()
-        .expect("Failed to get home dir")
-        .join(".orinfar")
+    let base = xdg::BaseDirectories::with_prefix("orinfar");
+    base.get_state_home().expect("Could not find home")
 }
 
 pub fn log_file() -> PathBuf {
-    env::home_dir()
-        .expect("Failed to get home dir")
-        .join(".orinfar/log")
+    log_dir().join("log")
 }
 
 pub fn log(contents: &impl ToString) {
