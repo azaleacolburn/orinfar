@@ -106,11 +106,28 @@ pub fn iterate_range(
         buffer: &mut Buffer,
         mode: &mut Mode,
     ),
+    will_delete: bool,
 ) {
     let anchor = buffer.cursor;
-    let count = (i32::try_from(end).unwrap() - i32::try_from(anchor).unwrap()).abs();
+    let count = i32::try_from(end).unwrap() - i32::try_from(anchor).unwrap();
     initial_callback(register_handler, buffer, mode);
-    (0..=count).for_each(|_| iter_callback(register_handler, buffer));
+    if count.is_positive() {
+        if will_delete {
+            (0..=count).for_each(|_| iter_callback(register_handler, buffer));
+        } else {
+            (0..=count).for_each(|_| {
+                iter_callback(register_handler, buffer);
+                if buffer.cursor + 1 < buffer.rope.len_chars() {
+                    buffer.next_char();
+                }
+            });
+        }
+    } else {
+        (0..=count.abs()).for_each(|_| {
+            iter_callback(register_handler, buffer);
+            buffer.prev_char();
+        });
+    }
     after_callback(anchor, register_handler, buffer, mode);
 }
 
@@ -171,6 +188,7 @@ pub fn delete(
         clear_reg,
         delete_char,
         noop,
+        true,
     );
     // TODO
     // Currently using the 'd' command across lines will break because of this
@@ -183,9 +201,6 @@ pub fn delete(
 
 fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
     register_handler.push_reg(&buffer.get_curr_char());
-    if buffer.cursor + 1 < buffer.rope.len_chars() {
-        buffer.next_char();
-    }
 }
 pub fn yank(
     end: usize,
@@ -209,6 +224,7 @@ pub fn yank(
         clear_reg,
         yank_char,
         reset_position,
+        false,
     );
 }
 
@@ -232,6 +248,7 @@ pub fn change(
         clear_reg,
         delete_char,
         insert,
+        true,
     );
 
     // TODO
