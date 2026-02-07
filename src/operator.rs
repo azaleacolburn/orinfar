@@ -111,6 +111,9 @@ pub fn iterate_range(
     let anchor = buffer.cursor;
     let count = i32::try_from(end).unwrap() - i32::try_from(anchor).unwrap();
     initial_callback(register_handler, buffer, mode);
+
+    let initial_register_contents = register_handler.get_reg().to_string();
+
     if count.is_positive() {
         if will_delete {
             (0..=count).for_each(|_| iter_callback(register_handler, buffer));
@@ -127,7 +130,13 @@ pub fn iterate_range(
             iter_callback(register_handler, buffer);
             buffer.prev_char();
         });
+
+        let final_register_contents = register_handler.get_reg();
+        if initial_register_contents != final_register_contents {
+            register_handler.set_reg(final_register_contents.chars().rev().collect::<String>());
+        }
     }
+
     after_callback(anchor, register_handler, buffer, mode);
 }
 
