@@ -7,7 +7,6 @@ mod buffer_line;
 mod buffer_update;
 mod commands;
 mod meta_command;
-mod view;
 #[macro_use]
 mod io;
 mod mode;
@@ -16,7 +15,9 @@ mod operator;
 mod panic_hook;
 mod register;
 mod status_bar;
+mod tutorial;
 mod undo;
+mod view;
 mod view_box;
 mod view_command;
 
@@ -27,7 +28,7 @@ use crate::{
         append, cut, first_row, insert, insert_new_line, insert_new_line_above, last_row, paste,
         replace, set_curr_register, undo,
     },
-    io::{Cli, log, log_dir, log_file},
+    io::{Cli, data_file, log, log_dir, log_file, write_data},
     meta_command::match_meta_command,
     mode::Mode,
     motion::{
@@ -56,6 +57,9 @@ use crossterm::{
 pub static mut DEBUG: bool = true;
 
 fn main() -> Result<()> {
+    let (cols, rows) = size()?;
+    setup(rows, cols)?;
+
     panic_hook::add_panic_hook(&cleanup);
 
     // This could fail if the dir already exists, so we don't care if this fails
@@ -65,6 +69,24 @@ fn main() -> Result<()> {
         return Err(err.into());
     }
     std::fs::File::create(log_file())?;
+    let data_path = data_file();
+    if !data_path.exists() {
+        std::fs::File::create(&data_path)?;
+    }
+
+    let data = std::fs::read_to_string(&data_path)?;
+
+    let mut has_opened = false;
+    data.lines().for_each(|l| {
+        let Some((k, v)) = l.split_once(":") else {
+            panic!("Invalid Data File");
+        };
+
+        match (k.trim(), v.trim()) {
+            ("has_opened", "true") => has_opened = true,
+            (_, _) => {}
+        }
+    });
 
     let mut undo_tree = UndoTree::new();
     let mut register_handler = RegisterHandler::new();
@@ -133,9 +155,7 @@ fn main() -> Result<()> {
     // Used for not putting excluded chars in the chain
     let all_normal_chars = enumerate_normal_chars(commands, operators, motions, view_commands);
 
-    let (cols, rows) = size()?;
     let mut view: View = View::new(cols, rows);
-    setup(rows, cols)?;
 
     let mut mode = Mode::Normal;
     let mut count: u16 = 1;
@@ -145,6 +165,11 @@ fn main() -> Result<()> {
     let (cli, path) = Cli::parse_path()?;
     unsafe {
         DEBUG = cli.debug;
+    }
+
+    if !has_opened && path.is_none() {
+        view.get_view_box().write_welcome_screen();
+        write_data("has_opened", "true");
     }
 
     view.set_path(path);
