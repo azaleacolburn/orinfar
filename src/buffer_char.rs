@@ -272,13 +272,21 @@ impl Buffer {
     }
 
     pub fn goto_next_string(&mut self, str: &[char]) {
+        if str.is_empty() {
+            return;
+        }
+
         let mut i = 0;
         let mut cursor = self.cursor;
-        if self.rope.slice(self.cursor..self.cursor + str.len()) == str.iter().collect::<String>()
-            && self.cursor < self.rope.len_chars()
+
+        let within_bounds = self.rope.len_chars() > cursor + str.len();
+        if within_bounds
+            && self.rope.slice(self.cursor..self.cursor + str.len())
+                == str.iter().collect::<String>()
         {
             cursor += 1;
         }
+
         while let Some(s) = self.rope.get_char(cursor + i) {
             if s == str[i] {
                 i += 1;
