@@ -70,8 +70,7 @@ pub fn match_action<'a>(
         });
 
         reset(chained, count, next_operation, last_chained, last_count);
-    }
-    if let Some(operator) = operators
+    } else if let Some(operator) = operators
         .iter()
         .find(|operator| last_char(operator.name) == last)
     {
