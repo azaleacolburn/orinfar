@@ -7,6 +7,7 @@ mod buffer_line;
 mod buffer_update;
 mod commands;
 mod meta_command;
+mod text_objects;
 #[macro_use]
 mod io;
 mod mode;
