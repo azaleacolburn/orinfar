@@ -1,5 +1,5 @@
 use crate::{
-    buffer::Buffer,
+    buffer::{self, Buffer},
     utility::{is_symbol, on_next_input_buffer_only},
 };
 use crossterm::event::KeyCode;
@@ -199,18 +199,9 @@ pub fn beginning_of_line(buffer: &mut Buffer) {
 pub fn find(buffer: &mut Buffer) {
     fn find(key: KeyCode, buffer: &mut Buffer) {
         if let KeyCode::Char(target) = key {
-            let anchor = buffer.cursor;
-            loop {
-                if buffer.cursor == buffer.get_end_of_line() {
-                    break;
-                }
-                if buffer.get_curr_char() == target {
-                    return;
-                }
-                buffer.cursor += 1;
+            if let Some(position) = buffer.find_next(target) {
+                buffer.cursor = position;
             }
-
-            buffer.cursor = anchor;
         }
     }
 
@@ -220,22 +211,12 @@ pub fn find(buffer: &mut Buffer) {
 pub fn find_until(buffer: &mut Buffer) {
     fn find_until(key: KeyCode, buffer: &mut Buffer) {
         if let KeyCode::Char(target) = key {
-            let anchor = buffer.cursor;
-            loop {
-                if buffer.cursor == buffer.get_end_of_line() {
-                    break;
+            if let Some(position) = buffer.find_next(target) {
+                buffer.cursor = position;
+                if buffer.cursor != 0 {
+                    buffer.cursor -= 1;
                 }
-                if buffer.get_curr_char() == target {
-                    if buffer.cursor != 0 {
-                        buffer.cursor -= 1;
-                    }
-                    return;
-                }
-
-                buffer.cursor += 1;
             }
-
-            buffer.cursor = anchor;
         }
     }
 
@@ -245,19 +226,9 @@ pub fn find_until(buffer: &mut Buffer) {
 pub fn find_back(buffer: &mut Buffer) {
     fn find_back(key: KeyCode, buffer: &mut Buffer) {
         if let KeyCode::Char(target) = key {
-            let anchor = buffer.cursor;
-            loop {
-                if buffer.cursor == 0 {
-                    break;
-                }
-                if buffer.get_curr_char() == target {
-                    return;
-                }
-
-                buffer.cursor -= 1;
+            if let Some(position) = buffer.find_prev(target) {
+                buffer.cursor = position;
             }
-
-            buffer.cursor = anchor;
         }
     }
 

@@ -1,9 +1,10 @@
-use std::iter::once;
-
 use crate::{
+    DEBUG,
     buffer::Buffer,
+    log,
     undo::{Action, UndoTree},
 };
+use std::iter::once;
 
 impl Buffer {
     pub fn delete_curr_char(&mut self) {
@@ -297,6 +298,28 @@ impl Buffer {
             if i == str.len() {
                 self.cursor = cursor;
                 return;
+            }
+        }
+    }
+
+    pub fn find_next(&self, target: char) -> Option<usize> {
+        let mut cursor = self.cursor;
+        loop {
+            match self.rope.get_char(cursor) {
+                Some(c) if c == target => return Some(cursor),
+                Some(_) => cursor += 1,
+                None => return None,
+            }
+        }
+    }
+
+    pub fn find_prev(&self, target: char) -> Option<usize> {
+        let mut cursor = self.cursor;
+        loop {
+            match self.rope.get_char(cursor) {
+                Some(c) if c == target => return Some(cursor),
+                Some(_) => cursor -= 1,
+                None => return None,
             }
         }
     }
