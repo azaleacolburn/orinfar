@@ -5,9 +5,11 @@ pub enum TextObjectType {
     Around,
 }
 
+pub type TOBounds = Option<(usize, usize)>;
+
 pub struct TextObject<'a> {
     pub name: &'a str,
-    command: fn(buffer: &Buffer) -> Option<(usize, usize)>,
+    command: fn(buffer: &Buffer) -> TOBounds,
 }
 
 // TODO
@@ -24,16 +26,16 @@ pub struct TextObject<'a> {
 // 1. Move more (if not all) motion logic into the `Buffer` struct
 // 2. Utilize the shared logic in both the sets of motion and text object functions
 impl<'a> TextObject<'a> {
-    pub fn new(name: &'a str, command: fn(buffer: &Buffer) -> Option<(usize, usize)>) -> Self {
+    pub fn new(name: &'a str, command: fn(buffer: &Buffer) -> TOBounds) -> Self {
         TextObject { name, command }
     }
 
     // Returns the range that the text object occupies
-    pub fn around(&self, buffer: &Buffer) -> Option<(usize, usize)> {
+    pub fn around(&self, buffer: &Buffer) -> TOBounds {
         (self.command)(&buffer)
     }
 
-    pub fn inside(&self, buffer: &Buffer) -> Option<(usize, usize)> {
+    pub fn inside(&self, buffer: &Buffer) -> TOBounds {
         let Some((i, j)) = (self.command)(&buffer) else {
             return None;
         };
@@ -46,17 +48,30 @@ impl<'a> TextObject<'a> {
     }
 }
 
-pub fn parentheses(buffer: &Buffer) -> Option<(usize, usize)> {
-    log!("here");
-    let Some(first) = buffer.find_prev('(') else {
+pub fn find_matching(buffer: &Buffer, start: char, end: char) -> TOBounds {
+    let Some(first) = buffer.find_prev(start) else {
         return None;
     };
 
-    log!("first: {first}");
-
-    let Some(second) = buffer.find_next(')') else {
+    let Some(second) = buffer.find_next(end) else {
         return None;
     };
 
     Some((first, second))
+}
+
+pub fn parentheses(buffer: &Buffer) -> TOBounds {
+    find_matching(buffer, '(', ')')
+}
+
+pub fn curly_braces(buffer: &Buffer) -> TOBounds {
+    find_matching(buffer, '{', '}')
+}
+
+pub fn square_braces(buffer: &Buffer) -> TOBounds {
+    find_matching(buffer, '[', ']')
+}
+
+pub fn quotations(buffer: &Buffer) -> TOBounds {
+    find_matching(buffer, '\"', '\"')
 }
