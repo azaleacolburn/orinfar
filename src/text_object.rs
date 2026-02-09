@@ -1,4 +1,4 @@
-use crate::{DEBUG, buffer::Buffer, log, motion::find_back};
+use crate::buffer::Buffer;
 
 pub enum TextObjectType {
     Inside,

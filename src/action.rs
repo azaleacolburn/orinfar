@@ -1,12 +1,10 @@
 use crate::{
-    DEBUG,
     commands::Command,
-    log,
     mode::Mode,
     motion::Motion,
     operator::Operator,
     register::RegisterHandler,
-    text_object::{self, TextObject, TextObjectType},
+    text_object::{TextObject, TextObjectType},
     undo::UndoTree,
     utility::last_char,
     view::View,
@@ -41,13 +39,7 @@ pub fn match_action<'a>(
     let buffer = view.get_buffer_mut();
 
     if let Some(operation) = next_operation {
-        if let Some(motion) = motions.iter().find(|motion| last_char(motion.name) == last) {
-            (0..*count).for_each(|_| {
-                operation.execute_motion(motion, buffer, register_handler, mode, undo_tree);
-            });
-
-            reset(chained, count, next_operation, last_chained, last_count);
-        } else if last == 'i' {
+        if last == 'i' {
             *text_object_type = Some(TextObjectType::Inside);
         } else if last == 'a' {
             *text_object_type = Some(TextObjectType::Around);
@@ -72,6 +64,12 @@ pub fn match_action<'a>(
 
                 reset(chained, count, next_operation, last_chained, last_count);
             }
+        } else if let Some(motion) = motions.iter().find(|motion| last_char(motion.name) == last) {
+            (0..*count).for_each(|_| {
+                operation.execute_motion(motion, buffer, register_handler, mode, undo_tree);
+            });
+
+            reset(chained, count, next_operation, last_chained, last_count);
         }
     } else if let Some(command) = commands
         .iter()

@@ -1,7 +1,6 @@
 use crate::{
-    DEBUG, Mode,
+    Mode,
     buffer::Buffer,
-    log,
     motion::Motion,
     register::RegisterHandler,
     text_object::{TextObject, TextObjectType},
@@ -65,11 +64,7 @@ impl<'a> Operator<'a> {
             return;
         };
 
-        log!("beginngin: {} end: {}", beginning, end);
-
-        let _anchor = buffer.cursor;
         buffer.cursor = beginning;
-
         (self.command)(end, buffer, register_handler, mode, undo_tree);
     }
 

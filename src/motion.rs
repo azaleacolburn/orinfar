@@ -1,5 +1,5 @@
 use crate::{
-    buffer::{self, Buffer},
+    buffer::Buffer,
     utility::{is_symbol, on_next_input_buffer_only},
 };
 use crossterm::event::KeyCode;

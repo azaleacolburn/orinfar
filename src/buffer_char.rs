@@ -1,7 +1,5 @@
 use crate::{
-    DEBUG,
     buffer::Buffer,
-    log,
     undo::{Action, UndoTree},
 };
 use std::iter::once;
@@ -304,9 +302,11 @@ impl Buffer {
 
     pub fn find_next(&self, target: char) -> Option<usize> {
         let mut cursor = self.cursor;
+        let last = self.rope.len_chars() - 1;
         loop {
             match self.rope.get_char(cursor) {
                 Some(c) if c == target => return Some(cursor),
+                Some(_) if cursor == last => return None,
                 Some(_) => cursor += 1,
                 None => return None,
             }
@@ -318,6 +318,7 @@ impl Buffer {
         loop {
             match self.rope.get_char(cursor) {
                 Some(c) if c == target => return Some(cursor),
+                Some(_) if cursor == 0 => return None,
                 Some(_) => cursor -= 1,
                 None => return None,
             }
