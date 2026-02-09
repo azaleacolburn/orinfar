@@ -144,10 +144,12 @@ impl Buffer {
         let mut idx = self.cursor;
         while let Some(c) = self.rope.get_char(idx)
             && c == ' '
-            && idx > 0
         {
-            idx -= 1;
             space_count += 1;
+            if idx == 0 {
+                break;
+            }
+            idx -= 1;
         }
 
         space_count
@@ -259,6 +261,7 @@ impl Buffer {
         if space_count > 1 {
             let deleted = self.delete_to_4_spaces_alignment(space_count);
 
+            self.update_list_use_current_line();
             let action = Action::delete(self.cursor, &deleted);
             undo_tree.new_action_merge(action);
         } else {
