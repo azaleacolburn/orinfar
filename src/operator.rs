@@ -3,6 +3,7 @@ use crate::{
     buffer::Buffer,
     motion::Motion,
     register::RegisterHandler,
+    text_object::{TextObject, TextObjectType},
     undo::{Action, UndoTree},
 };
 
@@ -31,7 +32,7 @@ impl<'a> Operator<'a> {
         Self { name, command }
     }
 
-    pub fn execute(
+    pub fn execute_motion(
         &self,
         motion: &Motion,
         buffer: &mut Buffer,
@@ -44,6 +45,26 @@ impl<'a> Operator<'a> {
             end = usize::max(end, 1) - 1;
         }
 
+        (self.command)(end, buffer, register_handler, mode, undo_tree);
+    }
+
+    pub fn execute_text_object(
+        &self,
+        text_object: &TextObject,
+        text_object_type: &TextObjectType,
+        buffer: &mut Buffer,
+        register_handler: &mut RegisterHandler,
+        mode: &mut Mode,
+        undo_tree: &mut UndoTree,
+    ) {
+        let Some((beginning, end)) = (match text_object_type {
+            TextObjectType::Inside => text_object.inside(buffer),
+            TextObjectType::Around => text_object.around(buffer),
+        }) else {
+            return;
+        };
+
+        buffer.cursor = beginning;
         (self.command)(end, buffer, register_handler, mode, undo_tree);
     }
 
