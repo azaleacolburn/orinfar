@@ -184,11 +184,6 @@ pub fn delete(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
-    let end_of_file = buffer.rope.len_chars();
-    if end == end_of_file && end != 0 {
-        buffer.cursor -= 1;
-    }
-
     iterate_range(
         mode,
         register_handler,
@@ -206,6 +201,7 @@ pub fn delete(
     let text = register_handler.get_reg();
     let action = Action::delete(buffer.cursor, &text);
     undo_tree.new_action(action);
+    buffer.cursor = std::cmp::min(std::cmp::max(buffer.rope.len_chars(), 1) - 1, buffer.cursor);
 }
 
 fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
