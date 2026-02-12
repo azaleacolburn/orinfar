@@ -126,9 +126,13 @@ pub fn iterate_range(
             });
         }
     } else {
-        (0..=count.abs()).for_each(|_| {
+        (0..=count.abs()).for_each(|c| {
             iter_callback(register_handler, buffer);
-            buffer.prev_char();
+            // TODO Probably remove
+            // This is just to stop `db` from being weird
+            // if c + 1 < count.abs() {
+            //     buffer.prev_char();
+            // }
         });
 
         let final_register_contents = register_handler.get_reg();
@@ -184,11 +188,6 @@ pub fn delete(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
-    let end_of_file = buffer.rope.len_chars();
-    if end == end_of_file && end != 0 {
-        buffer.cursor -= 1;
-    }
-
     iterate_range(
         mode,
         register_handler,
@@ -206,6 +205,8 @@ pub fn delete(
     let text = register_handler.get_reg();
     let action = Action::delete(buffer.cursor, &text);
     undo_tree.new_action(action);
+
+    buffer.cursor = usize::min(buffer.cursor, usize::max(buffer.rope.len_chars(), 1) - 1);
 }
 
 fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
@@ -221,10 +222,7 @@ pub fn yank(
     if end == buffer.rope.len_chars() && end == buffer.cursor {
         return;
     }
-    let end_of_file = buffer.rope.len_chars();
-    if end == end_of_file && end != 0 {
-        buffer.cursor -= 1;
-    }
+
     iterate_range(
         mode,
         register_handler,
@@ -235,6 +233,8 @@ pub fn yank(
         reset_position,
         false,
     );
+
+    buffer.cursor = usize::min(buffer.cursor, usize::max(buffer.rope.len_chars(), 1) - 1);
 }
 
 pub fn change(
@@ -244,11 +244,6 @@ pub fn change(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
-    let end_of_file = buffer.rope.len_chars();
-    if end == end_of_file && end != 0 {
-        buffer.cursor -= 1;
-    }
-
     iterate_range(
         mode,
         register_handler,
@@ -267,4 +262,6 @@ pub fn change(
     let text = register_handler.get_reg();
     let action = Action::delete(buffer.cursor, &text);
     undo_tree.new_action(action);
+
+    buffer.cursor = usize::min(buffer.cursor, usize::max(buffer.rope.len_chars(), 1) - 1);
 }
