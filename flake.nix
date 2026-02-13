@@ -4,7 +4,6 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     systems.url = "github:nix-systems/default";
-    rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
   outputs =
@@ -12,27 +11,17 @@
       self,
       nixpkgs,
       systems,
-      rust-overlay,
     }:
     let
       inherit (nixpkgs) lib;
-      forEachPkgs =
-        f:
-        lib.genAttrs (import systems) (
-          system:
-          f (
-            import nixpkgs {
-              inherit system;
-              overlays = [ (import rust-overlay) ];
-            }
-          )
-        );
+      forEachPkgs = f: lib.genAttrs (import systems) (system: f nixpkgs.legacyPackages.${system});
     in
     {
       devShells = forEachPkgs (pkgs: {
         default = pkgs.mkShell {
+          inputsFrom = [ self.packages.${pkgs.stdenv.hostPlatform.system}.default ];
           buildInputs = [
-            pkgs.rust-bin.stable.latest.default
+            pkgs.clippy
           ];
         };
       });
@@ -41,12 +30,8 @@
         default =
           let
             p = (lib.importTOML ./Cargo.toml).package;
-            rustPlatform = pkgs.makeRustPlatform {
-              cargo = pkgs.rust-bin.stable.latest.default;
-              rustc = pkgs.rust-bin.stable.latest.default;
-            };
           in
-          rustPlatform.buildRustPackage {
+          pkgs.rustPlatform.buildRustPackage {
             pname = p.name;
             inherit (p) version;
 
