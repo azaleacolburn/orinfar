@@ -130,6 +130,7 @@ pub fn back(buffer: &mut Buffer) {
             buffer.prev_char();
             prev_char = unwrap_or_break!(buffer.get_prev_char());
         }
+
         if prev_char.is_alphanumeric() {
             while prev_char.is_alphanumeric() && buffer.cursor > 0 {
                 buffer.prev_char();

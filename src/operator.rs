@@ -40,8 +40,31 @@ impl<'a> Operator<'a> {
         undo_tree: &mut UndoTree,
     ) {
         let mut end = motion.evaluate(buffer);
-        if !motion.inclusive && end != buffer.get_end_of_line() {
-            end = usize::max(end, 1) - 1;
+        // NOTE
+        // So I'm pretty sure the delete behavior thing isn't fixable
+        // Like the word c vs word cc thing
+        // Like VI must have a special case for it
+        // The reason it was inconsistent is because we had a special case that made it weird
+        // But if
+        // ```
+        // word c
+        // dw--->doesn't delete c, than
+        // ```
+        // ```
+        // word
+        // dw->won't delete d
+        // ```
+        // Because `w` is an exclusive motion (edited)
+        // I think that `w` must go past the last character of the buffer when that character is the last character of the alphanumeric word. Of course, this would mean that there's a later check that moves the cursor back into the bounds of the file when you just type w at the end of the file. (edited)
+        // Pretty sure that's how they do it
+        // Of course, I'm not interested in replicating this nonsense
+        // Just use de if you want to delete the last word of a buffer
+        // Like this is pretty nonsensical
+        //
+        if !motion.inclusive {
+            if end > buffer.cursor {
+                end = usize::max(end, 1) - 1;
+            }
         }
 
         (self.command)(end, buffer, register_handler, mode, undo_tree);
@@ -128,7 +151,6 @@ pub fn iterate_range(
     } else {
         (0..=count.abs()).for_each(|_| {
             iter_callback(register_handler, buffer);
-            buffer.prev_char();
         });
 
         let final_register_contents = register_handler.get_reg();
@@ -184,11 +206,6 @@ pub fn delete(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
-    let end_of_file = buffer.rope.len_chars();
-    if end == end_of_file && end != 0 {
-        buffer.cursor -= 1;
-    }
-
     iterate_range(
         mode,
         register_handler,
@@ -206,6 +223,8 @@ pub fn delete(
     let text = register_handler.get_reg();
     let action = Action::delete(buffer.cursor, &text);
     undo_tree.new_action(action);
+
+    buffer.cursor = usize::min(buffer.cursor, usize::max(buffer.rope.len_chars(), 1) - 1);
 }
 
 fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
@@ -221,10 +240,7 @@ pub fn yank(
     if end == buffer.rope.len_chars() && end == buffer.cursor {
         return;
     }
-    let end_of_file = buffer.rope.len_chars();
-    if end == end_of_file && end != 0 {
-        buffer.cursor -= 1;
-    }
+
     iterate_range(
         mode,
         register_handler,
@@ -235,6 +251,8 @@ pub fn yank(
         reset_position,
         false,
     );
+
+    buffer.cursor = usize::min(buffer.cursor, usize::max(buffer.rope.len_chars(), 1) - 1);
 }
 
 pub fn change(
@@ -244,11 +262,6 @@ pub fn change(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
-    let end_of_file = buffer.rope.len_chars();
-    if end == end_of_file && end != 0 {
-        buffer.cursor -= 1;
-    }
-
     iterate_range(
         mode,
         register_handler,
@@ -267,4 +280,6 @@ pub fn change(
     let text = register_handler.get_reg();
     let action = Action::delete(buffer.cursor, &text);
     undo_tree.new_action(action);
+
+    buffer.cursor = usize::min(buffer.cursor, usize::max(buffer.rope.len_chars(), 1) - 1);
 }

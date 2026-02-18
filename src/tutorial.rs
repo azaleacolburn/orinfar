@@ -20,8 +20,8 @@ const WELCOME_WIDTH: u16 = count_longest_line(WELCOME_TEXT);
 
 impl ViewBox {
     pub fn write_welcome_screen(&mut self) {
-        let vertical_padding: i32 = (self.height - WELCOME_HEIGHT).into();
-        let max_horizontal_padding: i32 = (self.width - WELCOME_WIDTH).into();
+        let vertical_padding = self.height as i32 - WELCOME_HEIGHT as i32;
+        let max_horizontal_padding = self.width as i32 - WELCOME_WIDTH as i32;
 
         if vertical_padding <= 0 || max_horizontal_padding <= 0 {
             return;
