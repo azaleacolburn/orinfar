@@ -1,6 +1,7 @@
 use crate::{
-    Mode,
+    DEBUG, Mode,
     buffer::Buffer,
+    log,
     motion::Motion,
     register::RegisterHandler,
     undo::{Action, UndoTree},
@@ -40,8 +41,25 @@ impl<'a> Operator<'a> {
         undo_tree: &mut UndoTree,
     ) {
         let mut end = motion.evaluate(buffer);
-        if !motion.inclusive && end != buffer.get_end_of_line() {
-            end = usize::max(end, 1) - 1;
+        log!("initial end: {end}");
+        // There isn't a solution to this
+        // There isn't a good way to distinguish between not wanting to delete
+        // the first character of the last word and the last character of the last word
+        // in the two cases:
+        // word c
+        // dw--->
+        //
+        // and
+        //
+        // word
+        // dw->
+        if !motion.inclusive {
+            // && end != buffer.rope.len_chars() - 1 {
+            if end > buffer.cursor {
+                end = usize::max(end, 1) - 1;
+            } else if end != buffer.rope.len_chars() {
+                end += 1;
+            }
         }
 
         (self.command)(end, buffer, register_handler, mode, undo_tree);
@@ -114,6 +132,9 @@ pub fn iterate_range(
 
     let initial_register_contents = register_handler.get_reg().to_string();
 
+    log!("count: {count}");
+    log!("end2: {end}");
+
     if count.is_positive() {
         if will_delete {
             (0..=count).for_each(|_| iter_callback(register_handler, buffer));
@@ -126,7 +147,7 @@ pub fn iterate_range(
             });
         }
     } else {
-        (0..=count.abs()).for_each(|c| {
+        (0..=count.abs()).for_each(|_| {
             iter_callback(register_handler, buffer);
             // TODO Probably remove
             // This is just to stop `db` from being weird
@@ -188,6 +209,7 @@ pub fn delete(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
+    log!("delete end {end}");
     iterate_range(
         mode,
         register_handler,
