@@ -1,7 +1,6 @@
 use crate::{
-    DEBUG, commands::Command, log, mode::Mode, motion::Motion, operator::Operator,
-    register::RegisterHandler, undo::UndoTree, utility::last_char, view::View,
-    view_command::ViewCommand,
+    commands::Command, mode::Mode, motion::Motion, operator::Operator, register::RegisterHandler,
+    undo::UndoTree, utility::last_char, view::View, view_command::ViewCommand,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -49,7 +48,6 @@ pub fn match_action<'a>(
         reset(chained, count, next_operation, last_chained, last_count);
     } else if let Some(operation) = next_operation {
         if let Some(motion) = motions.iter().find(|motion| last_char(motion.name) == last) {
-            log!("op: {} motion: {}", operation.name, motion.name);
             (0..*count).for_each(|_| {
                 operation.execute(motion, buffer, register_handler, mode, undo_tree);
             });

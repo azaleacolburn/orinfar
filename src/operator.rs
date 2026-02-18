@@ -1,7 +1,6 @@
 use crate::{
-    DEBUG, Mode,
+    Mode,
     buffer::Buffer,
-    log,
     motion::Motion,
     register::RegisterHandler,
     undo::{Action, UndoTree},
@@ -41,20 +40,28 @@ impl<'a> Operator<'a> {
         undo_tree: &mut UndoTree,
     ) {
         let mut end = motion.evaluate(buffer);
-        log!("initial end: {end}");
-        // There isn't a solution to this
-        // There isn't a good way to distinguish between not wanting to delete
-        // the first character of the last word and the last character of the last word
-        // in the two cases:
+        // NOTE
+        // So I'm pretty sure the delete behavior thing isn't fixable
+        // Like the word c vs word cc thing
+        // Like VI must have a special case for it
+        // The reason it was inconsistent is because we had a special case that made it weird
+        // But if
+        // ```
         // word c
-        // dw--->
-        //
-        // and
-        //
+        // dw--->doesn't delete c, than
+        // ```
+        // ```
         // word
-        // dw->
+        // dw->won't delete d
+        // ```
+        // Because `w` is an exclusive motion (edited)
+        // I think that `w` must go past the last character of the buffer when that character is the last character of the alphanumeric word. Of course, this would mean that there's a later check that moves the cursor back into the bounds of the file when you just type w at the end of the file. (edited)
+        // Pretty sure that's how they do it
+        // Of course, I'm not interested in replicating this nonsense
+        // Just use de if you want to delete the last word of a buffer
+        // Like this is pretty nonsensical
+        //
         if !motion.inclusive {
-            // && end != buffer.rope.len_chars() - 1 {
             if end > buffer.cursor {
                 end = usize::max(end, 1) - 1;
             } else if end != buffer.rope.len_chars() {
@@ -132,9 +139,6 @@ pub fn iterate_range(
 
     let initial_register_contents = register_handler.get_reg().to_string();
 
-    log!("count: {count}");
-    log!("end2: {end}");
-
     if count.is_positive() {
         if will_delete {
             (0..=count).for_each(|_| iter_callback(register_handler, buffer));
@@ -209,7 +213,6 @@ pub fn delete(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
-    log!("delete end {end}");
     iterate_range(
         mode,
         register_handler,
