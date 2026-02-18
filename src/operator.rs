@@ -151,11 +151,6 @@ pub fn iterate_range(
     } else {
         (0..=count.abs()).for_each(|_| {
             iter_callback(register_handler, buffer);
-            // TODO Probably remove
-            // This is just to stop `db` from being weird
-            // if c + 1 < count.abs() {
-            //     buffer.prev_char();
-            // }
         });
 
         let final_register_contents = register_handler.get_reg();
