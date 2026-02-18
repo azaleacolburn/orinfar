@@ -64,8 +64,6 @@ impl<'a> Operator<'a> {
         if !motion.inclusive {
             if end > buffer.cursor {
                 end = usize::max(end, 1) - 1;
-            } else if end != buffer.rope.len_chars() {
-                end += 1;
             }
         }
 
