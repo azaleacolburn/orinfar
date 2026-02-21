@@ -7,6 +7,7 @@ mod buffer_line;
 mod buffer_update;
 mod commands;
 mod meta_command;
+mod text_object;
 #[macro_use]
 mod io;
 mod mode;
@@ -39,6 +40,9 @@ use crate::{
     operator::{Operator, change, delete, yank},
     register::RegisterHandler,
     status_bar::StatusBar,
+    text_object::{
+        TextObject, TextObjectType, curly_braces, parentheses, quotations, square_braces,
+    },
     undo::{Action, UndoTree},
     view::{View, cleanup, setup},
     view_command::{
@@ -150,10 +154,23 @@ fn main() -> Result<()> {
         Motion::inclusive("}", next_newline),
         Motion::inclusive("{", prev_newline),
     ];
+
+    let text_objects: &[TextObject] = &[
+        TextObject::new("(", parentheses),
+        TextObject::new(")", parentheses),
+        TextObject::new("{", curly_braces),
+        TextObject::new("}", curly_braces),
+        TextObject::new("[", square_braces),
+        TextObject::new("]", square_braces),
+        TextObject::new("\"", quotations),
+    ];
+
     let mut next_operation: Option<&Operator> = None;
+    let mut text_object_type: Option<TextObjectType> = None;
 
     // Used for not putting excluded chars in the chain
-    let all_normal_chars = enumerate_normal_chars(commands, operators, motions, view_commands);
+    let all_normal_chars =
+        enumerate_normal_chars(commands, operators, motions, text_objects, view_commands);
 
     let mut view: View = View::new(cols, rows);
 
@@ -188,10 +205,12 @@ fn main() -> Result<()> {
         commands,
         operators,
         motions,
+        text_objects,
         view_commands,
         &mut count,
         &mut chained,
         &mut next_operation,
+        &mut text_object_type,
         &all_normal_chars,
         &mut search_str,
         &mut status_bar,
@@ -219,11 +238,13 @@ fn program_loop<'a>(
     commands: &[Cmd],
     operators: &'a [Operator<'a>],
     motions: &[Motion],
+    text_objects: &[TextObject],
     view_commands: &[ViewCommand],
 
     count: &mut u16,
     chained: &mut Vec<char>,
     next_operation: &mut Option<&'a Operator<'a>>,
+    text_object_type: &mut Option<TextObjectType>,
     all_normal_chars: &[char],
 
     search_str: &mut Vec<char>,
@@ -263,6 +284,7 @@ fn program_loop<'a>(
                 (KeyCode::Char('.'), Mode::Normal) => match_action(
                     chained,
                     next_operation,
+                    text_object_type,
                     count,
                     &mut last_chained,
                     &mut last_count,
@@ -273,6 +295,7 @@ fn program_loop<'a>(
                     commands,
                     operators,
                     motions,
+                    text_objects,
                     view_commands,
                 ),
                 (KeyCode::Char(c), Mode::Normal) => {
@@ -284,6 +307,7 @@ fn program_loop<'a>(
                     match_action(
                         chained,
                         next_operation,
+                        text_object_type,
                         count,
                         &mut last_chained,
                         &mut last_count,
@@ -294,6 +318,7 @@ fn program_loop<'a>(
                         commands,
                         operators,
                         motions,
+                        text_objects,
                         view_commands,
                     );
                 }
