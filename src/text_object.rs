@@ -68,3 +68,11 @@ pub fn square_braces(buffer: &Buffer) -> TOBounds {
 pub fn quotations(buffer: &Buffer) -> TOBounds {
     find_matching(buffer, '\"', '\"')
 }
+
+pub fn single_quotations(buffer: &Buffer) -> TOBounds {
+    find_matching(buffer, '\'', '\'')
+}
+
+pub fn grav(buffer: &Buffer) -> TOBounds {
+    find_matching(buffer, '`', '`')
+}

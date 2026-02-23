@@ -41,7 +41,8 @@ use crate::{
     register::RegisterHandler,
     status_bar::StatusBar,
     text_object::{
-        TextObject, TextObjectType, curly_braces, parentheses, quotations, square_braces,
+        TextObject, TextObjectType, curly_braces, grav, parentheses, quotations, single_quotations,
+        square_braces,
     },
     undo::{Action, UndoTree},
     view::{View, cleanup, setup},
@@ -158,11 +159,19 @@ fn main() -> Result<()> {
     let text_objects: &[TextObject] = &[
         TextObject::new("(", parentheses),
         TextObject::new(")", parentheses),
+        TextObject::new("p", parentheses),
+        //
         TextObject::new("{", curly_braces),
         TextObject::new("}", curly_braces),
+        TextObject::new("c", curly_braces),
+        //
         TextObject::new("[", square_braces),
         TextObject::new("]", square_braces),
+        TextObject::new("s", square_braces),
+        //
         TextObject::new("\"", quotations),
+        TextObject::new("\'", single_quotations),
+        TextObject::new("`", grav),
     ];
 
     let mut next_operation: Option<&Operator> = None;
