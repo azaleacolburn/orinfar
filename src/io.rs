@@ -58,7 +58,7 @@ pub fn try_get_git_hash(path: Option<&PathBuf>) -> Option<String> {
         let head_path = format!("{git_stem}/HEAD");
 
         if let Ok(head_str) = std::fs::read_to_string(head_path).map(|s| s.trim().to_string()) {
-            let head = head_str.split(' ').collect::<Vec<&str>>()[1];
+            let head = head_str.split(' ').nth(1).unwrap();
 
             let ref_path = format!("{git_stem}/{head}");
             git_hash = std::fs::read_to_string(ref_path)
@@ -94,7 +94,7 @@ pub fn log(contents: &impl ToString) {
         .expect("unable to append data");
 }
 
-pub fn write_data(key: impl ToString, value: impl ToString) {
+pub fn write_data(key: &impl ToString, value: &impl ToString) {
     let mut file = OpenOptions::new()
         .append(true)
         .open(data_file())

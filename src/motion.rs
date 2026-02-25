@@ -199,11 +199,10 @@ pub fn beginning_of_line(buffer: &mut Buffer) {
 
 pub fn find(buffer: &mut Buffer) {
     fn find(key: KeyCode, buffer: &mut Buffer) {
-        if let KeyCode::Char(target) = key {
-            if let Some(position) = buffer.find_next(target) {
+        if let KeyCode::Char(target) = key
+            && let Some(position) = buffer.find_next(target) {
                 buffer.cursor = position;
             }
-        }
     }
 
     on_next_input_buffer_only(buffer, find).expect("Failed to get character to find");
@@ -211,14 +210,13 @@ pub fn find(buffer: &mut Buffer) {
 
 pub fn find_until(buffer: &mut Buffer) {
     fn find_until(key: KeyCode, buffer: &mut Buffer) {
-        if let KeyCode::Char(target) = key {
-            if let Some(position) = buffer.find_next(target) {
+        if let KeyCode::Char(target) = key
+            && let Some(position) = buffer.find_next(target) {
                 buffer.cursor = position;
                 if buffer.cursor != 0 {
                     buffer.cursor -= 1;
                 }
             }
-        }
     }
 
     on_next_input_buffer_only(buffer, find_until).expect("Failed to get character to find");
@@ -226,11 +224,10 @@ pub fn find_until(buffer: &mut Buffer) {
 
 pub fn find_back(buffer: &mut Buffer) {
     fn find_back(key: KeyCode, buffer: &mut Buffer) {
-        if let KeyCode::Char(target) = key {
-            if let Some(position) = buffer.find_prev(target) {
+        if let KeyCode::Char(target) = key
+            && let Some(position) = buffer.find_prev(target) {
                 buffer.cursor = position;
             }
-        }
     }
 
     on_next_input_buffer_only(buffer, find_back).expect("Failed to get character to find");

@@ -32,13 +32,11 @@ impl<'a> TextObject<'a> {
 
     // Returns the range that the text object occupies
     pub fn around(&self, buffer: &Buffer) -> TOBounds {
-        (self.command)(&buffer)
+        (self.command)(buffer)
     }
 
     pub fn inside(&self, buffer: &Buffer) -> TOBounds {
-        let Some((i, j)) = (self.command)(&buffer) else {
-            return None;
-        };
+        let (i, j) = (self.command)(buffer)?;
 
         if i == j {
             return Some((i, j));
@@ -49,13 +47,8 @@ impl<'a> TextObject<'a> {
 }
 
 pub fn find_matching(buffer: &Buffer, start: char, end: char) -> TOBounds {
-    let Some(first) = buffer.find_prev(start) else {
-        return None;
-    };
-
-    let Some(second) = buffer.find_next(end) else {
-        return None;
-    };
+    let first = buffer.find_prev(start)?;
+    let second = buffer.find_next(end)?;
 
     Some((first, second))
 }

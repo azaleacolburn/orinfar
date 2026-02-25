@@ -62,10 +62,8 @@ impl<'a> Operator<'a> {
         // Just use de if you want to delete the last word of a buffer
         // Like this is pretty nonsensical
         //
-        if !motion.inclusive {
-            if end > buffer.cursor {
-                end = usize::max(end, 1) - 1;
-            }
+        if !motion.inclusive && end > buffer.cursor {
+            end = usize::max(end, 1) - 1;
         }
 
         (self.command)(end, buffer, register_handler, mode, undo_tree);
@@ -133,6 +131,7 @@ impl<'a> Operator<'a> {
 ///   the cursor after the iteration.
 ///
 /// Any of the given callbacks may be noops. Each callback is free modify
+#[allow(clippy::too_many_arguments)]
 pub fn iterate_range(
     mode: &mut Mode,
     register_handler: &mut RegisterHandler,

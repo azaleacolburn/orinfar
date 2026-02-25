@@ -60,6 +60,7 @@ use crossterm::{
 
 pub static mut DEBUG: bool = true;
 
+#[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
     let (cols, rows) = size()?;
     setup(rows, cols)?;
@@ -82,13 +83,12 @@ fn main() -> Result<()> {
 
     let mut has_opened = false;
     data.lines().for_each(|l| {
-        let Some((k, v)) = l.split_once(":") else {
+        let Some((k, v)) = l.split_once(':') else {
             panic!("Invalid Data File");
         };
 
-        match (k.trim(), v.trim()) {
-            ("has_opened", "true") => has_opened = true,
-            (_, _) => {}
+        if ("has_opened", "true") == (k.trim(), v.trim()) {
+            has_opened = true;
         }
     });
 
@@ -186,7 +186,7 @@ fn main() -> Result<()> {
 
     if !has_opened && path.is_none() {
         view.get_view_box().write_welcome_screen();
-        write_data("has_opened", "true");
+        write_data(&"has_opened", &"true");
     }
 
     view.set_path(path);
