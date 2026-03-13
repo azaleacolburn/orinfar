@@ -1,11 +1,8 @@
-use std::iter::once;
-
 use crate::{
-    DEBUG,
     buffer::Buffer,
-    log,
     undo::{Action, UndoTree},
 };
+use std::iter::once;
 
 impl Buffer {
     pub fn delete_curr_char(&mut self) {
@@ -33,23 +30,22 @@ impl Buffer {
         self.rope.insert_char(self.cursor, c);
     }
 
-    // Inserts a newline at the current position, then adds spaces to the new line until the last
-    // non-whitespace column lines up
-    //
-    // Increments cursor accordingly
-    //
-    // # Returns
-    // The contents of the newline including the newline character but not including the contents
-    // moved from the previous line
-    //
-    // It returns the contents inserted into the buffer
+    /// Inserts a newline at the current position, then adds spaces to the new line until the last
+    /// non-whitespace column lines up
+    ///
+    /// Increments cursor accordingly
+    ///
+    /// # Returns
+    /// The contents of the newline including the newline character but not including the contents
+    /// moved from the previous line
+    ///
+    /// It returns the contents inserted into the buffer
     pub fn insert_newline(&mut self) -> String {
         let first_col = self.get_first_non_whitespace_col();
-        log!("first_col {}", first_col);
         self.update_list_add_current();
         self.rope.insert_char(self.cursor, '\n');
         self.cursor += 1;
-        self.insert_char_n_times(' ', first_col as u8);
+        self.insert_char_n_times(' ', first_col);
         self.cursor += first_col;
 
         once('\n')
@@ -57,7 +53,7 @@ impl Buffer {
             .collect::<String>()
     }
 
-    pub fn insert_char_n_times(&mut self, c: char, n: u8) {
+    pub fn insert_char_n_times(&mut self, c: char, n: usize) {
         if c == '\n' {
             (0..n).for_each(|_| self.update_list_add_current());
         }
@@ -84,7 +80,7 @@ impl Buffer {
         if self.cursor <= self.rope.len_chars() {
             self.cursor += 1;
             return Some(self.rope.char(self.cursor));
-        };
+        }
 
         None
     }
@@ -120,16 +116,8 @@ impl Buffer {
 
     // This is where we are
     pub fn set_col(&mut self, col: usize) {
-        log!("\nset_col cursor: {}", self.cursor);
         let start_idx = self.get_start_of_line();
         self.cursor = start_idx + col;
-        log!(
-            "start_of_line: {}\ncol: {}\nnew_cursor: {} len: {}\n",
-            start_idx,
-            col,
-            self.cursor,
-            self.rope.len_chars()
-        );
     }
 
     pub fn get_row(&self) -> usize {
@@ -148,22 +136,6 @@ impl Buffer {
 
         let new_position = usize::min(start_of_next_row + col, end_next_row);
         self.cursor = new_position;
-        // Subtracting a signed integer variable from a usize is annoying
-        // if curr_row < row {
-        //     while curr_row != row && self.cursor + 1 < self.rope.len_chars() {
-        //         if self.rope.char(self.cursor) == '\n' {
-        //             curr_row += 1;
-        //         }
-        //         self.cursor += 1;
-        //     }
-        // } else {
-        //     while curr_row != row && self.cursor - 1 < self.rope.len_chars() {
-        //         if self.rope.char(self.cursor) == '\n' {
-        //             curr_row -= 1;
-        //         }
-        //         self.cursor -= 1;
-        //     }
-        // };
     }
 
     pub fn count_spaces_backwards(&self) -> usize {
@@ -171,10 +143,12 @@ impl Buffer {
         let mut idx = self.cursor;
         while let Some(c) = self.rope.get_char(idx)
             && c == ' '
-            && idx > 0
         {
-            idx -= 1;
             space_count += 1;
+            if idx == 0 {
+                break;
+            }
+            idx -= 1;
         }
 
         space_count
@@ -185,7 +159,7 @@ impl Buffer {
         let mut deleted = String::with_capacity(4);
         let mut leftover = space_count % 4;
         if leftover == 0 {
-            leftover = 4
+            leftover = 4;
         }
         assert!(space_count >= leftover);
 
@@ -236,28 +210,31 @@ impl Buffer {
     // new action.
     pub fn replace_text(
         &mut self,
-        new: String,
-        original: String,
+        new: &str,
+        original: &str,
         idxs_of_substitution: &[usize],
         undo_tree: &mut UndoTree,
         undoing: bool,
     ) {
-        let offset = new.len() as i32 - original.len() as i32;
+        let offset = i32::try_from(new.len()).unwrap() - i32::try_from(original.len()).unwrap();
+
         for (i, end_idx) in idxs_of_substitution.iter().enumerate() {
-            let offset = i as i32 * offset;
+            let offset = i32::try_from(i).unwrap() * offset;
+            let end_idx = i32::try_from(*end_idx).unwrap();
+            let original_len = i32::try_from(original.len()).unwrap();
+
             assert!(
-                *end_idx as i32 >= original.len() as i32 + offset,
+                end_idx >= original_len + offset,
                 "end_idx {} original len {} offset {}",
                 end_idx,
                 original.len(),
                 offset
             );
-            let start_idx = (*end_idx as i32 - original.len() as i32 + offset) as usize;
-            log!("start_idx: {} offset {}", start_idx, offset);
+            let start_idx = usize::try_from(end_idx - original_len + offset).unwrap();
 
             self.rope
-                .remove(start_idx..(*end_idx as i32 + offset) as usize);
-            self.rope.insert(start_idx, &new);
+                .remove(start_idx..usize::try_from(end_idx + offset).unwrap());
+            self.rope.insert(start_idx, new);
 
             if !undoing {
                 let action = Action::replace(vec![start_idx + new.len()], &original, &new);
@@ -267,6 +244,87 @@ impl Buffer {
 
         if self.cursor > self.rope.len_chars() {
             self.cursor = self.rope.len_chars();
+        }
+    }
+
+    pub fn backspace(&mut self, undo_tree: &mut UndoTree) {
+        if self.cursor == 0 {
+            return;
+        }
+        self.cursor -= 1;
+        let char = self.get_curr_char();
+
+        // Handles deleting 4 spaces or up to the alignment of 4 spaces if possible
+        let space_count = self.count_spaces_backwards();
+
+        if space_count > 1 {
+            let deleted = self.delete_to_4_spaces_alignment(space_count);
+
+            self.update_list_use_current_line();
+            let action = Action::delete(self.cursor, &deleted);
+            undo_tree.new_action_merge(action);
+        } else {
+            // In most cases, when there's just one character to delete
+            self.delete_curr_char();
+            self.update_list_use_current_line();
+
+            let action = Action::delete(self.cursor, &char);
+            undo_tree.new_action_merge(action);
+        }
+    }
+
+    pub fn goto_next_string(&mut self, str: &[char]) {
+        if str.is_empty() {
+            return;
+        }
+
+        let mut i = 0;
+        let mut cursor = self.cursor;
+
+        let within_bounds = self.rope.len_chars() > cursor + str.len();
+        if within_bounds
+            && self.rope.slice(self.cursor..self.cursor + str.len())
+                == str.iter().collect::<String>()
+        {
+            cursor += 1;
+        }
+
+        while let Some(s) = self.rope.get_char(cursor + i) {
+            if s == str[i] {
+                i += 1;
+            } else {
+                cursor += 1;
+                i = 0;
+            }
+            if i == str.len() {
+                self.cursor = cursor;
+                return;
+            }
+        }
+    }
+
+    pub fn find_next(&self, target: char) -> Option<usize> {
+        let mut cursor = self.cursor;
+        let last = self.rope.len_chars() - 1;
+        loop {
+            match self.rope.get_char(cursor) {
+                Some(c) if c == target => return Some(cursor),
+                Some(_) if cursor == last => return None,
+                Some(_) => cursor += 1,
+                None => return None,
+            }
+        }
+    }
+
+    pub fn find_prev(&self, target: char) -> Option<usize> {
+        let mut cursor = self.cursor;
+        loop {
+            match self.rope.get_char(cursor) {
+                Some(c) if c == target => return Some(cursor),
+                Some(_) if cursor == 0 => return None,
+                Some(_) => cursor -= 1,
+                None => return None,
+            }
         }
     }
 }

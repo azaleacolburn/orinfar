@@ -6,15 +6,15 @@ pub struct StatusBar {
 }
 
 impl StatusBar {
-    pub fn new() -> Self {
-        StatusBar {
+    pub const fn new() -> Self {
+        Self {
             buffer: vec![],
             idx: 0,
         }
     }
 
-    pub fn idx(&self) -> usize {
-        self.idx
+    pub fn idx(&self) -> u16 {
+        u16::try_from(self.idx).unwrap()
     }
 
     pub fn buffer(&self) -> String {

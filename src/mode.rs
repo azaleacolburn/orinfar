@@ -9,18 +9,25 @@ pub enum Mode {
     Normal,
     Insert,
     Meta,
+    Search,
     Visual,
 }
 
 impl Mode {
     pub fn insert(&mut self) {
-        *self = Mode::Insert;
+        *self = Self::Insert;
         execute!(stdout(), SetCursorStyle::BlinkingBar)
             .expect("Crossterm blinking bar command failed");
     }
 
     pub fn normal(&mut self) {
-        *self = Mode::Normal;
+        *self = Self::Normal;
+        execute!(stdout(), SetCursorStyle::SteadyBlock)
+            .expect("Crossterm steady block command failed");
+    }
+
+    pub fn search(&mut self) {
+        *self = Self::Search;
         execute!(stdout(), SetCursorStyle::SteadyBlock)
             .expect("Crossterm steady block command failed");
     }
@@ -29,10 +36,11 @@ impl Mode {
 impl Display for Mode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
-            Mode::Normal => "normal",
-            Mode::Insert => "insert",
-            Mode::Meta => "meta",
-            Mode::Visual => "visual",
+            Self::Normal => "normal",
+            Self::Insert => "insert",
+            Self::Meta => "meta",
+            Self::Search => "search",
+            Self::Visual => "visual",
         };
 
         f.write_str(str)

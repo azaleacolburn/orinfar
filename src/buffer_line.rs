@@ -1,5 +1,8 @@
-use crate::{DEBUG, buffer::Buffer, log};
-use ropey::RopeSlice;
+use crate::{
+    buffer::Buffer,
+    undo::{Action, UndoTree},
+};
+use ropey::{Rope, RopeSlice};
 
 impl Buffer {
     pub fn is_empty_line(&self) -> bool {
@@ -12,7 +15,7 @@ impl Buffer {
 
         let start_index = self.get_start_of_n_line(line_idx);
         let end_index = self.get_end_of_n_line(line_idx);
-        self.rope.remove(start_index..=end_index)
+        self.rope.remove(start_index..=end_index);
     }
 
     /// Returns the number of lines in the buffer
@@ -28,15 +31,17 @@ impl Buffer {
     /// Returns the first index (absolute) of the line where the given `char_idx` is located
     pub fn get_start_of_char_line(&self, char_idx: usize) -> usize {
         let line_idx = self.rope.char_to_line(char_idx);
-        log!("line idx: {} len: {}", line_idx, self.len());
         self.rope.line_to_char(line_idx)
     }
 
     pub fn get_first_non_whitespace_col(&self) -> usize {
         let mut start_of_line = self.get_start_of_line();
+        let end_of_line = self.get_end_of_line();
         let anchor = start_of_line;
+
         while let Some(c) = self.rope.get_char(start_of_line)
             && c.is_whitespace()
+            && start_of_line < end_of_line
         {
             start_of_line += 1;
         }
@@ -86,15 +91,12 @@ impl Buffer {
         assert!(self.cursor <= self.rope.len_chars());
 
         let line = self.rope.char_to_line(self.cursor);
-        log!("get_end_of(curr)_line: {}, line: {}", self.cursor, line);
         self.get_end_of_n_line(line)
     }
 
     /// Called by the '$' motion
     pub fn end_of_line(&mut self) {
         let end_of_line = self.get_end_of_line();
-        log!("end_of_line: {}", end_of_line);
-        log!("length of buffer: {}", self.rope.len_chars());
         self.cursor = end_of_line;
     }
 
@@ -125,7 +127,23 @@ impl Buffer {
 
     pub fn next_line(&mut self) {
         let line = self.get_row();
-        log!("next_line current_line: {}", line);
         self.set_row(line + 1);
+    }
+
+    pub fn replace_contents(&mut self, contents: String, undo_tree: &mut UndoTree) {
+        self.has_changed = true;
+        self.lines_for_updating.clear();
+        contents.lines().for_each(|_| self.update_list_add(0));
+        if contents.is_empty() {
+            self.update_list_add(0);
+        }
+
+        let action = Action::insert(0, &contents);
+        undo_tree.new_action(action);
+
+        self.rope = Rope::from(contents);
+        if self.cursor > self.rope.len_chars() {
+            self.cursor = 0;
+        }
     }
 }

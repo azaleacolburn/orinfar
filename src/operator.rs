@@ -3,6 +3,7 @@ use crate::{
     buffer::Buffer,
     motion::Motion,
     register::RegisterHandler,
+    text_object::{TextObject, TextObjectType},
     undo::{Action, UndoTree},
 };
 
@@ -31,7 +32,7 @@ impl<'a> Operator<'a> {
         Self { name, command }
     }
 
-    pub fn execute(
+    pub fn execute_motion(
         &self,
         motion: &Motion,
         buffer: &mut Buffer,
@@ -40,10 +41,51 @@ impl<'a> Operator<'a> {
         undo_tree: &mut UndoTree,
     ) {
         let mut end = motion.evaluate(buffer);
-        if !motion.inclusive && end != buffer.get_end_of_line() {
-            end = usize::max(end, 1) - 1
+        // NOTE
+        // So I'm pretty sure the delete behavior thing isn't fixable
+        // Like the word c vs word cc thing
+        // Like VI must have a special case for it
+        // The reason it was inconsistent is because we had a special case that made it weird
+        // But if
+        // ```
+        // word c
+        // dw--->doesn't delete c, than
+        // ```
+        // ```
+        // word
+        // dw->won't delete d
+        // ```
+        // Because `w` is an exclusive motion (edited)
+        // I think that `w` must go past the last character of the buffer when that character is the last character of the alphanumeric word. Of course, this would mean that there's a later check that moves the cursor back into the bounds of the file when you just type w at the end of the file. (edited)
+        // Pretty sure that's how they do it
+        // Of course, I'm not interested in replicating this nonsense
+        // Just use de if you want to delete the last word of a buffer
+        // Like this is pretty nonsensical
+        //
+        if !motion.inclusive && end > buffer.cursor {
+            end = usize::max(end, 1) - 1;
         }
 
+        (self.command)(end, buffer, register_handler, mode, undo_tree);
+    }
+
+    pub fn execute_text_object(
+        &self,
+        text_object: &TextObject,
+        text_object_type: &TextObjectType,
+        buffer: &mut Buffer,
+        register_handler: &mut RegisterHandler,
+        mode: &mut Mode,
+        undo_tree: &mut UndoTree,
+    ) {
+        let Some((beginning, end)) = (match text_object_type {
+            TextObjectType::Inside => text_object.inside(buffer),
+            TextObjectType::Around => text_object.around(buffer),
+        }) else {
+            return;
+        };
+
+        buffer.cursor = beginning;
         (self.command)(end, buffer, register_handler, mode, undo_tree);
     }
 
@@ -55,7 +97,6 @@ impl<'a> Operator<'a> {
         undo_tree: &mut UndoTree,
     ) {
         buffer.start_of_line();
-        // `+ 1` because the `iterate_range` function is exclusive
         let end_of_line = buffer.get_end_of_line();
         let reg_before = register_handler.get_reg().to_string();
 
@@ -63,7 +104,7 @@ impl<'a> Operator<'a> {
         if reg_before != register_handler.get_reg()
             && register_handler.get_reg().chars().last().unwrap_or('\n') != '\n'
         {
-            register_handler.push_reg("\n");
+            register_handler.push_reg(&'\n');
         }
     }
 }
@@ -90,6 +131,7 @@ impl<'a> Operator<'a> {
 ///   the cursor after the iteration.
 ///
 /// Any of the given callbacks may be noops. Each callback is free modify
+#[allow(clippy::too_many_arguments)]
 pub fn iterate_range(
     mode: &mut Mode,
     register_handler: &mut RegisterHandler,
@@ -107,15 +149,40 @@ pub fn iterate_range(
         buffer: &mut Buffer,
         mode: &mut Mode,
     ),
+    will_delete: bool,
 ) {
     let anchor = buffer.cursor;
-    let count = (end as isize - anchor as isize).abs();
+    let count = i32::try_from(end).unwrap() - i32::try_from(anchor).unwrap();
     initial_callback(register_handler, buffer, mode);
-    (0..=count).for_each(|_| iter_callback(register_handler, buffer));
+
+    let initial_register_contents = register_handler.get_reg().to_string();
+
+    if count.is_positive() {
+        if will_delete {
+            (0..=count).for_each(|_| iter_callback(register_handler, buffer));
+        } else {
+            (0..=count).for_each(|_| {
+                iter_callback(register_handler, buffer);
+                if buffer.cursor + 1 < buffer.rope.len_chars() {
+                    buffer.next_char();
+                }
+            });
+        }
+    } else {
+        (0..=count.abs()).for_each(|_| {
+            iter_callback(register_handler, buffer);
+        });
+
+        let final_register_contents = register_handler.get_reg();
+        if initial_register_contents != final_register_contents {
+            register_handler.set_reg(final_register_contents.chars().rev().collect::<String>());
+        }
+    }
+
     after_callback(anchor, register_handler, buffer, mode);
 }
 
-fn noop(
+const fn noop(
     _start: usize,
     _register_handler: &mut RegisterHandler,
     _buffer: &mut Buffer,
@@ -123,13 +190,13 @@ fn noop(
 ) {
 }
 
-fn reset_position(
+const fn reset_position(
     start: usize,
     _register_handler: &mut RegisterHandler,
     buffer: &mut Buffer,
     _mode: &mut Mode,
 ) {
-    buffer.cursor = start
+    buffer.cursor = start;
 }
 
 fn insert(
@@ -149,7 +216,7 @@ fn delete_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
     if buffer.rope.len_chars() <= buffer.cursor {
         return;
     }
-    register_handler.push_reg(&buffer.get_curr_char().to_string());
+    register_handler.push_reg(&buffer.get_curr_char());
     buffer.delete_curr_char();
 }
 pub fn delete(
@@ -159,11 +226,6 @@ pub fn delete(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
-    let end_of_file = buffer.rope.len_chars();
-    if end == end_of_file && end != 0 {
-        buffer.cursor -= 1;
-    }
-
     iterate_range(
         mode,
         register_handler,
@@ -172,21 +234,21 @@ pub fn delete(
         clear_reg,
         delete_char,
         noop,
+        true,
     );
     // TODO
     // Currently using the 'd' command across lines will break because of this
     buffer.update_list_use_current_line();
 
     let text = register_handler.get_reg();
-    let action = Action::delete(buffer.cursor, text);
+    let action = Action::delete(buffer.cursor, &text);
     undo_tree.new_action(action);
+
+    buffer.cursor = usize::min(buffer.cursor, usize::max(buffer.rope.len_chars(), 1) - 1);
 }
 
 fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
-    register_handler.push_reg(&buffer.get_curr_char().to_string());
-    if buffer.cursor + 1 < buffer.rope.len_chars() {
-        buffer.next_char();
-    }
+    register_handler.push_reg(&buffer.get_curr_char());
 }
 pub fn yank(
     end: usize,
@@ -198,10 +260,7 @@ pub fn yank(
     if end == buffer.rope.len_chars() && end == buffer.cursor {
         return;
     }
-    let end_of_file = buffer.rope.len_chars();
-    if end == end_of_file && end != 0 {
-        buffer.cursor -= 1;
-    }
+
     iterate_range(
         mode,
         register_handler,
@@ -210,7 +269,10 @@ pub fn yank(
         clear_reg,
         yank_char,
         reset_position,
+        false,
     );
+
+    buffer.cursor = usize::min(buffer.cursor, usize::max(buffer.rope.len_chars(), 1) - 1);
 }
 
 pub fn change(
@@ -220,11 +282,6 @@ pub fn change(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
-    let end_of_file = buffer.rope.len_chars();
-    if end == end_of_file && end != 0 {
-        buffer.cursor -= 1;
-    }
-
     iterate_range(
         mode,
         register_handler,
@@ -233,6 +290,7 @@ pub fn change(
         clear_reg,
         delete_char,
         insert,
+        true,
     );
 
     // TODO
@@ -240,6 +298,8 @@ pub fn change(
     buffer.update_list_use_current_line();
 
     let text = register_handler.get_reg();
-    let action = Action::delete(buffer.cursor, text);
+    let action = Action::delete(buffer.cursor, &text);
     undo_tree.new_action(action);
+
+    buffer.cursor = usize::min(buffer.cursor, usize::max(buffer.rope.len_chars(), 1) - 1);
 }

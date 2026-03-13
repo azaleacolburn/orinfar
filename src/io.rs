@@ -1,10 +1,7 @@
+use crate::mode::Mode;
 use anyhow::{Result, bail};
-use ropey::Rope;
-use std::{env, fs::OpenOptions, io::Write, path::PathBuf};
-
 use clap::Parser;
-
-use crate::{buffer::Buffer, mode::Mode};
+use std::{fs::OpenOptions, io::Write, path::PathBuf};
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -18,7 +15,7 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn parse_path() -> Result<(Cli, Option<PathBuf>)> {
+    pub fn parse_path() -> Result<(Self, Option<PathBuf>)> {
         let cli = Self::parse();
 
         match cli.file_name {
@@ -41,43 +38,52 @@ impl Cli {
     }
 }
 
-pub fn load_file(path: &Option<PathBuf>, buffer: &mut Buffer) -> Result<()> {
+pub fn try_get_git_hash(path: Option<&PathBuf>) -> Option<String> {
+    let mut git_hash: Option<String> = None;
     if let Some(path) = path {
-        if !std::fs::exists(path)? {
-            std::fs::write(path, buffer.rope.to_string())?;
-            return Ok(());
+        let path = if path.is_dir() {
+            path
+        } else {
+            path.parent().unwrap()
         }
+        .to_str()
+        .unwrap();
 
-        let contents = std::fs::read_to_string(path)?;
-        buffer.rope = Rope::from(contents);
+        let git_stem = if path.is_empty() {
+            String::from(".git")
+        } else {
+            format!("{path}/.git")
+        };
 
-        buffer.lines_for_updating = (0..buffer.len()).map(|_| true).collect::<Vec<bool>>();
-        buffer.cursor = usize::min(buffer.cursor, buffer.rope.len_chars());
-        buffer.has_changed = true;
+        let head_path = format!("{git_stem}/HEAD");
+
+        if let Ok(head_str) = std::fs::read_to_string(head_path).map(|s| s.trim().to_string()) {
+            let head = head_str.split(' ').nth(1).unwrap();
+
+            let ref_path = format!("{git_stem}/{head}");
+            git_hash = std::fs::read_to_string(ref_path)
+                .ok()
+                .map(|s| s.trim().chars().take(7).collect::<String>());
+        }
     }
 
-    Ok(())
-}
-
-pub fn write(path: PathBuf, buffer: Buffer) -> Result<()> {
-    std::fs::write(path, buffer.to_string())?;
-
-    Ok(())
+    git_hash
 }
 
 pub fn log_dir() -> PathBuf {
-    env::home_dir()
-        .expect("Failed to get home dir")
-        .join(".orinfar")
+    let base = xdg::BaseDirectories::with_prefix("orinfar");
+    base.get_state_home().expect("Could not find home")
 }
 
 pub fn log_file() -> PathBuf {
-    env::home_dir()
-        .expect("Failed to get home dir")
-        .join(".orinfar/log")
+    log_dir().join("log")
 }
 
-pub fn log(contents: impl ToString) {
+pub fn data_file() -> PathBuf {
+    log_dir().join("data")
+}
+
+pub fn log(contents: &impl ToString) {
     let mut file = OpenOptions::new()
         .append(true)
         .open(log_file())
@@ -88,11 +94,22 @@ pub fn log(contents: impl ToString) {
         .expect("unable to append data");
 }
 
+pub fn write_data(key: &impl ToString, value: &impl ToString) {
+    let mut file = OpenOptions::new()
+        .append(true)
+        .open(data_file())
+        .expect("unable to open file");
+
+    // append data to the file
+    file.write_all(format!("{}:{}\n", key.to_string(), value.to_string()).as_bytes())
+        .expect("unable to append data");
+}
+
 #[macro_export]
 macro_rules! log {
     ($($arg:tt)*) => {
         if unsafe { DEBUG } {
-            log(format!($($arg)*))
+            log(&format!($($arg)*))
         }
     };
 }

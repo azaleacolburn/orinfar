@@ -1,8 +1,14 @@
 [package]
 
 name = "orinfar"
-version = "0.1.0"
+version = "0.0.3"
 edition = "2024"
+description = "A Text Editor For Witches"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/azaleacolburn/orinfar"
+authors = ["Azalea Colburn azaleacolburn@gmail.com"]
+keywords = ["text", "editor", "files", "vi", "vim"]
 
 [dependencies]
 anyhow = "1.0.98"
@@ -12,3 +18,9 @@ ropey = "1.6.1"
 tree-sitter = "0.26.3"
 tree-sitter-c = "0.24.1"
 tree-sitter-highlight = "0.26.3"
+xdg = "3.0.0"
+
+[lints.clippy]
+pedantic      = { level = "deny", priority = -1 }
+nursery       = { level = "deny", priority = -1 }
+# unwrap_used   = "deny"

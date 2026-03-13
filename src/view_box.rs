@@ -1,65 +1,84 @@
-use crate::{DEBUG, Mode, buffer::Buffer, log, status_bar::StatusBar};
+use crate::buffer::Buffer;
 use anyhow::Result;
 use crossterm::{
-    cursor::{Hide, MoveDown, MoveTo, MoveToColumn, MoveToRow, SetCursorStyle, Show},
+    cursor::{Hide, MoveDown, MoveTo, MoveToColumn},
     execute,
-    style::{Color, Print, ResetColor, SetForegroundColor},
-    terminal::{
-        Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
-        enable_raw_mode,
-    },
+    style::{Color, Print, SetForegroundColor},
 };
 use ropey::RopeSlice;
 use std::{
-    io::{Stdout, Write, stdout},
+    io::{Stdout, stdout},
     path::PathBuf,
 };
 use tree_sitter_highlight::HighlightEvent;
 
+#[derive(Debug)]
 pub struct ViewBox {
+    // Components inherant to the view box
+    pub buffer: Buffer,
+    pub path: Option<PathBuf>,
+    pub git_hash: Option<String>,
+
+    // The x and y corrdinates of the upper right hand corner of where the buffer will be displayed
+    pub x: u16,
+    pub y: u16,
     // The topmost row of the buffer being displayed (zero-indexed)
     pub top: usize,
     // The height in rows of the entire view box (minus the status bar)
-    height: usize,
+    pub height: u16,
     // The leftmost row of the buffer being displayed (zero-indexed)
     pub left: usize,
     // The width in rows of the entire view box
-    width: usize,
+    pub width: u16,
 }
 
 impl ViewBox {
-    pub fn new(cols: u16, rows: u16) -> Self {
-        ViewBox {
+    /// # Arguments
+    /// - cols: the number of cols this view box has
+    /// - rows: the number of rows this view box has
+    /// - x: the x position of the upper right hand corner of this view box
+    /// - y: the y position of the upper right hand corner of this view box
+    pub fn new(cols: u16, rows: u16, x: u16, y: u16) -> Self {
+        Self {
+            buffer: Buffer::new(),
+            path: None,
+            git_hash: None,
+
+            x,
+            y,
             top: 0,
-            height: rows as usize - 1, // Reserve one for the status bar
+            height: rows,
             left: 0,
-            width: cols as usize - 1,
+            // Reserve one for line numbers
+            // TODO
+            // Have option to not have line nums
+            width: cols - 1,
         }
     }
 
-    pub fn adjust(&mut self, buffer: &mut Buffer) -> bool {
-        let col = buffer.get_col();
-        let row = buffer.get_row();
+    pub fn adjust(&mut self) -> bool {
+        let col = self.buffer.get_col();
+        let row = self.buffer.get_row();
         let mut adjusted = false;
 
         if self.top > row {
             self.top = row;
             adjusted = true;
-        } else if self.top + self.height <= row {
-            self.top = row - self.height + 1;
+        } else if self.top + self.height as usize <= row {
+            self.top = row - self.height as usize + 1;
             adjusted = true;
         }
 
         if self.left > col {
             self.left = col;
             adjusted = true;
-        } else if self.left + self.width < col {
-            self.left = col - self.width;
+        } else if self.left + (self.width as usize) < col {
+            self.left = col - self.width as usize;
             adjusted = true;
         }
 
         if adjusted {
-            buffer.update_list_set(.., true);
+            self.buffer.update_list_set(.., true);
         }
 
         adjusted
@@ -82,7 +101,7 @@ impl ViewBox {
             .zip(buffer.lines_for_updating.iter())
             .enumerate()
             .skip(self.top)
-            .take(self.height)
+            .take(self.height.into())
             .map(|(i, (line, should_update))| {
                 let mut slice_list: Vec<(RopeSlice<'_>, Color)> =
                     Vec::with_capacity(lines_len * 10);
@@ -165,198 +184,140 @@ impl ViewBox {
         let lines = buffer
             .rope
             .lines()
-            .zip(buffer.lines_for_updating.iter())
+            .zip(self.buffer.lines_for_updating.iter())
             .enumerate()
             .skip(self.top)
-            .take(self.height);
-        let len_lines = lines.len();
+            .take(self.height.into());
 
-        execute!(stdout, Hide, MoveTo(0, 0))?;
+        let len_lines = u16::try_from(lines.len()).unwrap();
+
+        execute!(stdout, Hide, MoveTo(self.x, self.y))?;
         let mut padding_buffer = String::with_capacity(left_padding);
 
-        lines.for_each(|(i, (line, should_update))| {
+        let clear_str: String = (0..self.width).map(|_| ' ').collect();
+
+        lines.for_each(|(line_num, (line, should_update))| {
             if !should_update {
                 execute!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
                 return;
             }
 
-            let i_str = i.to_string();
-            for _ in 0..left_padding - i_str.len() {
+            let line_num = line_num.to_string();
+            // `-1` for the last space character that gets pushed
+            for _ in 0..left_padding - line_num.len() - 1 {
                 padding_buffer.push(' ');
             }
-            padding_buffer.push_str(&i_str);
+            padding_buffer.push_str(&line_num);
             padding_buffer.push(' ');
+
+            execute!(stdout, Print(&clear_str)).unwrap();
+
             execute!(
                 stdout,
-                Clear(ClearType::CurrentLine),
-                SetForegroundColor(Color::DarkGrey),
+                SetForegroundColor(Color::Grey),
+                MoveToColumn(self.x),
                 Print(padding_buffer.clone()),
             )
             .expect("Crossterm padding buffer print failed");
             padding_buffer.clear();
 
-            let len = line.len_chars();
-            if len == 0 {
+            let mut total_line_len = line.len_chars();
+            if total_line_len > 0
+                && let Some(c) = line.get_char(total_line_len - 1)
+                && c == '\n'
+            {
+                total_line_len -= 1;
+            }
+
+            if total_line_len == 0 {
+                execute!(stdout, MoveToColumn(self.x), MoveDown(1))
+                    .expect("Crossterm padding buffer print failed");
                 return;
             }
 
-            let last_col = usize::min(self.left + self.width, len);
-            log!(
-                "eos {} len {} last_col {} left {}",
-                self.left + self.width,
-                len,
-                last_col,
-                self.left
-            );
+            // Number of characters that we're able to display in the current line
+            let display_line_len = self.width as usize - left_padding;
+
+            // Last column in the buffer that's being rendered to the screen
+            let last_col = usize::min(self.left + display_line_len, total_line_len);
+
+            // NOTE
+            // What was happening here waswhen we cropped the line
+            // we also cropped the newline character at the
+            // end, meaning that we never moved down to the next row!
             let line = if self.left >= last_col {
-                String::from("\n")
+                String::new()
             } else {
-                line.slice(self.left..last_col).to_string()
+                line.slice(self.left..last_col)
+                    .to_string()
+                    .trim_matches('\n')
+                    .to_string()
             };
 
             execute!(
                 stdout,
                 SetForegroundColor(Color::Blue),
                 Print(line),
-                MoveToColumn(0)
+                MoveToColumn(self.x),
+                MoveDown(1)
             )
             .expect("Crossterm print line command failed");
         });
 
         // This is for clearing trailing lines that we missed
         if len_lines < self.height {
-            execute!(stdout, MoveTo(0, len_lines as u16))?;
+            execute!(stdout, MoveTo(self.x, self.y + len_lines))?;
             (len_lines..self.height).for_each(|_| {
-                execute!(stdout, Clear(ClearType::CurrentLine), MoveDown(1))
-                    .expect("Crossterm clearing trailing lines failed")
+                execute!(stdout, Print(&clear_str), MoveDown(1), MoveToColumn(self.x))
+                    .expect("Crossterm clearing trailing lines failed");
             });
-        };
+        }
 
         Ok(())
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn flush(
-        &self,
-        buffer: &Buffer,
-        status_bar: &StatusBar,
-        mode: &Mode,
-        chained: &[char],
-        count: u16,
-        register: char,
-        path: &Option<PathBuf>,
-        adjusted: bool,
-    ) -> Result<()> {
+    pub fn flush(&self, adjusted: bool) -> Result<()> {
         let mut stdout = stdout();
-        let left_padding = (self.top + self.height).to_string().len();
+        let left_padding = self.left_padding();
 
-        if buffer.has_changed || adjusted {
-            self.write_buffer(buffer, &mut stdout, left_padding)?;
+        if self.buffer.has_changed || adjusted {
+            self.write_buffer(&mut stdout, left_padding)?;
         }
-
-        let col = buffer.get_col();
-        log("past col");
-        let row = buffer.get_row();
-
-        let status_message = match (mode, path) {
-            (Mode::Meta, _) => status_bar.buffer(),
-            (Mode::Normal, Some(path)) => {
-                let count_str = if count == 1 {
-                    String::new()
-                } else {
-                    count.to_string()
-                };
-
-                let reg_str = if register == '\"' {
-                    String::new()
-                } else {
-                    format!("\"{}", register)
-                };
-
-                format!(
-                    "Editing File: \"{}\" {}b {}{}{}",
-                    path.to_string_lossy(),
-                    std::fs::read(path)?.len(),
-                    reg_str,
-                    count_str,
-                    chained.iter().collect::<String>()
-                )
-            }
-            (Mode::Normal, None) => {
-                let count_str = if count == 1 {
-                    String::new()
-                } else {
-                    count.to_string()
-                };
-
-                format!("{}{}", count_str, chained.iter().collect::<String>())
-            }
-            (Mode::Insert, _) => "-- INSERT --".into(),
-            (Mode::Visual, _) => "-- VISUAL --".into(),
-        };
-        execute!(
-            stdout,
-            SetForegroundColor(Color::White),
-            MoveTo(0, self.height as u16 + 1),
-            Clear(ClearType::CurrentLine),
-            Print(status_message)
-        )?;
-
-        let (new_col, new_row) = match mode {
-            Mode::Meta => (status_bar.idx() as u16, (self.height + 1) as u16),
-            _ => {
-                let row = row - self.top;
-                let col = col - self.left + left_padding + 1;
-                (col as u16, row as u16)
-            }
-        };
-        execute!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
-        stdout.flush()?;
 
         Ok(())
     }
 
-    pub fn height(&self) -> usize {
-        self.height
+    pub fn left_padding(&self) -> usize {
+        (self.top + self.height as usize).to_string().len() + 1
     }
 
-    pub fn _width(&self) -> usize {
-        self.width
+    pub const fn _get_lower_right(&self) -> (u16, u16) {
+        (self.x + self.width, self.y + self.height)
     }
-}
 
-pub fn cleanup() -> Result<()> {
-    disable_raw_mode()?;
-    execute!(
-        stdout(),
-        ResetColor,
-        Clear(ClearType::All),
-        SetCursorStyle::SteadyBlock,
-        LeaveAlternateScreen
-    )?;
-
-    Ok(())
-}
-
-pub fn setup(rows: u16, cols: u16) -> Result<()> {
-    execute!(
-        stdout(),
-        EnterAlternateScreen,
-        Clear(ClearType::All),
-        MoveToRow(0),
-        SetForegroundColor(Color::Blue),
-    )?;
-
-    // Fill entire screen with spaces with the background color
-    for row in 0..rows {
-        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+    pub const fn get_lower_left(&self) -> (u16, u16) {
+        (self.x, self.y + self.height)
     }
-    execute!(stdout(), MoveTo(0, 0))?;
-    for row in 0..rows {
-        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
-    }
-    execute!(stdout(), MoveTo(0, 0))?;
-    enable_raw_mode()?;
 
-    Ok(())
+    pub const fn get_upper_right(&self) -> (u16, u16) {
+        (self.x + self.width, self.y)
+    }
+
+    /// # Returns
+    /// The current cursor position on the absolute screen
+    /// Given that the cursor is in the given view box
+    pub fn cursor_position(&self) -> (u16, u16) {
+        let left_padding = self.left_padding();
+        let col = self.buffer.get_col();
+        let row = self.buffer.get_row();
+
+        let row = self.y + u16::try_from(row - self.top).unwrap();
+        let col = self.x
+            + u16::min(
+                u16::try_from(col - self.left + left_padding).unwrap(),
+                self.width,
+            );
+        (col, row)
+    }
 }

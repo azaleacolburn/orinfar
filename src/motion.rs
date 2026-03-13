@@ -1,4 +1,7 @@
-use crate::{buffer::Buffer, on_next_input_buffer_only, utility::is_symbol};
+use crate::{
+    buffer::Buffer,
+    utility::{is_symbol, on_next_input_buffer_only},
+};
 use crossterm::event::KeyCode;
 
 pub struct Motion<'a> {
@@ -65,7 +68,7 @@ pub fn prev_row(buffer: &mut Buffer) {
     } else {
         0
     };
-    buffer.set_col(col)
+    buffer.set_col(col);
 }
 
 pub fn next_char(buffer: &mut Buffer) {
@@ -78,26 +81,26 @@ pub fn word(buffer: &mut Buffer) {
     }
     let mut c = buffer.get_curr_char();
 
-    let last_legal_char = buffer.get_end_of_line();
+    let last_legal_char = buffer.rope.len_chars() - 1;
 
     if is_symbol(c) {
         while is_symbol(c) && buffer.cursor < last_legal_char {
-            c = unwrap_or_break!(buffer.next_and_char());
-        }
-        while c.is_whitespace() && buffer.cursor < last_legal_char {
             c = unwrap_or_break!(buffer.next_and_char());
         }
     } else if c.is_alphanumeric() || c == '_' {
         while (c.is_alphanumeric() || c == '_') && buffer.cursor < last_legal_char {
             c = unwrap_or_break!(buffer.next_and_char());
         }
-        while c.is_whitespace() && buffer.cursor < last_legal_char {
-            c = unwrap_or_break!(buffer.next_and_char());
+    }
+
+    while c.is_whitespace() && buffer.cursor < last_legal_char {
+        if c == '\n' {
+            if buffer.cursor < last_legal_char {
+                buffer.cursor += 1;
+            }
+            return;
         }
-    } else {
-        while c.is_whitespace() && buffer.cursor < last_legal_char {
-            c = unwrap_or_break!(buffer.next_and_char());
-        }
+        c = unwrap_or_break!(buffer.next_and_char());
     }
 }
 
@@ -106,6 +109,11 @@ pub fn back(buffer: &mut Buffer) {
         return;
     }
     let mut prev_char = unwrap_or_return!(buffer.get_prev_char());
+
+    if prev_char == '\n' && buffer.cursor > 0 {
+        buffer.cursor -= 1;
+        return;
+    }
 
     if is_symbol(prev_char) {
         while is_symbol(prev_char) && buffer.cursor > 0 {
@@ -122,6 +130,7 @@ pub fn back(buffer: &mut Buffer) {
             buffer.prev_char();
             prev_char = unwrap_or_break!(buffer.get_prev_char());
         }
+
         if prev_char.is_alphanumeric() {
             while prev_char.is_alphanumeric() && buffer.cursor > 0 {
                 buffer.prev_char();
@@ -141,8 +150,15 @@ pub fn end_of_word(buffer: &mut Buffer) {
         return;
     }
 
+    let last_legal_char = buffer.rope.len_chars() - 1;
     let mut next_char = unwrap_or_return!(buffer.get_next_char());
-    let last_legal_char = buffer.get_end_of_line();
+
+    if next_char == '\n' {
+        if buffer.cursor < last_legal_char {
+            buffer.cursor += 2;
+        }
+        return;
+    }
 
     if is_symbol(next_char) {
         while is_symbol(next_char) && buffer.cursor < last_legal_char {
@@ -183,20 +199,10 @@ pub fn beginning_of_line(buffer: &mut Buffer) {
 
 pub fn find(buffer: &mut Buffer) {
     fn find(key: KeyCode, buffer: &mut Buffer) {
-        if let KeyCode::Char(target) = key {
-            let anchor = buffer.cursor;
-            loop {
-                if buffer.cursor == buffer.get_end_of_line() {
-                    break;
-                }
-                if buffer.get_curr_char() == target {
-                    return;
-                }
-                buffer.cursor += 1;
+        if let KeyCode::Char(target) = key
+            && let Some(position) = buffer.find_next(target) {
+                buffer.cursor = position;
             }
-
-            buffer.cursor = anchor
-        }
     }
 
     on_next_input_buffer_only(buffer, find).expect("Failed to get character to find");
@@ -204,24 +210,13 @@ pub fn find(buffer: &mut Buffer) {
 
 pub fn find_until(buffer: &mut Buffer) {
     fn find_until(key: KeyCode, buffer: &mut Buffer) {
-        if let KeyCode::Char(target) = key {
-            let anchor = buffer.cursor;
-            loop {
-                if buffer.cursor == buffer.get_end_of_line() {
-                    break;
+        if let KeyCode::Char(target) = key
+            && let Some(position) = buffer.find_next(target) {
+                buffer.cursor = position;
+                if buffer.cursor != 0 {
+                    buffer.cursor -= 1;
                 }
-                if buffer.get_curr_char() == target {
-                    if buffer.cursor != 0 {
-                        buffer.cursor -= 1;
-                    }
-                    return;
-                }
-
-                buffer.cursor += 1;
             }
-
-            buffer.cursor = anchor
-        }
     }
 
     on_next_input_buffer_only(buffer, find_until).expect("Failed to get character to find");
@@ -229,28 +224,17 @@ pub fn find_until(buffer: &mut Buffer) {
 
 pub fn find_back(buffer: &mut Buffer) {
     fn find_back(key: KeyCode, buffer: &mut Buffer) {
-        if let KeyCode::Char(target) = key {
-            let anchor = buffer.cursor;
-            loop {
-                if buffer.cursor == 0 {
-                    break;
-                }
-                if buffer.get_curr_char() == target {
-                    return;
-                }
-
-                buffer.cursor -= 1;
+        if let KeyCode::Char(target) = key
+            && let Some(position) = buffer.find_prev(target) {
+                buffer.cursor = position;
             }
-
-            buffer.cursor = anchor
-        }
     }
 
     on_next_input_buffer_only(buffer, find_back).expect("Failed to get character to find");
 }
 
-// Goes to the opposite bracket corresponding to the next bracket in the line (inclusive with  the
-// current character).
+/// Goes to the opposite bracket corresponding to the next bracket in the line (inclusive with  the
+/// current character).
 pub fn next_corresponding_bracket(buffer: &mut Buffer) {
     let anchor = buffer.cursor;
     let end_of_line = buffer.get_end_of_line();
@@ -284,13 +268,14 @@ pub fn next_corresponding_bracket(buffer: &mut Buffer) {
     // There's probably a better way to do this
     let condition: Box<dyn Fn(usize) -> bool> = match direction {
         1 => Box::new(|cursor: usize| end_of_file > cursor + 1),
-        -1 => Box::new(|cursor: usize| cursor as i32 > 0),
+        -1 => Box::new(|cursor: usize| i32::try_from(cursor).unwrap() > 0),
         _ => unreachable!(),
     };
 
     loop {
         if condition(buffer.cursor) {
-            buffer.cursor = (buffer.cursor as i32 + direction) as usize;
+            buffer.cursor =
+                usize::try_from(i32::try_from(buffer.cursor).unwrap() + direction).unwrap();
             c = buffer.get_curr_char();
         } else {
             buffer.cursor = anchor;
@@ -302,9 +287,8 @@ pub fn next_corresponding_bracket(buffer: &mut Buffer) {
         } else if c == search_character {
             if count == 0 {
                 break;
-            } else {
-                count -= 1;
             }
+            count -= 1;
         }
     }
 }
