@@ -1,4 +1,4 @@
-use crate::buffer::Buffer;
+use crate::{DEBUG, buffer::Buffer, highlight::highlight, log};
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn},
@@ -84,104 +84,100 @@ impl ViewBox {
         adjusted
     }
 
-    fn write_buffer_highlighted(
-        &self,
-        buffer: &Buffer,
-        highlights: Vec<HighlightEvent>,
-        stdout: &mut Stdout,
-        left_padding: usize,
-    ) -> Result<()> {
-        let mut hl_iter = highlights.iter();
-        let mut curr_hl = hl_iter.next();
+    // fn write_buffer_highlighted(
+    //     &self,
+    //     buffer: &Buffer,
+    //     highlights: Vec<HighlightEvent>,
+    //     stdout: &mut Stdout,
+    //     left_padding: usize,
+    // ) -> Result<()> {
+    //     let mut hl_iter = highlights.iter();
+    //     let mut curr_hl = hl_iter.next();
+    //
+    //     let lines = buffer.rope.lines();
+    //     let lines_len = lines.len();
+    //
+    //     let lines = lines
+    //         .zip(buffer.lines_for_updating.iter())
+    //         .enumerate()
+    //         .skip(self.top)
+    //         .take(self.height.into())
+    //         .map(|(i, (line, should_update))| {
+    //             let mut slice_list: Vec<(RopeSlice<'_>, Color)> =
+    //                 Vec::with_capacity(lines_len * 10);
+    //             // loop {
+    //             //     let line.slice(char_range);
+    //             // }
+    //         });
+    //     let len_lines = lines.len();
+    //
+    //     execute!(stdout, Hide, MoveTo(0, 0))?;
+    //     let mut padding_buffer = String::with_capacity(left_padding);
+    //
+    //     lines.for_each(|(i, (line, should_update))| {
+    //         if !should_update {
+    //             execute!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
+    //             return;
+    //         }
+    //
+    //         let i_str = i.to_string();
+    //         for _ in 0..left_padding - i_str.len() {
+    //             padding_buffer.push(' ');
+    //         }
+    //         padding_buffer.push_str(&i_str);
+    //         padding_buffer.push(' ');
+    //         execute!(
+    //             stdout,
+    //             Clear(ClearType::CurrentLine),
+    //             SetForegroundColor(Color::DarkGrey),
+    //             Print(padding_buffer.clone()),
+    //         )
+    //         .expect("Crossterm padding buffer print failed");
+    //         padding_buffer.clear();
+    //
+    //         let len = line.len_chars();
+    //         if len == 0 {
+    //             return;
+    //         }
+    //
+    //         let last_col = usize::min(self.left + self.width, len);
+    //         log!(
+    //             "eos {} len {} last_col {} left {}",
+    //             self.left + self.width,
+    //             len,
+    //             last_col,
+    //             self.left
+    //         );
+    //         let line = if self.left >= last_col {
+    //             String::from("\n")
+    //         } else {
+    //             line.slice(self.left..last_col).to_string()
+    //         };
+    //
+    //         execute!(
+    //             stdout,
+    //             SetForegroundColor(Color::Blue),
+    //             Print(line),
+    //             MoveToColumn(0)
+    //         )
+    //         .expect("Crossterm print line command failed");
+    //     });
+    //
+    //     // This is for clearing trailing lines that we missed
+    //     if len_lines < self.height {
+    //         execute!(stdout, MoveTo(0, len_lines as u16))?;
+    //         (len_lines..self.height).for_each(|_| {
+    //             execute!(stdout, Clear(ClearType::CurrentLine), MoveDown(1))
+    //                 .expect("Crossterm clearing trailing lines failed")
+    //         });
+    //     };
+    //
+    //     Ok(())
+    // }
 
-        let lines = buffer.rope.lines();
-        let lines_len = lines.len();
-
-        let lines = lines
-            .zip(buffer.lines_for_updating.iter())
-            .enumerate()
-            .skip(self.top)
-            .take(self.height.into())
-            .map(|(i, (line, should_update))| {
-                let mut slice_list: Vec<(RopeSlice<'_>, Color)> =
-                    Vec::with_capacity(lines_len * 10);
-                loop {
-                    let line.slice(char_range);
-                }
-            });
-        let len_lines = lines.len();
-
-        execute!(stdout, Hide, MoveTo(0, 0))?;
-        let mut padding_buffer = String::with_capacity(left_padding);
-
-        lines.for_each(|(i, (line, should_update))| {
-            if !should_update {
-                execute!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
-                return;
-            }
-
-            let i_str = i.to_string();
-            for _ in 0..left_padding - i_str.len() {
-                padding_buffer.push(' ');
-            }
-            padding_buffer.push_str(&i_str);
-            padding_buffer.push(' ');
-            execute!(
-                stdout,
-                Clear(ClearType::CurrentLine),
-                SetForegroundColor(Color::DarkGrey),
-                Print(padding_buffer.clone()),
-            )
-            .expect("Crossterm padding buffer print failed");
-            padding_buffer.clear();
-
-            let len = line.len_chars();
-            if len == 0 {
-                return;
-            }
-
-            let last_col = usize::min(self.left + self.width, len);
-            log!(
-                "eos {} len {} last_col {} left {}",
-                self.left + self.width,
-                len,
-                last_col,
-                self.left
-            );
-            let line = if self.left >= last_col {
-                String::from("\n")
-            } else {
-                line.slice(self.left..last_col).to_string()
-            };
-
-            execute!(
-                stdout,
-                SetForegroundColor(Color::Blue),
-                Print(line),
-                MoveToColumn(0)
-            )
-            .expect("Crossterm print line command failed");
-        });
-
-        // This is for clearing trailing lines that we missed
-        if len_lines < self.height {
-            execute!(stdout, MoveTo(0, len_lines as u16))?;
-            (len_lines..self.height).for_each(|_| {
-                execute!(stdout, Clear(ClearType::CurrentLine), MoveDown(1))
-                    .expect("Crossterm clearing trailing lines failed")
-            });
-        };
-
-        Ok(())
-    }
-
-    fn write_buffer(
-        &self,
-        buffer: &Buffer,
-        stdout: &mut Stdout,
-        left_padding: usize,
-    ) -> Result<()> {
-        let lines = buffer
+    fn write_buffer(&self, stdout: &mut Stdout, left_padding: usize) -> Result<()> {
+        let lines = self
+            .buffer
             .rope
             .lines()
             .zip(self.buffer.lines_for_updating.iter())
@@ -195,6 +191,9 @@ impl ViewBox {
         let mut padding_buffer = String::with_capacity(left_padding);
 
         let clear_str: String = (0..self.width).map(|_| ' ').collect();
+
+        let events = highlight(&self.buffer);
+        log!("{:?}", events);
 
         lines.for_each(|(line_num, (line, should_update))| {
             if !should_update {

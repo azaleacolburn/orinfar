@@ -263,9 +263,11 @@ fn program_loop<'a>(
 ) -> Result<()> {
     let mut last_count = 1;
     let mut last_chained: Vec<char> = vec![];
+
     'main: loop {
         let buffer = view.get_buffer_mut();
         buffer.update_list_reset();
+
         if let Event::Key(event) = read()? {
             match (event.code, mode.clone()) {
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
