@@ -49,19 +49,18 @@ impl<'a> Operator<'a> {
         // But if
         // ```
         // word c
-        // dw--->doesn't delete c, than
+        // dw--->doesn't delete c
         // ```
         // ```
         // word
         // dw->won't delete d
         // ```
-        // Because `w` is an exclusive motion (edited)
+        // Because `w` is an exclusive motion
         // I think that `w` must go past the last character of the buffer when that character is the last character of the alphanumeric word. Of course, this would mean that there's a later check that moves the cursor back into the bounds of the file when you just type w at the end of the file. (edited)
         // Pretty sure that's how they do it
         // Of course, I'm not interested in replicating this nonsense
-        // Just use de if you want to delete the last word of a buffer
+        // Just use `de` if you want to delete the last word of a buffer
         // Like this is pretty nonsensical
-        //
         if !motion.inclusive && end > buffer.cursor {
             end = usize::max(end, 1) - 1;
         }
