@@ -1,4 +1,9 @@
-use crate::{DEBUG, buffer::Buffer, highlight::highlight, log, view_box};
+use crate::{
+    DEBUG,
+    buffer::Buffer,
+    highlight::{HLBlock, highlight},
+    log, view_box,
+};
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn},
@@ -111,7 +116,11 @@ impl ViewBox {
 
         let clear_str: String = (0..self.width).map(|_| ' ').collect();
 
-        let mut hl_lines = highlight(&self.buffer, &self.parser);
+        // Expensive
+        let mut hl_lines: Vec<Vec<HLBlock>> = highlight(&self.buffer, &self.parser)
+            .into_iter()
+            .rev()
+            .collect();
 
         log!("{:?}", hl_lines);
 

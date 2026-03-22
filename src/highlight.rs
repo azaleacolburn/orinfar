@@ -14,6 +14,8 @@ pub fn highlight(buffer: &Buffer, parser: &RefCell<Parser>) -> Vec<Vec<HLBlock>>
     if let Some(tree) = parse(buffer, parser) {
         let mut tree_hl_blocks = highlight_tree(&tree);
 
+        log!("Tree HL Blocks:\n\t{:?}\n", tree_hl_blocks);
+
         let buffer_lines = buffer.rope.len_lines();
         let hl_lines = tree_hl_blocks.len();
         if hl_lines < buffer_lines {
@@ -91,7 +93,7 @@ fn hl_group_from_node<'a>(node: Node<'a>, hl_blocks: &mut Vec<Vec<HLBlock>>) {
             end: end.column,
             color,
         };
-        log!("Block: {:?}\n", block);
+        // log!("Block: {:?}\n", block);
         hl_blocks[start.row].push(block);
     }
 }
