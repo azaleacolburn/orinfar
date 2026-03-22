@@ -18,7 +18,6 @@ use std::{
     path::PathBuf,
 };
 
-#[derive(Debug)]
 pub struct View {
     boxes: Vec<ViewBox>,
     // Represents which index of the view box the cursor is in
