@@ -126,8 +126,9 @@ impl View {
             (Mode::Visual, _) => "-- VISUAL --".into(),
         };
 
+        let mut stdout = stdout().lock();
         execute!(
-            stdout(),
+            stdout,
             SetForegroundColor(Color::White),
             MoveTo(0, self.height + 1),
             Clear(ClearType::CurrentLine),
@@ -141,8 +142,8 @@ impl View {
             let view_box = &self.boxes[self.cursor];
             view_box.cursor_position()
         };
-        execute!(stdout(), MoveToColumn(new_col), MoveToRow(new_row), Show)?;
-        stdout().flush()?;
+        execute!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
+        stdout.flush()?;
 
         Ok(())
     }
@@ -362,8 +363,10 @@ pub fn cleanup() -> Result<()> {
 }
 
 pub fn setup(rows: u16, cols: u16) -> Result<()> {
+    let mut stdout = stdout().lock();
+
     execute!(
-        stdout(),
+        stdout,
         EnterAlternateScreen,
         Clear(ClearType::All),
         MoveToRow(0),
@@ -372,13 +375,13 @@ pub fn setup(rows: u16, cols: u16) -> Result<()> {
 
     // Fill entire screen with spaces with the background color
     for row in 0..rows {
-        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+        execute!(stdout, MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
     }
-    execute!(stdout(), MoveTo(0, 0))?;
+    execute!(stdout, MoveTo(0, 0))?;
     for row in 0..rows {
-        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+        execute!(stdout, MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
     }
-    execute!(stdout(), MoveTo(0, 0))?;
+    execute!(stdout, MoveTo(0, 0))?;
     enable_raw_mode()?;
 
     Ok(())

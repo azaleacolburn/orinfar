@@ -3,15 +3,15 @@ use std::cell::RefCell;
 use crossterm::style::Color;
 use tree_sitter::{Node, Parser, Point, Tree};
 
-use crate::{DEBUG, buffer::Buffer, log, utility::is_symbol, view_box::ViewBox};
+use crate::{DEBUG, buffer::Buffer, log, utility::is_symbol};
 
 pub fn parse(buffer: &Buffer, parser: &RefCell<Parser>) -> Option<Tree> {
     let source: Vec<u8> = buffer.rope.bytes().collect();
     parser.borrow_mut().parse(source, None)
 }
 
-pub fn highlight(buffer: &Buffer, parser: &RefCell<Parser>) -> Vec<Vec<HLBlock>> {
-    if let Some(tree) = parse(buffer, parser) {
+pub fn highlight(buffer: &Buffer, parser: Option<&RefCell<Parser>>) -> Vec<Vec<HLBlock>> {
+    if let Some(tree) = parse(buffer, parser.unwrap()) {
         let mut tree_hl_blocks = highlight_tree(&tree);
 
         log!("Tree HL Blocks:\n\t{:?}\n", tree_hl_blocks);
