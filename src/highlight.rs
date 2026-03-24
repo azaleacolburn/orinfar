@@ -16,6 +16,7 @@ pub fn highlight(buffer: &Buffer, parser: Option<&RefCell<Parser>>) -> Vec<Vec<H
 
         log!("Tree HL Blocks:\n\t{:?}\n", tree_hl_blocks);
 
+        // Append lines without hl_block lists
         let buffer_lines = buffer.rope.len_lines();
         let hl_lines = tree_hl_blocks.len();
         if hl_lines < buffer_lines {
@@ -30,19 +31,21 @@ pub fn highlight(buffer: &Buffer, parser: Option<&RefCell<Parser>>) -> Vec<Vec<H
             }
         }
 
-        for (line_idx, hl_blocks) in tree_hl_blocks
+        // Fill in empty lines
+        tree_hl_blocks
             .iter_mut()
             .enumerate()
             .filter(|(_, l)| l.is_empty())
-        {
-            let line = buffer.rope.get_line(line_idx).unwrap();
-            let block = HLBlock {
-                start: 0,
-                end: line.len_chars(),
-                color: Color::White,
-            };
-            hl_blocks.push(block);
-        }
+            .for_each(|(line_idx, hl_blocks)| {
+                let line = buffer.rope.get_line(line_idx).unwrap();
+                let block = HLBlock {
+                    start: 0,
+                    end: line.len_chars(),
+                    color: Color::White,
+                };
+
+                hl_blocks.push(block);
+            });
 
         return tree_hl_blocks;
     }
