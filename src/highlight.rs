@@ -217,26 +217,22 @@ fn is_c_keyword(str: &str) -> bool {
 
 const OPERATORS: &[&str] = &[
     "+", "-", "/", "*", "++", "--", "+=", "-=", "<", ">", "||", "&&", "<=", ">=", "||=", "&&=",
-    "!", "!=", "==", "=", "&", "|", "^", "~", "<<", ">>", "|=", "&=", "~=", "^=",
+    "!", "!=", "==", "=", "&", "|", "^", "~", "<<", ">>", "|=", "&=", "~=", "^=", "->",
 ];
 
 fn is_operator(str: &str) -> bool {
     OPERATORS.contains(&str)
 }
 
+// My special orange since my colorscheme (everforest) isn't actually base16 compliant
 const ORANGE: Color = Color::Rgb {
     r: 230,
     g: 152,
     b: 117,
 };
 
-const WHITE: Color = Color::Rgb {
-    r: 211,
-    g: 198,
-    b: 170,
-};
-
 fn node_type_to_color(node_type: &str, parent_type: &str) -> Option<Color> {
+    log!("node_type: {}", node_type);
     let color = match node_type {
         "#include" => Color::DarkRed,
 
@@ -247,7 +243,7 @@ fn node_type_to_color(node_type: &str, parent_type: &str) -> Option<Color> {
         "#ifndef" => Color::DarkRed,
         "#endif" => Color::DarkRed,
 
-        "string_content" | "\"" | "system_lib_string" => Color::Green,
+        "string_content" | "character" | "\"" | "\'" | "system_lib_string" => Color::Green,
 
         "identifier"
             if parent_type == "function_declarator" || parent_type == "call_expression" =>
@@ -261,7 +257,6 @@ fn node_type_to_color(node_type: &str, parent_type: &str) -> Option<Color> {
         "type_identifier" => Color::DarkMagenta,
 
         "number_literal" => Color::Magenta,
-        "char_literal" => Color::DarkGreen,
         "comment" => Color::DarkGrey,
         ";" | "." | "," => Color::DarkGrey,
         str if is_operator(str) => ORANGE,
