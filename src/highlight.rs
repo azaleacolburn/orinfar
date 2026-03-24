@@ -24,11 +24,22 @@ pub fn highlight(buffer: &Buffer, parser: Option<&RefCell<Parser>>) -> Vec<Vec<H
                 let line = buffer.rope.get_line(line_idx).unwrap();
                 let block = HLBlock {
                     start: 0,
-                    end: line.len_chars(),
+                    end: if line_idx + 1 == buffer_lines {
+                        line.len_chars()
+                    } else {
+                        line.len_chars() - 1
+                    },
                     color: Color::White,
                 };
                 tree_hl_blocks.push(vec![block])
             }
+            // let line = buffer.rope.get_line(buffer_lines).unwrap();
+            // let block = HLBlock {
+            //     start: 0,
+            //     end: line.len_chars() - 1,
+            //     color: Color::White,
+            // };
+            // tree_hl_blocks.push(vec![block])
         }
 
         // Fill in empty lines
@@ -102,7 +113,7 @@ fn hl_group_from_node<'a>(node: Node<'a>, hl_blocks: &mut Vec<Vec<HLBlock>>) {
 }
 
 fn highlight_tree(tree: &Tree) -> Vec<Vec<HLBlock>> {
-    let mut hl_blocks: Vec<Vec<HLBlock>> = Vec::with_capacity(10);
+    let mut hl_blocks: Vec<Vec<HLBlock>> = Vec::new();
     let mut cursor = tree.walk();
 
     // Depth-first search with a cursor instead of recursion
