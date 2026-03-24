@@ -10,8 +10,8 @@ pub fn parse(buffer: &Buffer, parser: &RefCell<Parser>) -> Option<Tree> {
     parser.borrow_mut().parse(source, None)
 }
 
-pub fn highlight(buffer: &Buffer, parser: Option<&RefCell<Parser>>) -> Vec<Vec<HLBlock>> {
-    if let Some(tree) = parse(buffer, parser.unwrap()) {
+pub fn highlight(buffer: &Buffer, parser: &RefCell<Parser>) -> Vec<Vec<HLBlock>> {
+    if let Some(tree) = parse(buffer, parser) {
         let mut tree_hl_blocks = highlight_tree(&tree);
 
         // Chop multi-line hl blocks

@@ -15,7 +15,6 @@ mod mode;
 mod motion;
 mod operator;
 mod panic_hook;
-mod parser;
 mod register;
 mod status_bar;
 mod tutorial;
@@ -59,10 +58,6 @@ use crossterm::{
     event::{Event, KeyCode, read},
     terminal::size,
 };
-use ropey::Rope;
-use std::{io::stdout, path::PathBuf};
-use tree_sitter::Parser;
-use tree_sitter_highlight::{HighlightConfiguration, HighlightEvent};
 
 pub static mut DEBUG: bool = true;
 

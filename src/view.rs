@@ -14,9 +14,11 @@ use crossterm::{
 };
 use ropey::Rope;
 use std::{
+    cell::RefCell,
     io::{Write, stdout},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
+use tree_sitter::Parser;
 
 pub struct View {
     boxes: Vec<ViewBox>,
@@ -356,10 +358,24 @@ impl View {
     }
 
     pub fn set_path(&mut self, path: Option<PathBuf>) {
-        let git_hash = try_get_git_hash(path.as_ref());
         let view_box = &mut self.boxes[self.cursor];
 
+        if let Some(path) = &path
+            && let Some(ext) = path.extension()
+            && (ext == "c" || ext == "h")
+        {
+            let parser = RefCell::new(Parser::new());
+            parser
+                .borrow_mut()
+                .set_language(&tree_sitter_c::LANGUAGE.into())
+                .expect("Failed to load C parser");
+
+            view_box.parser = Some(parser);
+        }
+
+        let git_hash = try_get_git_hash(path.as_ref());
         view_box.git_hash = git_hash;
+
         view_box.path = path;
     }
 

@@ -47,17 +47,11 @@ impl ViewBox {
     /// - x: the x position of the upper right hand corner of this view box
     /// - y: the y position of the upper right hand corner of this view box
     pub fn new(cols: u16, rows: u16, x: u16, y: u16) -> Self {
-        let parser = RefCell::new(Parser::new());
-        parser
-            .borrow_mut()
-            .set_language(&tree_sitter_c::LANGUAGE.into())
-            .expect("Failed to load C parser");
-
         Self {
             buffer: Buffer::new(),
             path: None,
             git_hash: None,
-            parser: Some(parser),
+            parser: None,
 
             x,
             y,
@@ -116,8 +110,53 @@ impl ViewBox {
 
         let clear_str: String = (0..self.width).map(|_| ' ').collect();
 
+        if let Some(parser) = self.parser.as_ref()
+            && let Some(path) = self.path.as_ref()
+            && let Some(ex) = path.extension()
+            && (ex == "c" || ex == "h")
+        {
+            self.print_buffer_hl(
+                lines,
+                parser,
+                stdout,
+                &mut padding_buffer,
+                left_padding,
+                &clear_str,
+            );
+        } else {
+            self.print_buffe_colorless(
+                lines,
+                stdout,
+                &mut padding_buffer,
+                left_padding,
+                &clear_str,
+            );
+        }
+
+        // This is for clearing trailing lines that we missed
+        if len_lines < self.height {
+            execute!(stdout, MoveTo(self.x, self.y + len_lines))?;
+            (len_lines..self.height).for_each(|_| {
+                execute!(stdout, Print(&clear_str), MoveDown(1), MoveToColumn(self.x))
+                    .expect("Crossterm clearing trailing lines failed");
+            });
+        }
+
+        Ok(())
+    }
+
+    fn print_buffer_hl<'a>(
+        &self,
+        lines: impl Iterator<Item = (usize, (RopeSlice<'a>, &'a bool))>,
+        parser: &RefCell<Parser>,
+        stdout: &mut StdoutLock,
+
+        padding_buffer: &mut String,
+        left_padding: usize,
+        clear_str: &str,
+    ) {
         // Expensive
-        let hl_lines = highlight(&self.buffer, self.parser.as_ref())
+        let hl_lines = highlight(&self.buffer, parser)
             .into_iter()
             .skip(self.top)
             .take(self.height.into());
@@ -133,9 +172,9 @@ impl ViewBox {
                 }
 
                 self.clear_line_print_padding(
-                    &mut padding_buffer,
+                    padding_buffer,
                     left_padding,
-                    &clear_str,
+                    clear_str,
                     line_num,
                     stdout,
                 );
@@ -149,17 +188,47 @@ impl ViewBox {
 
                 self.print_blocks(hl_blocks, line, stdout);
             });
+    }
 
-        // This is for clearing trailing lines that we missed
-        if len_lines < self.height {
-            execute!(stdout, MoveTo(self.x, self.y + len_lines))?;
-            (len_lines..self.height).for_each(|_| {
-                execute!(stdout, Print(&clear_str), MoveDown(1), MoveToColumn(self.x))
-                    .expect("Crossterm clearing trailing lines failed");
-            });
-        }
+    fn print_buffe_colorless<'a>(
+        &self,
+        lines: impl Iterator<Item = (usize, (RopeSlice<'a>, &'a bool))>,
+        stdout: &mut StdoutLock,
 
-        Ok(())
+        padding_buffer: &mut String,
+        left_padding: usize,
+        clear_str: &str,
+    ) {
+        lines.for_each(|(line_num, (line, should_update))| {
+            if !should_update {
+                execute!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
+                return;
+            }
+
+            self.clear_line_print_padding(
+                padding_buffer,
+                left_padding,
+                clear_str,
+                line_num,
+                stdout,
+            );
+
+            let line_len = match self.calculate_total_line_len(line, stdout) {
+                Some(l) => l,
+                None => return,
+            };
+
+            let line = self.slice_line(line, left_padding, line_len);
+
+            execute!(
+                stdout,
+                SetForegroundColor(Color::Grey),
+                Print(&line),
+                MoveToColumn(self.x),
+                MoveDown(1)
+            )
+            .expect("Crossterm print line command failed");
+        });
     }
 
     fn clear_line_print_padding(
