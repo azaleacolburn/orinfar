@@ -23,3 +23,6 @@ xdg = "3.0.0"
 pedantic      = { level = "deny", priority = -1 }
 nursery       = { level = "deny", priority = -1 }
 # unwrap_used   = "deny"
+
+[profile.release]
+lto = "fat"
