@@ -14,6 +14,8 @@ pub fn highlight(buffer: &Buffer, parser: Option<&RefCell<Parser>>) -> Vec<Vec<H
     if let Some(tree) = parse(buffer, parser.unwrap()) {
         let mut tree_hl_blocks = highlight_tree(&tree);
 
+        // Chop multi-line hl blocks
+
         log!("Tree HL Blocks:\n\t{:?}\n", tree_hl_blocks);
 
         // Append lines without hl_block lists
@@ -29,17 +31,11 @@ pub fn highlight(buffer: &Buffer, parser: Option<&RefCell<Parser>>) -> Vec<Vec<H
                     } else {
                         line.len_chars() - 1
                     },
-                    color: Color::White,
+                    color: Color::Grey,
+                    to_end_of_line: false,
                 };
                 tree_hl_blocks.push(vec![block])
             }
-            // let line = buffer.rope.get_line(buffer_lines).unwrap();
-            // let block = HLBlock {
-            //     start: 0,
-            //     end: line.len_chars() - 1,
-            //     color: Color::White,
-            // };
-            // tree_hl_blocks.push(vec![block])
         }
 
         // Fill in empty lines
@@ -51,8 +47,13 @@ pub fn highlight(buffer: &Buffer, parser: Option<&RefCell<Parser>>) -> Vec<Vec<H
                 let line = buffer.rope.get_line(line_idx).unwrap();
                 let block = HLBlock {
                     start: 0,
-                    end: line.len_chars(),
-                    color: Color::White,
+                    end: if line_idx + 1 == buffer_lines {
+                        line.len_chars()
+                    } else {
+                        line.len_chars() - 1
+                    },
+                    color: Color::Grey,
+                    to_end_of_line: false,
                 };
 
                 hl_blocks.push(block);
@@ -64,7 +65,8 @@ pub fn highlight(buffer: &Buffer, parser: Option<&RefCell<Parser>>) -> Vec<Vec<H
     let hl_block = HLBlock {
         start: 0,
         end: buffer.len() - 1,
-        color: Color::White,
+        to_end_of_line: false, // Technically true, but not needed
+        color: Color::Grey,
     };
 
     return (0..buffer.rope.len_lines())
@@ -77,39 +79,100 @@ pub struct HLBlock {
     pub start: usize,
     pub end: usize,
     pub color: crossterm::style::Color,
+    // If this is set, ignore `self.end` and make the block go to the end of the line
+    pub to_end_of_line: bool,
 }
 
 fn hl_group_from_node<'a>(node: Node<'a>, hl_blocks: &mut Vec<Vec<HLBlock>>) {
     let node_type = node.kind();
 
+    let parent = match node.parent() {
+        Some(p) => p,
+        None => return,
+    };
+
+    // Will return if on a non-lexical node
+    let color = match node_type_to_color(node_type, parent.kind()) {
+        Some(c) => c,
+        None => return,
+    };
+
     // Not every node needs a HLBlock, some are non-lexical nodes
-    if let Some(color) = node_type_to_color(node_type) {
-        let mut start: Point = node.start_position();
-        let end: Point = node.end_position();
+    let start: Point = node.start_position();
+    let end: Point = node.end_position();
 
-        // WARNING:
-        // This assumes highlight groups are one line or less for now
-        assert_eq!(start.row, end.row);
+    // WARNING:
+    // This assumes highlight groups are one line or less for now
+    // assert_eq!(start.row, end.row);
 
-        if start.row + 1 >= hl_blocks.len() {
-            for _ in hl_blocks.len()..start.row + 1 {
-                hl_blocks.push(Vec::new());
-            }
-        }
+    if start.row != end.row {
+        assert!(start.row < end.row);
 
-        // Expand blocks backwards to consme un-highlighted sections
-        if let Some(last_hl) = hl_blocks[start.row].last() {
-            start.column = last_hl.end;
-        }
-
-        let block = HLBlock {
-            start: start.column,
-            end: end.column,
-            color,
+        let first_end = Point {
+            row: start.row,
+            column: 0, // NOTE Will actually go to the end of the line
         };
-        // log!("Block: {:?}\n", block);
-        hl_blocks[start.row].push(block);
+
+        add_block_to_row(start, first_end, color, hl_blocks, true);
+
+        for line_idx in start.row + 1..end.row {
+            let middle_start = Point {
+                row: line_idx,
+                column: 0,
+            };
+
+            let middle_end = Point {
+                row: line_idx,
+                column: 0, // NOTE Will actually go to the end of the line
+            };
+
+            add_block_to_row(middle_start, middle_end, color, hl_blocks, true);
+        }
+
+        let last_start = Point {
+            row: end.row,
+            column: 0,
+        };
+
+        add_block_to_row(last_start, end, color, hl_blocks, false);
+
+        return;
     }
+
+    add_block_to_row(start, end, color, hl_blocks, false);
+}
+
+/// Assumes that `start.row == end.row`
+fn add_block_to_row(
+    mut start: Point,
+    end: Point,
+    color: Color,
+    hl_blocks: &mut Vec<Vec<HLBlock>>,
+    to_end_of_line: bool,
+) {
+    if start.row + 1 >= hl_blocks.len() {
+        for _ in hl_blocks.len()..start.row + 1 {
+            hl_blocks.push(Vec::new());
+        }
+    }
+
+    // Expand blocks backwards to consme un-highlighted sections
+    if let Some(last_hl) = hl_blocks[start.row].last() {
+        start.column = last_hl.end;
+    } else if end.column != 0 && hl_blocks[start.row].len() == 0 {
+        // Expand block backwards if there's whitespace or other non-parsable content at the
+        // beginning of the line
+        start.column = 0;
+    }
+
+    let block = HLBlock {
+        start: start.column,
+        end: end.column,
+        to_end_of_line,
+        color,
+    };
+    // log!("Block: {:?}\n", block);
+    hl_blocks[start.row].push(block);
 }
 
 fn highlight_tree(tree: &Tree) -> Vec<Vec<HLBlock>> {
@@ -144,14 +207,66 @@ fn highlight_tree(tree: &Tree) -> Vec<Vec<HLBlock>> {
     hl_blocks
 }
 
-fn node_type_to_color(node_type: &str) -> Option<Color> {
+const KEYWORDS: &[&str] = &[
+    "for", "while", "if", "continue", "break", "return", "asm", "register", "extern",
+];
+
+fn is_c_keyword(str: &str) -> bool {
+    KEYWORDS.contains(&str)
+}
+
+const OPERATORS: &[&str] = &[
+    "+", "-", "/", "*", "++", "--", "+=", "-=", "<", ">", "||", "&&", "<=", ">=", "||=", "&&=",
+    "!", "!=", "==", "=", "&", "|", "^", "~", "<<", ">>", "|=", "&=", "~=", "^=",
+];
+
+fn is_operator(str: &str) -> bool {
+    OPERATORS.contains(&str)
+}
+
+const ORANGE: Color = Color::Rgb {
+    r: 230,
+    g: 152,
+    b: 117,
+};
+
+const WHITE: Color = Color::Rgb {
+    r: 211,
+    g: 198,
+    b: 170,
+};
+
+fn node_type_to_color(node_type: &str, parent_type: &str) -> Option<Color> {
     let color = match node_type {
-        "string_literal" => Color::Green,
-        "identifier" => Color::White,
-        "primitive_type" => Color::DarkMagenta,
+        "#include" => Color::DarkRed,
+
+        "#define" => Color::DarkRed,
+        "preproc_arg" => Color::Grey,
+
+        "#ifdef" => Color::DarkRed,
+        "#ifndef" => Color::DarkRed,
+        "#endif" => Color::DarkRed,
+
+        "string_content" | "\"" | "system_lib_string" => Color::Green,
+
+        "identifier"
+            if parent_type == "function_declarator" || parent_type == "call_expression" =>
+        {
+            Color::Green
+        }
+        "identifier" => Color::Grey,
+        "field_identifier" => Color::Blue,
+
+        "primitive_type" => Color::Yellow,
+        "type_identifier" => Color::DarkMagenta,
+
         "number_literal" => Color::Magenta,
-        ";" => Color::DarkGrey,
-        str if str.chars().all(|c| is_symbol(c)) => Color::Yellow,
+        "char_literal" => Color::DarkGreen,
+        "comment" => Color::DarkGrey,
+        ";" | "." | "," => Color::DarkGrey,
+        str if is_operator(str) => ORANGE,
+        str if str.chars().all(|c| is_symbol(c)) => Color::Grey,
+        str if is_c_keyword(str) => Color::Red,
         _ => return None,
     };
 

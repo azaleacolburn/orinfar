@@ -117,7 +117,10 @@ impl ViewBox {
         let clear_str: String = (0..self.width).map(|_| ' ').collect();
 
         // Expensive
-        let hl_lines = highlight(&self.buffer, self.parser.as_ref()).into_iter();
+        let hl_lines = highlight(&self.buffer, self.parser.as_ref())
+            .into_iter()
+            .skip(self.top)
+            .take(self.height.into());
 
         log!("{:?}", hl_lines);
 
@@ -228,7 +231,10 @@ impl ViewBox {
 
     fn print_blocks(&self, hl_blocks: Vec<HLBlock>, line: String, stdout: &mut StdoutLock) {
         for hl in hl_blocks.iter() {
-            let text = &line[hl.start..hl.end];
+            let text = match hl.to_end_of_line {
+                true => &line[hl.start..],
+                false => &line[hl.start..hl.end],
+            };
 
             execute!(stdout, SetForegroundColor(hl.color), Print(text))
                 .expect("Crossterm print hl block command failed");
