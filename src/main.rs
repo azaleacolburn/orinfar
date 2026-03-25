@@ -25,7 +25,6 @@ mod view_command;
 
 use crate::{
     action::{enumerate_normal_chars, match_action},
-    buffer::Buffer,
     commands::{
         append, cut, first_row, insert, insert_new_line, insert_new_line_above, last_row, paste,
         replace, set_curr_register, undo,
@@ -413,19 +412,6 @@ fn program_loop<'a>(
                 register_handler.get_curr_reg(),
                 adjusted,
             )?;
-        }
-    }
-
-    Ok(())
-}
-
-/// # Errors
-/// - I/O error if `crossterm::events::read()` fails
-pub fn on_next_input(buffer: &mut Buffer, callback: fn(KeyCode, &mut Buffer)) -> Result<()> {
-    loop {
-        if let Event::Key(event) = read()? {
-            callback(event.code, buffer);
-            break;
         }
     }
 

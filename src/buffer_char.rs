@@ -60,10 +60,6 @@ impl Buffer {
         (0..n).for_each(|_| self.insert_char(c));
     }
 
-    pub fn is_last_char(&self) -> bool {
-        self.cursor + 1 == self.rope.len_chars()
-    }
-
     pub fn get_curr_char(&self) -> char {
         self.rope.char(self.cursor)
     }
