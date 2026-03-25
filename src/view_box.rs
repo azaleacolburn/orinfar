@@ -1,7 +1,7 @@
 use crate::{
     DEBUG,
     buffer::Buffer,
-    highlight::{HLBlock, highlight},
+    highlight_c::{HLBlock, highlight},
     log,
 };
 use anyhow::Result;

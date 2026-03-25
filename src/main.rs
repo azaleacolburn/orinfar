@@ -6,7 +6,7 @@ mod buffer_char;
 mod buffer_line;
 mod buffer_update;
 mod commands;
-mod highlight;
+mod highlight_c;
 mod meta_command;
 mod text_object;
 #[macro_use]
