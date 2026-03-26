@@ -49,7 +49,7 @@ impl View {
         &mut self.boxes[self.cursor]
     }
 
-    pub fn normal_unattached_status(&self, chained: &[char], count: u16, register: char) -> String {
+    pub fn normal_unattached_status(chained: &[char], count: u16, register: char) -> String {
         let info_str = "-- Unattached Buffer -- ".to_string();
 
         let count_str = if count == 1 {
@@ -125,7 +125,7 @@ impl View {
             (Mode::Normal, Some(path)) => {
                 self.normal_attached_status(path, chained, count, register)?
             }
-            (Mode::Normal, None) => self.normal_unattached_status(chained, count, register),
+            (Mode::Normal, None) => Self::normal_unattached_status(chained, count, register),
             (Mode::Insert, _) => "-- INSERT --".into(),
             (Mode::Visual, _) => "-- VISUAL --".into(),
         };
@@ -176,7 +176,7 @@ impl View {
     }
 }
 
-/// ViewBox Manipulation Methods
+/// `ViewBox` Manipulation Methods
 impl View {
     pub fn position_of_box<P>(&self, predicate: P) -> Option<usize>
     where

@@ -17,16 +17,18 @@ impl ViewBox {
 
     pub fn highlight(&self) -> Vec<Vec<HLBlock>> {
         if let Some(tree) = &self.parse_tree {
-            let mut tree_hl_blocks = highlight_tree(&tree);
+            let mut tree_hl_blocks = highlight_tree(tree);
 
             log!("Tree HL Blocks:\n\t{:?}\n", tree_hl_blocks);
 
             // Append lines without hl_block lists
             let buffer_lines = self.buffer.rope.len_lines();
             let hl_lines = tree_hl_blocks.len();
+
             if hl_lines < buffer_lines {
                 for line_idx in hl_lines..buffer_lines {
                     let line = self.buffer.rope.get_line(line_idx).unwrap();
+
                     let block = HLBlock {
                         start: 0,
                         end: if line_idx + 1 == buffer_lines {
@@ -37,7 +39,7 @@ impl ViewBox {
                         color: Color::Grey,
                         to_end_of_line: false,
                     };
-                    tree_hl_blocks.push(vec![block])
+                    tree_hl_blocks.push(vec![block]);
                 }
             }
 
@@ -72,9 +74,9 @@ impl ViewBox {
             color: Color::Grey,
         };
 
-        return (0..self.buffer.rope.len_lines())
+        (0..self.buffer.rope.len_lines())
             .map(|_| vec![hl_block.clone()])
-            .collect();
+            .collect()
     }
 }
 
@@ -87,18 +89,14 @@ pub struct HLBlock {
     pub to_end_of_line: bool,
 }
 
-fn hl_group_from_node<'a>(node: Node<'a>, hl_blocks: &mut Vec<Vec<HLBlock>>) {
+fn hl_group_from_node(node: Node, hl_blocks: &mut Vec<Vec<HLBlock>>) {
     let node_type = node.kind();
 
-    let parent = match node.parent() {
-        Some(p) => p,
-        None => return,
-    };
+    let Some(parent) = node.parent() else { return };
 
     // Will return if on a non-lexical node
-    let color = match node_type_to_color(node_type, parent.kind()) {
-        Some(c) => c,
-        None => return,
+    let Some(color) = node_type_to_color(node_type, parent.kind()) else {
+        return;
     };
 
     // Not every node needs a HLBlock, some are non-lexical nodes
@@ -155,7 +153,7 @@ fn add_block_to_row(
     to_end_of_line: bool,
 ) {
     if start.row + 1 >= hl_blocks.len() {
-        for _ in hl_blocks.len()..start.row + 1 {
+        for _ in hl_blocks.len()..=start.row {
             hl_blocks.push(Vec::new());
         }
     }
@@ -163,7 +161,7 @@ fn add_block_to_row(
     // Expand blocks backwards to consme un-highlighted sections
     if let Some(last_hl) = hl_blocks[start.row].last() {
         start.column = last_hl.end;
-    } else if end.column != 0 && hl_blocks[start.row].len() == 0 {
+    } else if end.column != 0 && hl_blocks[start.row].is_empty() {
         // Expand block backwards if there's whitespace or other non-parsable content at the
         // beginning of the line
         start.column = 0;
@@ -238,33 +236,25 @@ const ORANGE: Color = Color::Rgb {
 fn node_type_to_color(node_type: &str, parent_type: &str) -> Option<Color> {
     log!("node_type: {}", node_type);
     let color = match node_type {
-        "#include" => Color::DarkRed,
-
-        "#define" => Color::DarkRed,
-        "preproc_arg" => Color::Grey,
-
-        "#ifdef" => Color::DarkRed,
-        "#ifndef" => Color::DarkRed,
-        "#endif" => Color::DarkRed,
+        "#include" | "#define" | "#ifdef" | "#ifndef" | "#endif" => Color::DarkRed,
 
         "string_content" | "character" | "\"" | "\'" | "system_lib_string" => Color::Green,
-
         "identifier"
             if parent_type == "function_declarator" || parent_type == "call_expression" =>
         {
             Color::Green
         }
-        "identifier" => Color::Grey,
+
+        "identifier" | "preproc_arg" => Color::Grey,
         "field_identifier" => Color::Blue,
 
         "primitive_type" => Color::Yellow,
         "type_identifier" => Color::DarkMagenta,
 
         "number_literal" => Color::Magenta,
-        "comment" => Color::DarkGrey,
-        ";" | "." | "," => Color::DarkGrey,
+        "comment" | ";" | "." | "," => Color::DarkGrey,
         str if is_operator(str) => ORANGE,
-        str if str.chars().all(|c| is_symbol(c)) => Color::Grey,
+        str if str.chars().all(is_symbol) => Color::Grey,
         str if is_c_keyword(str) => Color::Red,
         _ => return None,
     };

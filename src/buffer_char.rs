@@ -304,28 +304,15 @@ impl Buffer {
             return;
         }
 
-        let mut i = str.len();
+        let mut i = 0;
         let mut cursor = self.cursor;
 
-        // NOTE
-        // Pretty sure I don't need this but idk for sure
-        // let within_bounds = self.rope.len_chars() > cursor - str.len();
-        // if within_bounds
-        //     && self.rope.slice(self.cursor..self.cursor + str.len())
-        //         == str.iter().collect::<String>()
-        // {
-        //     cursor += 1;
-        // }
-
-        while let Some(s) = self
-            .rope
-            .get_char(i32::max(0, cursor as i32 - str.len() as i32 + i as i32) as usize)
-        {
-            if s == str[i - 1] {
-                i -= 1;
+        while let Some(s) = self.rope.get_char(cursor - i) {
+            if s == str[str.len() - i - 1] {
+                i += 1;
             } else {
                 cursor -= 1;
-                i = str.len();
+                i = 0;
             }
 
             // We're at the beginning of the buffer
@@ -334,7 +321,7 @@ impl Buffer {
             }
 
             // We've found our string
-            if i == 0 {
+            if i == str.len() {
                 // NOTE
                 // You have to add `1`, otherwise we will overflow if the idx is 0
                 self.cursor = cursor + 1 - str.len();
