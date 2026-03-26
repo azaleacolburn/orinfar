@@ -176,14 +176,13 @@ impl ViewBox {
                     stdout,
                 );
 
-                let line_len = match self.calculate_total_line_len(line, stdout) {
-                    Some(l) => l,
-                    None => return,
+                let Some(line_len) = self.calculate_total_line_len(line, stdout) else {
+                    return;
                 };
 
                 let line = self.slice_line(line, left_padding, line_len);
 
-                self.print_blocks(hl_blocks, line, stdout);
+                self.print_blocks(&hl_blocks, &line, stdout);
             });
     }
 
@@ -210,9 +209,8 @@ impl ViewBox {
                 stdout,
             );
 
-            let line_len = match self.calculate_total_line_len(line, stdout) {
-                Some(l) => l,
-                None => return,
+            let Some(line_len) = self.calculate_total_line_len(line, stdout) else {
+                return;
             };
 
             let line = self.slice_line(line, left_padding, line_len);
@@ -285,21 +283,22 @@ impl ViewBox {
         // What was happening here waswhen we cropped the line
         // we also cropped the newline character at the
         // end, meaning that we never moved down to the next row!
-        match self.left >= last_col {
-            true => String::new(),
-            false => line
-                .slice(self.left..last_col)
+        if self.left >= last_col {
+            String::new()
+        } else {
+            line.slice(self.left..last_col)
                 .to_string()
                 .trim_matches('\n')
-                .to_string(),
+                .to_string()
         }
     }
 
-    fn print_blocks(&self, hl_blocks: Vec<HLBlock>, line: String, stdout: &mut StdoutLock) {
-        for hl in hl_blocks.iter() {
-            let text = match hl.to_end_of_line {
-                true => &line[hl.start..],
-                false => &line[hl.start..hl.end],
+    fn print_blocks(&self, hl_blocks: &[HLBlock], line: &str, stdout: &mut StdoutLock) {
+        for hl in hl_blocks {
+            let text = if hl.to_end_of_line {
+                &line[hl.start..]
+            } else {
+                &line[hl.start..hl.end]
             };
 
             execute!(stdout, SetForegroundColor(hl.color), Print(text))

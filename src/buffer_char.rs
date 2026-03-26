@@ -307,8 +307,8 @@ impl Buffer {
         let mut i = str.len();
         let mut cursor = self.cursor;
 
-        // NOTE
-        // Pretty sure I don't need this but idk for sure
+        // TODO
+        // Figure out if this is necessary
         // let within_bounds = self.rope.len_chars() > cursor - str.len();
         // if within_bounds
         //     && self.rope.slice(self.cursor..self.cursor + str.len())
@@ -317,10 +317,16 @@ impl Buffer {
         //     cursor += 1;
         // }
 
-        while let Some(s) = self
-            .rope
-            .get_char(i32::max(0, cursor as i32 - str.len() as i32 + i as i32) as usize)
-        {
+        // TODO Clean this up!!!
+        while let Some(s) = self.rope.get_char(
+            usize::try_from(i32::max(
+                0,
+                i32::try_from(cursor).expect("Search string too large to fit in i32")
+                    - i32::try_from(str.len()).expect("Search string too large to fit in i32")
+                    + i32::try_from(i).expect("Search string too large to fit in i32"),
+            ))
+            .unwrap(),
+        ) {
             if s == str[i - 1] {
                 i -= 1;
             } else {
