@@ -14,7 +14,7 @@ use crossterm::{
 };
 use ropey::Rope;
 use std::{
-    io::{StdoutLock, Write, stdout},
+    io::{Write, stdout},
     path::PathBuf,
 };
 use tree_sitter::Parser;
@@ -142,15 +142,16 @@ impl View {
         count: u16,
         register: char,
         adjusted: bool,
-        stdout: &mut StdoutLock,
     ) -> Result<()> {
         let mut errors = self.boxes.iter().enumerate().filter_map(|(i, view_box)| {
             let adjusted = adjusted && i == self.cursor;
-            view_box.flush(adjusted, stdout).err()
+            view_box.flush(adjusted).err()
         });
         if let Some(err) = errors.next() {
             return Err(err);
         }
+
+        let mut stdout = stdout().lock();
 
         let status_message = self.status_message(status_bar, mode, chained, count, register)?;
         execute!(

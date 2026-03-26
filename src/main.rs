@@ -23,8 +23,6 @@ mod view;
 mod view_box;
 mod view_command;
 
-use std::io::stdout;
-
 use crate::{
     action::{enumerate_normal_chars, match_action},
     commands::{
@@ -69,8 +67,6 @@ fn main() -> Result<()> {
     setup(rows, cols)?;
 
     panic_hook::add_panic_hook(&cleanup);
-
-    let mut stdout = stdout().lock();
 
     // This could fail if the dir already exists, so we don't care if this fails
     if let Err(err) = std::fs::create_dir(log_dir())
@@ -205,8 +201,7 @@ fn main() -> Result<()> {
     view.set_path(path);
     view.load_file()?;
 
-    let view_box = view.get_view_box();
-    let _ = view_box.parse();
+    let _ = view.get_view_box().parse();
 
     view.flush(
         &status_bar,
@@ -215,7 +210,6 @@ fn main() -> Result<()> {
         count,
         register_handler.get_curr_reg(),
         false,
-        &mut stdout,
     )?;
 
     program_loop(
@@ -274,8 +268,6 @@ fn program_loop<'a>(
 ) -> Result<()> {
     let mut last_count = 1;
     let mut last_chained: Vec<char> = vec![];
-
-    let mut stdout = stdout().lock();
 
     'main: loop {
         let buffer = view.get_buffer_mut();
@@ -384,14 +376,7 @@ fn program_loop<'a>(
                 }
 
                 (KeyCode::Enter, Mode::Meta) => {
-                    if match_meta_command(
-                        status_bar,
-                        view,
-                        register_handler,
-                        undo_tree,
-                        mode,
-                        &mut stdout,
-                    )? {
+                    if match_meta_command(status_bar, view, register_handler, undo_tree, mode)? {
                         break 'main;
                     }
                 }
@@ -429,8 +414,7 @@ fn program_loop<'a>(
                 _ => continue,
             }
 
-            let view_box = view.get_view_box();
-            let _ = view_box.parse();
+            let _ = view.get_view_box().parse();
 
             let adjusted = view.adjust();
             view.flush(
@@ -440,7 +424,6 @@ fn program_loop<'a>(
                 *count,
                 register_handler.get_curr_reg(),
                 adjusted,
-                &mut stdout,
             )?;
         }
     }

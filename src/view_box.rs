@@ -7,6 +7,7 @@ use crossterm::{
 };
 use ropey::RopeSlice;
 use std::{
+    cell::RefCell,
     io::{StdoutLock, stdout},
     path::PathBuf,
 };
@@ -46,7 +47,6 @@ impl ViewBox {
             buffer: Buffer::new(),
             path: None,
             git_hash: None,
-
             parser: None,
             parse_tree: None,
 
@@ -107,7 +107,7 @@ impl ViewBox {
 
         let clear_str: String = (0..self.width).map(|_| ' ').collect();
 
-        if let Some(_parser) = self.parser.as_ref()
+        if let Some(_tree) = self.parse_tree.as_ref()
             && let Some(path) = self.path.as_ref()
             && let Some(ex) = path.extension()
             && (ex == "c" || ex == "h")
@@ -123,14 +123,14 @@ impl ViewBox {
 
             self.print_buffer_hl(
                 lines,
-                stdout,
                 hl_lines,
+                stdout,
                 &mut padding_buffer,
                 left_padding,
                 &clear_str,
             );
         } else {
-            self.print_buffe_colorless(
+            self.print_buffer_colorless(
                 lines,
                 stdout,
                 &mut padding_buffer,
@@ -154,8 +154,9 @@ impl ViewBox {
     fn print_buffer_hl<'a>(
         &self,
         lines: impl Iterator<Item = (usize, (RopeSlice<'a>, &'a bool))>,
-        stdout: &mut StdoutLock,
         hl_lines: impl Iterator<Item = Vec<HLBlock>>,
+        stdout: &mut StdoutLock,
+
         padding_buffer: &mut String,
         left_padding: usize,
         clear_str: &str,
@@ -187,7 +188,7 @@ impl ViewBox {
             });
     }
 
-    fn print_buffe_colorless<'a>(
+    fn print_buffer_colorless<'a>(
         &self,
         lines: impl Iterator<Item = (usize, (RopeSlice<'a>, &'a bool))>,
         stdout: &mut StdoutLock,
@@ -310,11 +311,13 @@ impl ViewBox {
             .expect("Crossterm reset command failed");
     }
 
-    pub fn flush(&self, adjusted: bool, stdout: &mut StdoutLock) -> Result<()> {
+    #[allow(clippy::too_many_arguments)]
+    pub fn flush(&self, adjusted: bool) -> Result<()> {
+        let mut stdout = stdout().lock();
         let left_padding = self.left_padding();
 
         if self.buffer.has_changed || adjusted {
-            self.write_buffer(stdout, left_padding)?;
+            self.write_buffer(&mut stdout, left_padding)?;
         }
 
         Ok(())

@@ -6,10 +6,10 @@ use crate::{DEBUG, log, utility::is_symbol, view_box::ViewBox};
 impl ViewBox {
     pub fn parse(&mut self) -> Option<&Tree> {
         if self.buffer.has_changed {
-            let parser = self.parser.as_mut()?;
             let source: Vec<u8> = self.buffer.rope.bytes().collect();
-
-            self.parse_tree = parser.parse(source, self.parse_tree.as_ref());
+            // TODO
+            // Edit the `Tree` and pass it to the `parse` function
+            self.parse_tree = self.parser.as_mut()?.parse(source, None);
         }
 
         self.parse_tree.as_ref()
@@ -18,6 +18,7 @@ impl ViewBox {
     pub fn highlight(&self) -> Vec<Vec<HLBlock>> {
         if let Some(tree) = &self.parse_tree {
             let mut tree_hl_blocks = highlight_tree(&tree);
+
             log!("Tree HL Blocks:\n\t{:?}\n", tree_hl_blocks);
 
             // Append lines without hl_block lists
@@ -66,8 +67,8 @@ impl ViewBox {
 
         let hl_block = HLBlock {
             start: 0,
-            end: 0, // Reuse the same block for each line
-            to_end_of_line: true,
+            end: 0,
+            to_end_of_line: true, // Technically true, but not needed
             color: Color::Grey,
         };
 
@@ -76,6 +77,7 @@ impl ViewBox {
             .collect();
     }
 }
+
 #[derive(Debug, Clone)]
 pub struct HLBlock {
     pub start: usize,
