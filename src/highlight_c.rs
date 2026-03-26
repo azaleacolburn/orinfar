@@ -1,7 +1,7 @@
 use crossterm::style::Color;
 use tree_sitter::{Node, Point, Tree};
 
-use crate::{DEBUG, log, utility::is_symbol, view_box::ViewBox};
+use crate::{utility::is_symbol, view_box::ViewBox};
 
 impl ViewBox {
     pub fn parse(&mut self) -> Option<&Tree> {
@@ -18,8 +18,6 @@ impl ViewBox {
     pub fn highlight(&self) -> Vec<Vec<HLBlock>> {
         if let Some(tree) = &self.parse_tree {
             let mut tree_hl_blocks = highlight_tree(tree);
-
-            log!("Tree HL Blocks:\n\t{:?}\n", tree_hl_blocks);
 
             // Append lines without hl_block lists
             let buffer_lines = self.buffer.rope.len_lines();
@@ -173,7 +171,6 @@ fn add_block_to_row(
         to_end_of_line,
         color,
     };
-    // log!("Block: {:?}\n", block);
     hl_blocks[start.row].push(block);
 }
 
@@ -234,7 +231,6 @@ const ORANGE: Color = Color::Rgb {
 };
 
 fn node_type_to_color(node_type: &str, parent_type: &str) -> Option<Color> {
-    log!("node_type: {}", node_type);
     let color = match node_type {
         "#include" | "#define" | "#ifdef" | "#ifndef" | "#endif" => Color::DarkRed,
 
