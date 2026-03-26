@@ -1,4 +1,4 @@
-use crate::{DEBUG, buffer::Buffer, highlight_c::HLBlock, log};
+use crate::{buffer::Buffer, highlight_c::HLBlock};
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn},
@@ -117,8 +117,6 @@ impl ViewBox {
                 .into_iter()
                 .skip(self.top)
                 .take(self.height.into());
-
-            log!("{:?}", hl_lines);
 
             self.print_buffer_hl(
                 lines,

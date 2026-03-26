@@ -274,6 +274,7 @@ fn program_loop<'a>(
         buffer.update_list_reset();
 
         if let Event::Key(event) = read()? {
+            let start = std::time::Instant::now();
             match (event.code, mode.clone()) {
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
                     let c = u16::try_from(c.to_digit(10).expect("Numeric digit not in base 10"))
@@ -415,9 +416,15 @@ fn program_loop<'a>(
                 _ => continue,
             }
 
+            let before_parse = std::time::Instant::now();
             let _ = view.get_view_box().parse();
+            log!(
+                "Parsed buffer in {} microseconds",
+                before_parse.elapsed().as_micros()
+            );
 
             let adjusted = view.adjust();
+            let before_flush = std::time::Instant::now();
             view.flush(
                 status_bar,
                 mode,
@@ -426,6 +433,15 @@ fn program_loop<'a>(
                 register_handler.get_curr_reg(),
                 adjusted,
             )?;
+            log!(
+                "Flushed buffer in {} microseconds",
+                before_flush.elapsed().as_micros()
+            );
+
+            log!(
+                "Ran cycle in {} microseconds\n",
+                start.elapsed().as_micros()
+            );
         }
     }
 
