@@ -13,7 +13,7 @@ impl Buffer {
     pub fn _remove_n_line(&mut self, line_idx: usize) {
         self.update_list_remove(line_idx);
 
-        let start_index = self.get_start_of_n_line(line_idx);
+        let start_index = self._get_start_of_n_line(line_idx);
         let end_index = self.get_end_of_n_line(line_idx);
         self.rope.remove(start_index..=end_index);
     }
@@ -24,7 +24,7 @@ impl Buffer {
     }
 
     /// Returns the first index (absolute) of the line represented by the given `line_idx`
-    pub fn get_start_of_n_line(&self, line_idx: usize) -> usize {
+    pub fn _get_start_of_n_line(&self, line_idx: usize) -> usize {
         self.rope.line_to_char(line_idx)
     }
 

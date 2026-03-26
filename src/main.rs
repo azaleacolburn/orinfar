@@ -294,6 +294,7 @@ fn program_loop<'a>(
                     status_bar.push('/');
                 }
                 (KeyCode::Char('n'), Mode::Normal) => buffer.goto_next_string(search_str),
+                (KeyCode::Char('N'), Mode::Normal) => buffer.goto_prev_string(search_str),
                 (KeyCode::Char('.'), Mode::Normal) => match_action(
                     chained,
                     next_operation,

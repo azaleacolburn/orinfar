@@ -49,7 +49,11 @@ This mode is very similar to Meta mode. In this mode, you can type a string that
 This mode can be entered by pressing `/` in Normal mode.
 
 When the `enter` key is pressed in this mode, the `search_string` is set and the editor is returned to Normal mode.
+
 To move your cursor to the first character of the next occurance of the current `search_string` in the current buffer, press `n` in Normal mode.
+To move your cursor to the first character of the previous occurance of the current `search_string` in the current buffer, press `N` in Normal mode.
+
+When searching for the `search_string`, the cursor will always land on the first character of the instance of the string, regardless of the search direction.
 
 This mode can be exited to Normal mode without setting the search string by pressing `esc`.
 

@@ -7,7 +7,6 @@ use crossterm::{
 };
 use ropey::RopeSlice;
 use std::{
-    cell::RefCell,
     io::{StdoutLock, stdout},
     path::PathBuf,
 };
