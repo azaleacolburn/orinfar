@@ -3,75 +3,79 @@ use std::cell::RefCell;
 use crossterm::style::Color;
 use tree_sitter::{Node, Parser, Point, Tree};
 
-use crate::{DEBUG, buffer::Buffer, log, utility::is_symbol};
+use crate::{DEBUG, buffer::Buffer, log, utility::is_symbol, view_box::ViewBox};
 
-pub fn parse(buffer: &Buffer, parser: &RefCell<Parser>) -> Option<Tree> {
-    let source: Vec<u8> = buffer.rope.bytes().collect();
-    parser.borrow_mut().parse(source, None)
-}
+impl ViewBox {
+    pub fn parse(&mut self) -> Option<&Tree> {
+        let source: Vec<u8> = self.buffer.rope.bytes().collect();
+        self.parse_tree = self.parser.as_mut()?.parse(source, None);
 
-pub fn highlight(buffer: &Buffer, parser: &RefCell<Parser>) -> Vec<Vec<HLBlock>> {
-    if let Some(tree) = parse(buffer, parser) {
-        let mut tree_hl_blocks = highlight_tree(&tree);
-
-        // Chop multi-line hl blocks
-
-        log!("Tree HL Blocks:\n\t{:?}\n", tree_hl_blocks);
-
-        // Append lines without hl_block lists
-        let buffer_lines = buffer.rope.len_lines();
-        let hl_lines = tree_hl_blocks.len();
-        if hl_lines < buffer_lines {
-            for line_idx in hl_lines..buffer_lines {
-                let line = buffer.rope.get_line(line_idx).unwrap();
-                let block = HLBlock {
-                    start: 0,
-                    end: if line_idx + 1 == buffer_lines {
-                        line.len_chars()
-                    } else {
-                        line.len_chars() - 1
-                    },
-                    color: Color::Grey,
-                    to_end_of_line: false,
-                };
-                tree_hl_blocks.push(vec![block])
-            }
-        }
-
-        // Fill in empty lines
-        tree_hl_blocks
-            .iter_mut()
-            .enumerate()
-            .filter(|(_, l)| l.is_empty())
-            .for_each(|(line_idx, hl_blocks)| {
-                let line = buffer.rope.get_line(line_idx).unwrap();
-                let block = HLBlock {
-                    start: 0,
-                    end: if line_idx + 1 == buffer_lines {
-                        line.len_chars()
-                    } else {
-                        line.len_chars() - 1
-                    },
-                    color: Color::Grey,
-                    to_end_of_line: false,
-                };
-
-                hl_blocks.push(block);
-            });
-
-        return tree_hl_blocks;
+        self.parse_tree.as_ref()
     }
 
-    let hl_block = HLBlock {
-        start: 0,
-        end: buffer.len() - 1,
-        to_end_of_line: false, // Technically true, but not needed
-        color: Color::Grey,
-    };
+    pub fn highlight(&self) -> Vec<Vec<HLBlock>> {
+        if let Some(tree) = &self.parse_tree {
+            let mut tree_hl_blocks = highlight_tree(&tree);
 
-    return (0..buffer.rope.len_lines())
-        .map(|_| vec![hl_block.clone()])
-        .collect();
+            // Chop multi-line hl blocks
+
+            log!("Tree HL Blocks:\n\t{:?}\n", tree_hl_blocks);
+
+            // Append lines without hl_block lists
+            let buffer_lines = self.buffer.rope.len_lines();
+            let hl_lines = tree_hl_blocks.len();
+            if hl_lines < buffer_lines {
+                for line_idx in hl_lines..buffer_lines {
+                    let line = self.buffer.rope.get_line(line_idx).unwrap();
+                    let block = HLBlock {
+                        start: 0,
+                        end: if line_idx + 1 == buffer_lines {
+                            line.len_chars()
+                        } else {
+                            line.len_chars() - 1
+                        },
+                        color: Color::Grey,
+                        to_end_of_line: false,
+                    };
+                    tree_hl_blocks.push(vec![block])
+                }
+            }
+
+            // Fill in empty lines
+            tree_hl_blocks
+                .iter_mut()
+                .enumerate()
+                .filter(|(_, l)| l.is_empty())
+                .for_each(|(line_idx, hl_blocks)| {
+                    let line = self.buffer.rope.get_line(line_idx).unwrap();
+                    let block = HLBlock {
+                        start: 0,
+                        end: if line_idx + 1 == buffer_lines {
+                            line.len_chars()
+                        } else {
+                            line.len_chars() - 1
+                        },
+                        color: Color::Grey,
+                        to_end_of_line: false,
+                    };
+
+                    hl_blocks.push(block);
+                });
+
+            return tree_hl_blocks;
+        }
+
+        let hl_block = HLBlock {
+            start: 0,
+            end: 0,
+            to_end_of_line: true, // Technically true, but not needed
+            color: Color::Grey,
+        };
+
+        return (0..self.buffer.rope.len_lines())
+            .map(|_| vec![hl_block.clone()])
+            .collect();
+    }
 }
 
 #[derive(Debug, Clone)]

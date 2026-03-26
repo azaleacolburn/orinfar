@@ -14,7 +14,6 @@ use crossterm::{
 };
 use ropey::Rope;
 use std::{
-    cell::RefCell,
     io::{Write, stdout},
     path::PathBuf,
 };
@@ -364,9 +363,8 @@ impl View {
             && let Some(ext) = path.extension()
             && (ext == "c" || ext == "h")
         {
-            let parser = RefCell::new(Parser::new());
+            let mut parser = Parser::new();
             parser
-                .borrow_mut()
                 .set_language(&tree_sitter_c::LANGUAGE.into())
                 .expect("Failed to load C parser");
 

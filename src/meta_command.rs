@@ -164,9 +164,8 @@ pub fn attach_buffer(status_bar: &StatusBar, i: usize, view_box: &mut ViewBox) {
     if let Some(ext) = path_buf.extension()
         && (ext == "c" || ext == "h")
     {
-        let parser = RefCell::new(Parser::new());
+        let mut parser = Parser::new();
         parser
-            .borrow_mut()
             .set_language(&tree_sitter_c::LANGUAGE.into())
             .expect("Failed to load C parser");
 

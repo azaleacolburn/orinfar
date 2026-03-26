@@ -192,6 +192,8 @@ fn main() -> Result<()> {
     view.set_path(path);
     view.load_file()?;
 
+    let _ = view.get_view_box().parse();
+
     view.flush(
         &status_bar,
         &mode,
@@ -402,6 +404,8 @@ fn program_loop<'a>(
                 }
                 _ => continue,
             }
+
+            let _ = view.get_view_box().parse();
 
             let adjusted = view.adjust();
             view.flush(
