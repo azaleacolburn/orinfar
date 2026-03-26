@@ -321,7 +321,6 @@ impl Buffer {
             .rope
             .get_char(i32::max(0, cursor as i32 - str.len() as i32 + i as i32) as usize)
         {
-            log!("s: {}", s);
             if s == str[i - 1] {
                 i -= 1;
             } else {
