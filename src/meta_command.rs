@@ -102,11 +102,7 @@ pub fn substitute_cmd(
     let original = substitution[1];
     let new: String = substitution[2].iter().collect();
 
-    log!("Substition\n\tOriginal: {:?}\n\tNew: {}", original, new);
-
     let idxs_of_substitution = buffer.find_occurences(original);
-    log!("\tIndexes of Substitution: {:?}", idxs_of_substitution);
-
     buffer.replace_text(
         &new,
         &original.iter().collect::<String>(),
@@ -149,7 +145,7 @@ pub fn attach_buffer(status_bar: &StatusBar, i: usize, view_box: &mut ViewBox) {
         return;
     }
     let path_buf = PathBuf::from(status_bar[i + 1..].iter().collect::<String>().trim());
-    log!("Set path to equal: {}", path_buf.to_string_lossy());
+
     // If we already have a file, we don't want to write the contents
     // to a new empty file
     if let Some(_path) = &view_box.path {
