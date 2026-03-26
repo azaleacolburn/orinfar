@@ -1,5 +1,7 @@
 use crate::{
+    DEBUG,
     buffer::Buffer,
+    log,
     undo::{Action, UndoTree},
 };
 use std::iter::once;
@@ -58,10 +60,6 @@ impl Buffer {
             (0..n).for_each(|_| self.update_list_add_current());
         }
         (0..n).for_each(|_| self.insert_char(c));
-    }
-
-    pub fn is_last_char(&self) -> bool {
-        self.cursor + 1 == self.rope.len_chars()
     }
 
     pub fn get_curr_char(&self) -> char {
@@ -188,6 +186,7 @@ impl Buffer {
             if char == text[curr.len()] {
                 curr.push(char);
             }
+
             if curr.len() == text.len() {
                 idxs_of_substitution.push(i + 1);
                 curr.clear();
@@ -197,17 +196,17 @@ impl Buffer {
         idxs_of_substitution
     }
 
-    // Replaces all instances of the `original` text with the `new` text in the buffer, given a
-    // list of indexes at which they occur
-    //
-    // # Params
-    // - `new`: The text to replace `original`
-    // - `original`: The text to be replaced.
-    // - `idxs_of_substitution`: The index of the end of each of the occurences of `original` (the
-    // last character of each).
-    // - `undo_tree`: The undo tree to write an action to
-    // - `undoing`: Whether or not this replacement is undoing a previous action or whether it's a
-    // new action.
+    ///  Replaces all instances of the `original` text with the `new` text in the buffer, given a
+    /// list of indexes at which they occur
+    ///
+    /// # Params
+    /// - `new`: The text to replace `original`
+    /// - `original`: The text to be replaced.
+    /// - `idxs_of_substitution`: The index of the end of each of the occurences of `original` (the
+    /// last character of each).
+    /// - `undo_tree`: The undo tree to write an action to
+    /// - `undoing`: Whether or not this replacement is undoing a previous action or whether it's a
+    /// new action.
     pub fn replace_text(
         &mut self,
         new: &str,

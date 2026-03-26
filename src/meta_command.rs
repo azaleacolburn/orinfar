@@ -5,7 +5,8 @@ use crate::{
 };
 use anyhow::Result;
 use ropey::Rope;
-use std::path::PathBuf;
+use std::{io::StdoutLock, path::PathBuf};
+use tree_sitter::Parser;
 
 #[allow(clippy::too_many_arguments)]
 /// # Returns
@@ -16,6 +17,7 @@ pub fn match_meta_command(
     register_handler: &RegisterHandler,
     undo_tree: &mut UndoTree,
     mode: &mut Mode,
+    stdout: &mut StdoutLock,
 ) -> Result<bool> {
     for (i, command) in status_bar.iter().enumerate().skip(1) {
         match command {
@@ -26,14 +28,14 @@ pub fn match_meta_command(
             'l' => {
                 view.load_file()?;
                 let view_box = view.get_view_box();
-                view_box.flush(false)?;
+                view_box.flush(false, stdout)?;
             }
             'o' => {
                 attach_buffer(status_bar, i, view.get_view_box());
                 view.load_file()?;
 
                 let view_box = view.get_view_box();
-                view_box.flush(false)?;
+                view_box.flush(false, stdout)?;
                 break;
             }
             'd' => {
@@ -157,6 +159,17 @@ pub fn attach_buffer(status_bar: &StatusBar, i: usize, view_box: &mut ViewBox) {
         view_box.buffer.lines_for_updating = Vec::new();
         view_box.buffer.has_changed = true;
     }
-    view_box.path = Some(path_buf);
+    view_box.path = Some(path_buf.clone());
     view_box.git_hash = try_get_git_hash(view_box.path.as_ref());
+
+    if let Some(ext) = path_buf.extension()
+        && (ext == "c" || ext == "h")
+    {
+        let mut parser = Parser::new();
+        parser
+            .set_language(&tree_sitter_c::LANGUAGE.into())
+            .expect("Failed to load C parser");
+
+        view_box.parser = Some(parser);
+    }
 }

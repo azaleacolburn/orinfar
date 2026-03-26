@@ -26,10 +26,6 @@ impl Buffer {
         }
     }
 
-    pub fn clear(&mut self) {
-        self.rope.remove(0..);
-    }
-
     pub fn is_last_col(&self) -> bool {
         self.cursor + 1 >= self.rope.len_chars() || self.rope.char(self.cursor) == '\n'
     }

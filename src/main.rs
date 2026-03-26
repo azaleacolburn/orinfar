@@ -6,6 +6,7 @@ mod buffer_char;
 mod buffer_line;
 mod buffer_update;
 mod commands;
+mod highlight_c;
 mod meta_command;
 mod text_object;
 #[macro_use]
@@ -22,9 +23,10 @@ mod view;
 mod view_box;
 mod view_command;
 
+use std::io::stdout;
+
 use crate::{
     action::{enumerate_normal_chars, match_action},
-    buffer::Buffer,
     commands::{
         append, cut, first_row, insert, insert_new_line, insert_new_line_above, last_row, paste,
         replace, set_curr_register, undo,
@@ -67,6 +69,8 @@ fn main() -> Result<()> {
     setup(rows, cols)?;
 
     panic_hook::add_panic_hook(&cleanup);
+
+    let mut stdout = stdout().lock();
 
     // This could fail if the dir already exists, so we don't care if this fails
     if let Err(err) = std::fs::create_dir(log_dir())
@@ -201,6 +205,9 @@ fn main() -> Result<()> {
     view.set_path(path);
     view.load_file()?;
 
+    let view_box = view.get_view_box();
+    let _ = view_box.parse();
+
     view.flush(
         &status_bar,
         &mode,
@@ -208,6 +215,7 @@ fn main() -> Result<()> {
         count,
         register_handler.get_curr_reg(),
         false,
+        &mut stdout,
     )?;
 
     program_loop(
@@ -266,9 +274,13 @@ fn program_loop<'a>(
 ) -> Result<()> {
     let mut last_count = 1;
     let mut last_chained: Vec<char> = vec![];
+
+    let mut stdout = stdout().lock();
+
     'main: loop {
         let buffer = view.get_buffer_mut();
         buffer.update_list_reset();
+
         if let Event::Key(event) = read()? {
             match (event.code, mode.clone()) {
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
@@ -372,7 +384,14 @@ fn program_loop<'a>(
                 }
 
                 (KeyCode::Enter, Mode::Meta) => {
-                    if match_meta_command(status_bar, view, register_handler, undo_tree, mode)? {
+                    if match_meta_command(
+                        status_bar,
+                        view,
+                        register_handler,
+                        undo_tree,
+                        mode,
+                        &mut stdout,
+                    )? {
                         break 'main;
                     }
                 }
@@ -410,6 +429,9 @@ fn program_loop<'a>(
                 _ => continue,
             }
 
+            let view_box = view.get_view_box();
+            let _ = view_box.parse();
+
             let adjusted = view.adjust();
             view.flush(
                 status_bar,
@@ -418,20 +440,8 @@ fn program_loop<'a>(
                 *count,
                 register_handler.get_curr_reg(),
                 adjusted,
+                &mut stdout,
             )?;
-        }
-    }
-
-    Ok(())
-}
-
-/// # Errors
-/// - I/O error if `crossterm::events::read()` fails
-pub fn on_next_input(buffer: &mut Buffer, callback: fn(KeyCode, &mut Buffer)) -> Result<()> {
-    loop {
-        if let Event::Key(event) = read()? {
-            callback(event.code, buffer);
-            break;
         }
     }
 

@@ -14,11 +14,11 @@ use crossterm::{
 };
 use ropey::Rope;
 use std::{
-    io::{Write, stdout},
+    io::{StdoutLock, Write, stdout},
     path::PathBuf,
 };
+use tree_sitter::Parser;
 
-#[derive(Debug)]
 pub struct View {
     boxes: Vec<ViewBox>,
     // Represents which index of the view box the cursor is in
@@ -49,46 +49,51 @@ impl View {
         &mut self.boxes[self.cursor]
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn flush(
+    pub fn normal_unattached_status(&self, chained: &[char], count: u16, register: char) -> String {
+        let info_str = "-- Unattached Buffer -- ".to_string();
+
+        let count_str = if count == 1 {
+            String::new()
+        } else {
+            count.to_string()
+        };
+        let reg_str = if register == '\"' {
+            String::new()
+        } else {
+            format!("\"{register}")
+        };
+        let chained_str = chained.iter().collect::<String>();
+
+        format!("{info_str}{count_str}{reg_str}{chained_str}")
+    }
+
+    pub fn normal_attached_status(
         &self,
-        status_bar: &StatusBar,
-        mode: &Mode,
+        path: &PathBuf,
         chained: &[char],
         count: u16,
         register: char,
-        adjusted: bool,
-    ) -> Result<()> {
-        let mut errors = self.boxes.iter().enumerate().filter_map(|(i, view_box)| {
-            let adjusted = adjusted && i == self.cursor;
-            view_box.flush(adjusted).err()
-        });
-        if let Some(err) = errors.next() {
-            return Err(err);
-        }
+    ) -> Result<String> {
+        let info_str = "Editing File: ".to_string();
+        let file_size = std::fs::read(path)?.len().to_string();
+        let path = path.to_string_lossy();
 
-        let status_message = match (mode, self.get_path()) {
-            (Mode::Meta | Mode::Search, _) => status_bar.buffer(),
-            (Mode::Normal, Some(path)) => {
-                let info_str = "Editing File: ".to_string();
-                let file_size = std::fs::read(path)?.len().to_string();
-                let path = path.to_string_lossy();
+        let count_str = if count == 1 {
+            String::new()
+        } else {
+            count.to_string()
+        };
 
-                let count_str = if count == 1 {
-                    String::new()
-                } else {
-                    count.to_string()
-                };
-                let reg_str = if register == '\"' {
-                    String::new()
-                } else {
-                    format!("\"{register}")
-                };
-                let chained_str = chained.iter().collect::<String>();
+        let reg_str = if register == '\"' {
+            String::new()
+        } else {
+            format!("\"{register}")
+        };
+        let chained_str = chained.iter().collect::<String>();
 
-                let git_hash = self.get_git_hash().unwrap_or("");
+        let git_hash = self.get_git_hash().unwrap_or("");
 
-                let middle_buffer = (0..(self.width as usize)
+        let middle_buffer = (0..(self.width as usize)
                     - info_str.len()
                     - path.len()
                     - 2 // For the 2 quotations
@@ -99,36 +104,57 @@ impl View {
                     - count_str.len()
                     - chained_str.len()
                     - git_hash.len())
-                    .map(|_| ' ')
-                    .collect::<String>();
+            .map(|_| ' ')
+            .collect::<String>();
 
-                format!(
-                    "{info_str}\"{path}\" {file_size}b {reg_str}{count_str} {chained_str}{middle_buffer}{git_hash}",
-                )
+        Ok(format!(
+            "{info_str}\"{path}\" {file_size}b {reg_str}{count_str} {chained_str}{middle_buffer}{git_hash}",
+        ))
+    }
+
+    pub fn status_message(
+        &self,
+        status_bar: &StatusBar,
+        mode: &Mode,
+        chained: &[char],
+        count: u16,
+        register: char,
+    ) -> Result<String> {
+        let status_message = match (mode, self.get_path()) {
+            (Mode::Meta | Mode::Search, _) => status_bar.buffer(),
+            (Mode::Normal, Some(path)) => {
+                self.normal_attached_status(path, chained, count, register)?
             }
-            (Mode::Normal, None) => {
-                let info_str = "-- Unattached Buffer -- ".to_string();
-
-                let count_str = if count == 1 {
-                    String::new()
-                } else {
-                    count.to_string()
-                };
-                let reg_str = if register == '\"' {
-                    String::new()
-                } else {
-                    format!("\"{register}")
-                };
-                let chained_str = chained.iter().collect::<String>();
-
-                format!("{info_str}{count_str}{reg_str}{chained_str}")
-            }
+            (Mode::Normal, None) => self.normal_unattached_status(chained, count, register),
             (Mode::Insert, _) => "-- INSERT --".into(),
             (Mode::Visual, _) => "-- VISUAL --".into(),
         };
 
+        Ok(status_message)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn flush(
+        &self,
+        status_bar: &StatusBar,
+        mode: &Mode,
+        chained: &[char],
+        count: u16,
+        register: char,
+        adjusted: bool,
+        stdout: &mut StdoutLock,
+    ) -> Result<()> {
+        let mut errors = self.boxes.iter().enumerate().filter_map(|(i, view_box)| {
+            let adjusted = adjusted && i == self.cursor;
+            view_box.flush(adjusted, stdout).err()
+        });
+        if let Some(err) = errors.next() {
+            return Err(err);
+        }
+
+        let status_message = self.status_message(status_bar, mode, chained, count, register)?;
         execute!(
-            stdout(),
+            stdout,
             SetForegroundColor(Color::White),
             MoveTo(0, self.height + 1),
             Clear(ClearType::CurrentLine),
@@ -142,13 +168,14 @@ impl View {
             let view_box = &self.boxes[self.cursor];
             view_box.cursor_position()
         };
-        execute!(stdout(), MoveToColumn(new_col), MoveToRow(new_row), Show)?;
-        stdout().flush()?;
+        execute!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
 
+        stdout.flush()?;
         Ok(())
     }
 }
 
+/// ViewBox Manipulation Methods
 impl View {
     pub fn position_of_box<P>(&self, predicate: P) -> Option<usize>
     where
@@ -329,10 +356,23 @@ impl View {
     }
 
     pub fn set_path(&mut self, path: Option<PathBuf>) {
-        let git_hash = try_get_git_hash(path.as_ref());
         let view_box = &mut self.boxes[self.cursor];
 
+        if let Some(path) = &path
+            && let Some(ext) = path.extension()
+            && (ext == "c" || ext == "h")
+        {
+            let mut parser = Parser::new();
+            parser
+                .set_language(&tree_sitter_c::LANGUAGE.into())
+                .expect("Failed to load C parser");
+
+            view_box.parser = Some(parser);
+        }
+
+        let git_hash = try_get_git_hash(path.as_ref());
         view_box.git_hash = git_hash;
+
         view_box.path = path;
     }
 
@@ -363,8 +403,10 @@ pub fn cleanup() -> Result<()> {
 }
 
 pub fn setup(rows: u16, cols: u16) -> Result<()> {
+    let mut stdout = stdout().lock();
+
     execute!(
-        stdout(),
+        stdout,
         EnterAlternateScreen,
         Clear(ClearType::All),
         MoveToRow(0),
@@ -373,13 +415,13 @@ pub fn setup(rows: u16, cols: u16) -> Result<()> {
 
     // Fill entire screen with spaces with the background color
     for row in 0..rows {
-        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+        execute!(stdout, MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
     }
-    execute!(stdout(), MoveTo(0, 0))?;
+    execute!(stdout, MoveTo(0, 0))?;
     for row in 0..rows {
-        execute!(stdout(), MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
+        execute!(stdout, MoveTo(0, row), Print(" ".repeat(cols as usize)))?;
     }
-    execute!(stdout(), MoveTo(0, 0))?;
+    execute!(stdout, MoveTo(0, 0))?;
     enable_raw_mode()?;
 
     Ok(())
