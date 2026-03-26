@@ -1,14 +1,16 @@
-use std::cell::RefCell;
-
 use crossterm::style::Color;
-use tree_sitter::{Node, Parser, Point, Tree};
+use tree_sitter::{Node, Point, Tree};
 
-use crate::{DEBUG, buffer::Buffer, log, utility::is_symbol, view_box::ViewBox};
+use crate::{DEBUG, log, utility::is_symbol, view_box::ViewBox};
 
 impl ViewBox {
     pub fn parse(&mut self) -> Option<&Tree> {
-        let source: Vec<u8> = self.buffer.rope.bytes().collect();
-        self.parse_tree = self.parser.as_mut()?.parse(source, None);
+        if self.buffer.has_changed {
+            let source: Vec<u8> = self.buffer.rope.bytes().collect();
+            // TODO
+            // Edit the `Tree` and pass it to the `parse` function
+            self.parse_tree = self.parser.as_mut()?.parse(source, None);
+        }
 
         self.parse_tree.as_ref()
     }
@@ -16,8 +18,6 @@ impl ViewBox {
     pub fn highlight(&self) -> Vec<Vec<HLBlock>> {
         if let Some(tree) = &self.parse_tree {
             let mut tree_hl_blocks = highlight_tree(&tree);
-
-            // Chop multi-line hl blocks
 
             log!("Tree HL Blocks:\n\t{:?}\n", tree_hl_blocks);
 
