@@ -5,7 +5,7 @@ use crate::{
 };
 use anyhow::Result;
 use ropey::Rope;
-use std::{cell::RefCell, path::PathBuf};
+use std::path::PathBuf;
 use tree_sitter::Parser;
 
 #[allow(clippy::too_many_arguments)]

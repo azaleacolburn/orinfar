@@ -299,6 +299,50 @@ impl Buffer {
         }
     }
 
+    pub fn goto_prev_string(&mut self, str: &[char]) {
+        if str.is_empty() {
+            return;
+        }
+
+        let mut i = str.len();
+        let mut cursor = self.cursor;
+
+        // NOTE
+        // Pretty sure I don't need this but idk for sure
+        // let within_bounds = self.rope.len_chars() > cursor - str.len();
+        // if within_bounds
+        //     && self.rope.slice(self.cursor..self.cursor + str.len())
+        //         == str.iter().collect::<String>()
+        // {
+        //     cursor += 1;
+        // }
+
+        while let Some(s) = self
+            .rope
+            .get_char(i32::max(0, cursor as i32 - str.len() as i32 + i as i32) as usize)
+        {
+            if s == str[i - 1] {
+                i -= 1;
+            } else {
+                cursor -= 1;
+                i = str.len();
+            }
+
+            // We're at the beginning of the buffer
+            if cursor == 0 {
+                return;
+            }
+
+            // We've found our string
+            if i == 0 {
+                // NOTE
+                // You have to add `1`, otherwise we will overflow if the idx is 0
+                self.cursor = cursor + 1 - str.len();
+                return;
+            }
+        }
+    }
+
     pub fn find_next(&self, target: char) -> Option<usize> {
         let mut cursor = self.cursor;
         let last = self.rope.len_chars() - 1;
