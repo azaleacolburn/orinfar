@@ -14,8 +14,7 @@ use crossterm::{
 };
 use ropey::Rope;
 use std::{
-    cell::RefCell,
-    io::{Write, stdout},
+    io::{StdoutLock, Write, stdout},
     path::PathBuf,
 };
 use tree_sitter::Parser;
@@ -143,16 +142,15 @@ impl View {
         count: u16,
         register: char,
         adjusted: bool,
+        stdout: &mut StdoutLock,
     ) -> Result<()> {
         let mut errors = self.boxes.iter().enumerate().filter_map(|(i, view_box)| {
             let adjusted = adjusted && i == self.cursor;
-            view_box.flush(adjusted).err()
+            view_box.flush(adjusted, stdout).err()
         });
         if let Some(err) = errors.next() {
             return Err(err);
         }
-
-        let mut stdout = stdout().lock();
 
         let status_message = self.status_message(status_bar, mode, chained, count, register)?;
         execute!(
@@ -364,9 +362,8 @@ impl View {
             && let Some(ext) = path.extension()
             && (ext == "c" || ext == "h")
         {
-            let parser = RefCell::new(Parser::new());
+            let mut parser = Parser::new();
             parser
-                .borrow_mut()
                 .set_language(&tree_sitter_c::LANGUAGE.into())
                 .expect("Failed to load C parser");
 

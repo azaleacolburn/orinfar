@@ -5,7 +5,7 @@ use crate::{
 };
 use anyhow::Result;
 use ropey::Rope;
-use std::{cell::RefCell, path::PathBuf};
+use std::{io::StdoutLock, path::PathBuf};
 use tree_sitter::Parser;
 
 #[allow(clippy::too_many_arguments)]
@@ -17,6 +17,7 @@ pub fn match_meta_command(
     register_handler: &RegisterHandler,
     undo_tree: &mut UndoTree,
     mode: &mut Mode,
+    stdout: &mut StdoutLock,
 ) -> Result<bool> {
     for (i, command) in status_bar.iter().enumerate().skip(1) {
         match command {
@@ -27,14 +28,14 @@ pub fn match_meta_command(
             'l' => {
                 view.load_file()?;
                 let view_box = view.get_view_box();
-                view_box.flush(false)?;
+                view_box.flush(false, stdout)?;
             }
             'o' => {
                 attach_buffer(status_bar, i, view.get_view_box());
                 view.load_file()?;
 
                 let view_box = view.get_view_box();
-                view_box.flush(false)?;
+                view_box.flush(false, stdout)?;
                 break;
             }
             'd' => {
@@ -164,9 +165,8 @@ pub fn attach_buffer(status_bar: &StatusBar, i: usize, view_box: &mut ViewBox) {
     if let Some(ext) = path_buf.extension()
         && (ext == "c" || ext == "h")
     {
-        let parser = RefCell::new(Parser::new());
+        let mut parser = Parser::new();
         parser
-            .borrow_mut()
             .set_language(&tree_sitter_c::LANGUAGE.into())
             .expect("Failed to load C parser");
 

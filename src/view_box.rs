@@ -1,9 +1,4 @@
-use crate::{
-    DEBUG,
-    buffer::Buffer,
-    highlight_c::{HLBlock, highlight},
-    log,
-};
+use crate::{DEBUG, buffer::Buffer, highlight_c::HLBlock, log};
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn},
@@ -12,11 +7,10 @@ use crossterm::{
 };
 use ropey::RopeSlice;
 use std::{
-    cell::RefCell,
     io::{StdoutLock, stdout},
     path::PathBuf,
 };
-use tree_sitter::Parser;
+use tree_sitter::{Parser, Tree};
 
 pub struct ViewBox {
     // Components inherant to the view box
@@ -24,7 +18,8 @@ pub struct ViewBox {
     pub path: Option<PathBuf>,
     pub git_hash: Option<String>,
 
-    pub parser: Option<RefCell<Parser>>,
+    pub parser: Option<Parser>,
+    pub parse_tree: Option<Tree>,
 
     // The x and y corrdinates of the upper right hand corner of where the buffer will be displayed
     pub x: u16,
@@ -51,7 +46,9 @@ impl ViewBox {
             buffer: Buffer::new(),
             path: None,
             git_hash: None,
+
             parser: None,
+            parse_tree: None,
 
             x,
             y,
@@ -110,15 +107,24 @@ impl ViewBox {
 
         let clear_str: String = (0..self.width).map(|_| ' ').collect();
 
-        if let Some(parser) = self.parser.as_ref()
+        if let Some(_parser) = self.parser.as_ref()
             && let Some(path) = self.path.as_ref()
             && let Some(ex) = path.extension()
             && (ex == "c" || ex == "h")
         {
+            // Expensive
+            let hl_lines = self
+                .highlight()
+                .into_iter()
+                .skip(self.top)
+                .take(self.height.into());
+
+            log!("{:?}", hl_lines);
+
             self.print_buffer_hl(
                 lines,
-                parser,
                 stdout,
+                hl_lines,
                 &mut padding_buffer,
                 left_padding,
                 &clear_str,
@@ -148,21 +154,12 @@ impl ViewBox {
     fn print_buffer_hl<'a>(
         &self,
         lines: impl Iterator<Item = (usize, (RopeSlice<'a>, &'a bool))>,
-        parser: &RefCell<Parser>,
         stdout: &mut StdoutLock,
-
+        hl_lines: impl Iterator<Item = Vec<HLBlock>>,
         padding_buffer: &mut String,
         left_padding: usize,
         clear_str: &str,
     ) {
-        // Expensive
-        let hl_lines = highlight(&self.buffer, parser)
-            .into_iter()
-            .skip(self.top)
-            .take(self.height.into());
-
-        log!("{:?}", hl_lines);
-
         lines
             .zip(hl_lines)
             .for_each(|((line_num, (line, should_update)), hl_blocks)| {
@@ -313,13 +310,11 @@ impl ViewBox {
             .expect("Crossterm reset command failed");
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn flush(&self, adjusted: bool) -> Result<()> {
-        let mut stdout = stdout().lock();
+    pub fn flush(&self, adjusted: bool, stdout: &mut StdoutLock) -> Result<()> {
         let left_padding = self.left_padding();
 
         if self.buffer.has_changed || adjusted {
-            self.write_buffer(&mut stdout, left_padding)?;
+            self.write_buffer(stdout, left_padding)?;
         }
 
         Ok(())
