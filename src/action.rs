@@ -38,6 +38,8 @@ pub fn match_action<'a>(
     };
     let buffer = view.get_buffer_mut();
 
+    let cmd: String = chained.iter().collect();
+
     if let Some(operation) = next_operation {
         if last == 'i' {
             *text_object_type = Some(TextObjectType::Inside);
@@ -50,6 +52,8 @@ pub fn match_action<'a>(
 
             reset(chained, count, next_operation, last_chained, last_count);
         } else if let Some(to_type) = text_object_type {
+            // NOTE
+            // This is fine because for the text object, we only care about the last key pressed
             if let Some(text_object) = text_objects.iter().find(|to| last_char(to.name) == last) {
                 (0..*count).for_each(|_| {
                     operation.execute_text_object(
@@ -64,6 +68,10 @@ pub fn match_action<'a>(
 
                 reset(chained, count, next_operation, last_chained, last_count);
             }
+        // WARNING
+        // This only works for single character motions
+        // TODO
+        // If all motion names are a single character, we should just make them a character
         } else if let Some(motion) = motions.iter().find(|motion| last_char(motion.name) == last) {
             (0..*count).for_each(|_| {
                 operation.execute_motion(motion, buffer, register_handler, mode, undo_tree);
@@ -71,19 +79,13 @@ pub fn match_action<'a>(
 
             reset(chained, count, next_operation, last_chained, last_count);
         }
-    } else if let Some(command) = commands
-        .iter()
-        .find(|motion| last_char(motion.name) == last)
-    {
+    } else if let Some(command) = commands.iter().find(|motion| motion.name == cmd) {
         (0..*count).for_each(|_| {
             command.execute(buffer, register_handler, mode, undo_tree);
         });
 
         reset(chained, count, next_operation, last_chained, last_count);
-    } else if let Some(view_command) = view_commands
-        .iter()
-        .find(|command| command.name == chained.iter().collect::<String>())
-    {
+    } else if let Some(view_command) = view_commands.iter().find(|command| command.name == cmd) {
         (0..*count).for_each(|_| {
             view_command.execute(view);
         });
