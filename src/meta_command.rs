@@ -129,7 +129,8 @@ pub fn print_directories(view: &mut View, undo_tree: &mut UndoTree) -> Result<()
         .collect::<String>();
 
     // Some issue with replacing contents that has a trailing newline
-    view.get_buffer_mut().replace_contents(contents, undo_tree);
+    view.get_buffer_mut()
+        .replace_contents(&contents[0..contents.len() - 1], undo_tree);
 
     Ok(())
 }

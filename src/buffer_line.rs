@@ -136,7 +136,7 @@ impl Buffer {
         self.set_row(line + 1);
     }
 
-    pub fn replace_contents(&mut self, contents: String, undo_tree: &mut UndoTree) {
+    pub fn replace_contents(&mut self, contents: &str, undo_tree: &mut UndoTree) {
         self.has_changed = true;
         self.lines_for_updating.clear();
 
