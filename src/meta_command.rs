@@ -116,14 +116,7 @@ pub fn substitute_cmd(
 }
 
 pub fn print_directories(view: &mut View, undo_tree: &mut UndoTree) -> Result<()> {
-    let path = view.get_path().map_or_else(
-        || PathBuf::from("./"),
-        |p| {
-            let mut p = p.clone();
-            p.pop();
-            p
-        },
-    );
+    let path = PathBuf::from("./");
 
     let dir = std::fs::read_dir(path)?;
     let contents = dir
@@ -135,6 +128,7 @@ pub fn print_directories(view: &mut View, undo_tree: &mut UndoTree) -> Result<()
         })
         .collect::<String>();
 
+    // Some issue with replacing contents that has a trailing newline
     view.get_buffer_mut().replace_contents(contents, undo_tree);
 
     Ok(())
