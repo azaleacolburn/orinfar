@@ -1,3 +1,5 @@
+use std::iter::{self, once};
+
 use crate::{
     buffer::Buffer,
     undo::{Action, UndoTree},
@@ -134,10 +136,21 @@ impl Buffer {
         self.set_row(line + 1);
     }
 
-    pub fn replace_contents(&mut self, contents: String, undo_tree: &mut UndoTree) {
+    pub fn replace_contents(&mut self, contents: &str, undo_tree: &mut UndoTree) {
         self.has_changed = true;
         self.lines_for_updating.clear();
-        contents.lines().for_each(|_| self.update_list_add(0));
+
+        // NOTE
+        // Make sure to correctly add the trailing newline
+        if contents.chars().nth(contents.len() - 1).unwrap_or('\0') == '\n' {
+            contents
+                .lines()
+                .chain(once(""))
+                .for_each(|_| self.update_list_add(0));
+        } else {
+            contents.lines().for_each(|_| self.update_list_add(0));
+        }
+
         if contents.is_empty() {
             self.update_list_add(0);
         }

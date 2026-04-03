@@ -312,7 +312,7 @@ impl View {
         self.cursor = cursor;
 
         let buffer = self.get_buffer_mut();
-        buffer.replace_contents(str, undo_tree);
+        buffer.replace_contents(&str, undo_tree);
 
         self.cursor = anchor;
     }
