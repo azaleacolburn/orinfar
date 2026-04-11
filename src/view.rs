@@ -20,7 +20,7 @@ use std::{
 use tree_sitter::Parser;
 
 pub struct View {
-    boxes: Vec<ViewBox>,
+    pub boxes: Vec<ViewBox>,
     // Represents which index of the view box the cursor is in
     pub cursor: usize,
     width: u16,
@@ -403,7 +403,7 @@ pub fn cleanup() -> Result<()> {
     Ok(())
 }
 
-pub fn setup(rows: u16, cols: u16) -> Result<()> {
+pub fn terminal_setup(rows: u16, cols: u16) -> Result<()> {
     let mut stdout = stdout().lock();
 
     execute!(
