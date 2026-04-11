@@ -1,3 +1,39 @@
+use crate::{
+    action::{enumerate_normal_chars, match_action},
+    commands::{
+        append, cut, first_row, insert, insert_new_line, insert_new_line_above, last_row, paste,
+        replace, set_curr_register, undo,
+    },
+    io::{Cli, data_file, log, log_dir, log_file, write_data},
+    meta_command::match_meta_command,
+    mode::Mode,
+    motion::{
+        Motion, back, beginning_of_line, end_of_line, end_of_word, find, find_back, find_until,
+        next_char, next_corresponding_bracket, next_newline, next_row, prev_char, prev_newline,
+        prev_row, word,
+    },
+    operator::{Operator, change, delete, yank},
+    register::RegisterHandler,
+    status_bar::StatusBar,
+    text_object::{
+        TextObject, TextObjectType, curly_braces, grav, parentheses, quotations, single_quotations,
+        square_braces,
+    },
+    undo::{Action, UndoTree},
+    view::{View, cleanup, terminal_setup},
+    view_command::{
+        ViewCommand, center_viewbox_on_cursor, delete_curr_view_box, move_down_one_view_box,
+        move_left_one_view_box, move_right_one_view_box, move_up_one_view_box,
+        split_curr_view_box_horizontal, split_curr_view_box_vertical,
+    },
+};
+use anyhow::Result;
+use commands::Command as Cmd;
+use crossterm::{
+    event::{Event, KeyCode, read},
+    terminal::size,
+};
+
 #[macro_use]
 mod utility;
 mod action;
@@ -23,48 +59,12 @@ mod view;
 mod view_box;
 mod view_command;
 
-use crate::{
-    action::{enumerate_normal_chars, match_action},
-    commands::{
-        append, cut, first_row, insert, insert_new_line, insert_new_line_above, last_row, paste,
-        replace, set_curr_register, undo,
-    },
-    io::{Cli, data_file, log, log_dir, log_file, write_data},
-    meta_command::match_meta_command,
-    mode::Mode,
-    motion::{
-        Motion, back, beginning_of_line, end_of_line, end_of_word, find, find_back, find_until,
-        next_char, next_corresponding_bracket, next_newline, next_row, prev_char, prev_newline,
-        prev_row, word,
-    },
-    operator::{Operator, change, delete, yank},
-    register::RegisterHandler,
-    status_bar::StatusBar,
-    text_object::{
-        TextObject, TextObjectType, curly_braces, grav, parentheses, quotations, single_quotations,
-        square_braces,
-    },
-    undo::{Action, UndoTree},
-    view::{View, cleanup, setup},
-    view_command::{
-        ViewCommand, center_viewbox_on_cursor, delete_curr_view_box, move_down_one_view_box,
-        move_left_one_view_box, move_right_one_view_box, move_up_one_view_box,
-        split_curr_view_box_horizontal, split_curr_view_box_vertical,
-    },
-};
-use anyhow::Result;
-use commands::Command as Cmd;
-use crossterm::{
-    event::{Event, KeyCode, read},
-    terminal::size,
-};
-
 pub static mut DEBUG: bool = true;
 
 #[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
     let (cols, rows) = size()?;
-    setup(rows, cols)?;
+    terminal_setup(rows, cols)?;
 
     panic_hook::add_panic_hook(&cleanup);
 
@@ -93,9 +93,9 @@ fn main() -> Result<()> {
         }
     });
 
-    let mut undo_tree = UndoTree::new();
-    let mut register_handler = RegisterHandler::new();
-    let mut status_bar: StatusBar = StatusBar::new();
+    let undo_tree = UndoTree::new();
+    let register_handler = RegisterHandler::new();
+    let status_bar: StatusBar = StatusBar::new();
 
     let view_commands: &[ViewCommand] = &[
         ViewCommand::new("zz", center_viewbox_on_cursor),
@@ -174,8 +174,8 @@ fn main() -> Result<()> {
         TextObject::new("`", grav),
     ];
 
-    let mut next_operation: Option<&Operator> = None;
-    let mut text_object_type: Option<TextObjectType> = None;
+    let next_operation: Option<&Operator> = None;
+    let text_object_type: Option<TextObjectType> = None;
 
     // Used for not putting excluded chars in the chain
     let all_normal_chars =
@@ -183,10 +183,10 @@ fn main() -> Result<()> {
 
     let mut view: View = View::new(cols, rows);
 
-    let mut mode = Mode::Normal;
-    let mut count: u16 = 1;
-    let mut chained: Vec<char> = vec![];
-    let mut search_str: Vec<char> = vec![];
+    let mode = Mode::Normal;
+    let count: u16 = 1;
+    let chained: Vec<char> = vec![];
+    let search_str: Vec<char> = vec![];
 
     let (cli, path) = Cli::parse_path()?;
     unsafe {
@@ -218,17 +218,17 @@ fn main() -> Result<()> {
         motions,
         text_objects,
         view_commands,
-        &mut count,
-        &mut chained,
-        &mut next_operation,
-        &mut text_object_type,
+        count,
+        chained,
+        next_operation,
+        text_object_type,
         &all_normal_chars,
-        &mut search_str,
-        &mut status_bar,
-        &mut register_handler,
-        &mut undo_tree,
-        &mut view,
-        &mut mode,
+        search_str,
+        status_bar,
+        register_handler,
+        undo_tree,
+        view,
+        mode,
     )?;
 
     cleanup()
@@ -252,19 +252,19 @@ fn program_loop<'a>(
     text_objects: &[TextObject],
     view_commands: &[ViewCommand],
 
-    count: &mut u16,
-    chained: &mut Vec<char>,
-    next_operation: &mut Option<&'a Operator<'a>>,
-    text_object_type: &mut Option<TextObjectType>,
+    mut count: u16,
+    mut chained: Vec<char>,
+    mut next_operation: Option<&'a Operator<'a>>,
+    mut text_object_type: Option<TextObjectType>,
     all_normal_chars: &[char],
 
-    search_str: &mut Vec<char>,
+    mut search_str: Vec<char>,
 
-    status_bar: &mut StatusBar,
-    register_handler: &mut RegisterHandler,
-    undo_tree: &mut UndoTree,
-    view: &mut View,
-    mode: &mut Mode,
+    mut status_bar: StatusBar,
+    mut register_handler: RegisterHandler,
+    mut undo_tree: UndoTree,
+    mut view: View,
+    mut mode: Mode,
 ) -> Result<()> {
     let mut last_count = 1;
     let mut last_chained: Vec<char> = vec![];
@@ -278,34 +278,34 @@ fn program_loop<'a>(
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
                     let c = u16::try_from(c.to_digit(10).expect("Numeric digit not in base 10"))
                         .unwrap();
-                    if *count == 1 {
-                        *count = 0;
+                    if count == 1 {
+                        count = 0;
                     }
-                    *count *= 10;
-                    *count += c;
+                    count *= 10;
+                    count += c;
                 }
 
                 (KeyCode::Char(':'), Mode::Normal) => {
-                    *mode = Mode::Meta;
+                    mode = Mode::Meta;
                     status_bar.push(':');
                 }
                 (KeyCode::Char('/'), Mode::Normal) => {
                     mode.search();
                     status_bar.push('/');
                 }
-                (KeyCode::Char('n'), Mode::Normal) => buffer.goto_next_string(search_str),
-                (KeyCode::Char('N'), Mode::Normal) => buffer.goto_prev_string(search_str),
+                (KeyCode::Char('n'), Mode::Normal) => buffer.goto_next_string(&search_str),
+                (KeyCode::Char('N'), Mode::Normal) => buffer.goto_prev_string(&search_str),
                 (KeyCode::Char('.'), Mode::Normal) => match_action(
-                    chained,
-                    next_operation,
-                    text_object_type,
-                    count,
+                    &mut chained,
+                    &mut next_operation,
+                    &mut text_object_type,
+                    &mut count,
                     &mut last_chained,
                     &mut last_count,
-                    register_handler,
-                    undo_tree,
-                    view,
-                    mode,
+                    &mut register_handler,
+                    &mut undo_tree,
+                    &mut view,
+                    &mut mode,
                     commands,
                     operators,
                     motions,
@@ -319,16 +319,16 @@ fn program_loop<'a>(
                     chained.push(c);
 
                     match_action(
-                        chained,
-                        next_operation,
-                        text_object_type,
-                        count,
+                        &mut chained,
+                        &mut next_operation,
+                        &mut text_object_type,
+                        &mut count,
                         &mut last_chained,
                         &mut last_count,
-                        register_handler,
-                        undo_tree,
-                        view,
-                        mode,
+                        &mut register_handler,
+                        &mut undo_tree,
+                        &mut view,
+                        &mut mode,
                         commands,
                         operators,
                         motions,
@@ -339,8 +339,8 @@ fn program_loop<'a>(
 
                 (KeyCode::Esc, Mode::Normal) => {
                     chained.clear();
-                    *count = 1;
-                    *next_operation = None;
+                    count = 1;
+                    next_operation = None;
                 }
                 (KeyCode::Esc, Mode::Insert) => {
                     if buffer.cursor != buffer.get_start_of_line() {
@@ -349,7 +349,7 @@ fn program_loop<'a>(
                     mode.normal();
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
-                    buffer.backspace(undo_tree);
+                    buffer.backspace(&mut undo_tree);
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
                     buffer.insert_char(c);
@@ -377,7 +377,13 @@ fn program_loop<'a>(
                 }
 
                 (KeyCode::Enter, Mode::Meta) => {
-                    if match_meta_command(status_bar, view, register_handler, undo_tree, mode)? {
+                    if match_meta_command(
+                        &mut status_bar,
+                        &mut view,
+                        &register_handler,
+                        &mut undo_tree,
+                        &mut mode,
+                    )? {
                         break 'main;
                     }
                 }
@@ -395,7 +401,7 @@ fn program_loop<'a>(
                 (_, Mode::Meta) => {}
 
                 (KeyCode::Enter, Mode::Search) => {
-                    *search_str = status_bar.buffer().split_at(1).1.chars().collect();
+                    search_str = status_bar.buffer().split_at(1).1.chars().collect();
                     mode.normal();
                     status_bar.clear();
                 }
@@ -419,10 +425,10 @@ fn program_loop<'a>(
 
             let adjusted = view.adjust();
             view.flush(
-                status_bar,
-                mode,
-                chained,
-                *count,
+                &status_bar,
+                &mode,
+                &chained,
+                count,
                 register_handler.get_curr_reg(),
                 adjusted,
             )?;

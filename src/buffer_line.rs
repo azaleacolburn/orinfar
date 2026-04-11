@@ -1,4 +1,4 @@
-use std::iter::{self, once};
+use std::iter::once;
 
 use crate::{
     buffer::Buffer,
@@ -142,7 +142,7 @@ impl Buffer {
 
         // NOTE
         // Make sure to correctly add the trailing newline
-        if contents.chars().nth(contents.len() - 1).unwrap_or('\0') == '\n' {
+        if contents.is_empty() && contents.chars().nth(contents.len() - 1).unwrap_or('\0') == '\n' {
             contents
                 .lines()
                 .chain(once(""))

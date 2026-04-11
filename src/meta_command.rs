@@ -1,7 +1,7 @@
 use crate::{
     DEBUG, buffer::Buffer, io::try_get_git_hash, log, mode::Mode, register::RegisterHandler,
     status_bar::StatusBar, undo::UndoTree, view::View, view_box::ViewBox,
-    view_command::split_curr_view_box_vertical,
+    view_command::split_curr_view_box_horizontal,
 };
 use anyhow::Result;
 use ropey::Rope;
@@ -38,8 +38,18 @@ pub fn match_meta_command(
                 break;
             }
             'd' => {
-                split_curr_view_box_vertical(view);
+                if view.get_buffer().rope.len_chars() == 0 {
+                    print_directories(view, undo_tree)?;
+                    continue;
+                }
+
+                split_curr_view_box_horizontal(view);
+
+                let anchor = view.cursor;
+                view.cursor = view.boxes.len() - 1;
+
                 print_directories(view, undo_tree)?;
+                view.cursor = anchor;
             }
             // Print Registers
             'r' => {
