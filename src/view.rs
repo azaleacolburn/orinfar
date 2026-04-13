@@ -338,10 +338,9 @@ impl View {
 
     pub fn write(&self) -> Result<()> {
         let buffer = self.get_buffer().to_string();
-        if let Some(path) = self.get_path() {
-            std::fs::write(path, buffer)?;
-        } else {
-            log!("WARNING: Cannot Write Unattached Buffer");
+        match self.get_path() {
+            Some(path) => std::fs::write(path, buffer)?,
+            None => log!("WARNING: Cannot Write Unattached Buffer"),
         }
 
         Ok(())
@@ -350,10 +349,6 @@ impl View {
     pub fn adjust(&mut self) -> bool {
         let view_box = self.get_view_box();
         view_box.adjust()
-    }
-
-    pub const fn boxes_len(&self) -> usize {
-        self.boxes.len()
     }
 
     pub fn set_path(&mut self, path: Option<PathBuf>) {

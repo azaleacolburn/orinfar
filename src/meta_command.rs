@@ -21,9 +21,8 @@ pub fn match_meta_command(
     for (i, command) in status_bar.iter().enumerate().skip(1) {
         match command {
             'w' => view.write()?,
-            'u' => {
-                view.set_path(None);
-            }
+            'u' => view.set_path(None),
+
             'l' => {
                 view.load_file()?;
                 let view_box = view.get_view_box();
@@ -37,6 +36,7 @@ pub fn match_meta_command(
                 view_box.flush(false)?;
                 break;
             }
+
             'd' => {
                 if view.get_buffer().rope.len_chars() == 0 {
                     print_directories(view, undo_tree)?;
@@ -51,13 +51,27 @@ pub fn match_meta_command(
                 print_directories(view, undo_tree)?;
                 view.cursor = anchor;
             }
+
             // Print Registers
             'r' => {
                 let registers = register_handler.to_string();
-                view.split_view_box_vertical(view.cursor);
+                log!("registers: {}", registers);
 
-                let last_idx = view.boxes_len() - 1;
-                view.replace_buffer_contents(&registers, last_idx, undo_tree);
+                if view.get_buffer().rope.len_chars() == 0 {
+                    view.get_buffer_mut()
+                        .replace_contents(&registers, undo_tree);
+                    continue;
+                }
+
+                split_curr_view_box_horizontal(view);
+
+                let anchor = view.cursor;
+                view.cursor = view.boxes.len() - 1;
+
+                view.get_buffer_mut()
+                    .replace_contents(&registers, undo_tree);
+
+                view.cursor = anchor
             }
 
             's' => {
