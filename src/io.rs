@@ -38,38 +38,6 @@ impl Cli {
     }
 }
 
-pub fn try_get_git_hash(path: Option<&PathBuf>) -> Option<String> {
-    let mut git_hash: Option<String> = None;
-    if let Some(path) = path {
-        let path = if path.is_dir() {
-            path
-        } else {
-            path.parent().unwrap()
-        }
-        .to_str()
-        .unwrap();
-
-        let git_stem = if path.is_empty() {
-            String::from(".git")
-        } else {
-            format!("{path}/.git")
-        };
-
-        let head_path = format!("{git_stem}/HEAD");
-
-        if let Ok(head_str) = std::fs::read_to_string(head_path).map(|s| s.trim().to_string()) {
-            let head = head_str.split(' ').nth(1).unwrap();
-
-            let ref_path = format!("{git_stem}/{head}");
-            git_hash = std::fs::read_to_string(ref_path)
-                .ok()
-                .map(|s| s.trim().chars().take(7).collect::<String>());
-        }
-    }
-
-    git_hash
-}
-
 pub fn log_dir() -> PathBuf {
     let base = xdg::BaseDirectories::with_prefix("orinfar");
     base.get_state_home().expect("Could not find home")

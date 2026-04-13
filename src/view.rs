@@ -1,7 +1,4 @@
-use crate::{
-    DEBUG, buffer::Buffer, io::try_get_git_hash, log, mode::Mode, status_bar::StatusBar,
-    undo::UndoTree, view_box::ViewBox,
-};
+use crate::{buffer::Buffer, mode::Mode, status_bar::StatusBar, view_box::ViewBox};
 use anyhow::Result;
 use crossterm::{
     cursor::{MoveTo, MoveToColumn, MoveToRow, SetCursorStyle, Show},
@@ -12,12 +9,10 @@ use crossterm::{
         enable_raw_mode,
     },
 };
-use ropey::Rope;
 use std::{
     io::{Write, stdout},
     path::PathBuf,
 };
-use tree_sitter::Parser;
 
 pub struct View {
     pub boxes: Vec<ViewBox>,
@@ -296,92 +291,6 @@ impl View {
         }
 
         self.boxes.push(new_view_box);
-    }
-}
-
-impl View {
-    pub fn replace_buffer_contents(
-        &mut self,
-        contents: &impl ToString,
-        cursor: usize,
-        undo_tree: &mut UndoTree,
-    ) {
-        let str = contents.to_string();
-
-        let anchor = self.cursor;
-        self.cursor = cursor;
-
-        let buffer = self.get_buffer_mut();
-        buffer.replace_contents(&str, undo_tree);
-
-        self.cursor = anchor;
-    }
-
-    pub fn load_file(&mut self) -> Result<()> {
-        if let Some(path) = self.get_path().cloned() {
-            let buffer = self.get_buffer_mut();
-            if !std::fs::exists(&path)? {
-                std::fs::write(path, buffer.rope.to_string())?;
-                return Ok(());
-            }
-
-            let contents = std::fs::read_to_string(path)?;
-            buffer.rope = Rope::from(contents);
-
-            buffer.lines_for_updating = (0..buffer.len()).map(|_| true).collect::<Vec<bool>>();
-            buffer.cursor = usize::min(buffer.cursor, buffer.rope.len_chars());
-            buffer.has_changed = true;
-        }
-
-        Ok(())
-    }
-
-    pub fn write(&self) -> Result<()> {
-        let buffer = self.get_buffer().to_string();
-        match self.get_path() {
-            Some(path) => std::fs::write(path, buffer)?,
-            None => log!("WARNING: Cannot Write Unattached Buffer"),
-        }
-
-        Ok(())
-    }
-
-    pub fn adjust(&mut self) -> bool {
-        let view_box = self.get_view_box();
-        view_box.adjust()
-    }
-
-    pub fn set_path(&mut self, path: Option<PathBuf>) {
-        let view_box = &mut self.boxes[self.cursor];
-
-        if let Some(path) = &path
-            && let Some(ext) = path.extension()
-            && (ext == "c" || ext == "h")
-        {
-            let mut parser = Parser::new();
-            parser
-                .set_language(&tree_sitter_c::LANGUAGE.into())
-                .expect("Failed to load C parser");
-
-            view_box.parser = Some(parser);
-        }
-
-        let git_hash = try_get_git_hash(path.as_ref());
-        view_box.git_hash = git_hash;
-
-        view_box.path = path;
-    }
-
-    pub fn get_path(&self) -> Option<&PathBuf> {
-        let view_box = &self.boxes[self.cursor];
-
-        view_box.path.as_ref()
-    }
-
-    pub fn get_git_hash(&self) -> Option<&str> {
-        let view_box = &self.boxes[self.cursor];
-
-        view_box.git_hash.as_deref()
     }
 }
 

@@ -47,6 +47,7 @@ mod meta_command;
 mod text_object;
 #[macro_use]
 mod io;
+mod file_io;
 mod mode;
 mod motion;
 mod operator;
