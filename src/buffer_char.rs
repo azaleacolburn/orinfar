@@ -1,5 +1,7 @@
 use crate::{
+    DEBUG,
     buffer::Buffer,
+    log,
     undo::{Action, UndoTree},
 };
 use std::iter::once;
@@ -177,16 +179,19 @@ impl Buffer {
     /// For example for the string 'hello world' and the substring 'world',
     /// the index `10` will be put in the list.
     pub fn find_occurences(&self, text: &[char]) -> Vec<usize> {
-        let mut curr: Vec<char> = Vec::with_capacity(text.len() - 1);
+        let mut count = 0;
         let mut idxs_of_substitution: Vec<usize> = Vec::with_capacity(4);
 
         for (i, char) in self.rope.chars().enumerate() {
-            if char == text[curr.len()] {
-                curr.push(char);
+            if char == text[count] {
+                count += 1;
+            } else {
+                count = 0;
             }
-            if curr.len() == text.len() {
+
+            if count == text.len() {
                 idxs_of_substitution.push(i + 1);
-                curr.clear();
+                count = 0
             }
         }
 
