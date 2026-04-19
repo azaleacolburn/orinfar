@@ -21,11 +21,7 @@ use crate::{
     },
     undo::{Action, UndoTree},
     view::{View, cleanup, terminal_setup},
-    view_command::{
-        ViewCommand, center_viewbox_on_cursor, delete_curr_view_box, move_down_one_view_box,
-        move_left_one_view_box, move_right_one_view_box, move_up_one_view_box,
-        split_curr_view_box_horizontal, split_curr_view_box_vertical,
-    },
+    view_command::ViewCommand,
 };
 use anyhow::Result;
 use commands::Command as Cmd;
@@ -99,15 +95,18 @@ fn main() -> Result<()> {
     let status_bar: StatusBar = StatusBar::new();
 
     let view_commands: &[ViewCommand] = &[
-        ViewCommand::new("zz", center_viewbox_on_cursor),
+        ViewCommand::new("zz", View::center_viewbox_on_cursor),
         // View Box related
-        ViewCommand::new("zd", move_down_one_view_box),
-        ViewCommand::new("zu", move_up_one_view_box),
-        ViewCommand::new("zl", move_left_one_view_box),
-        ViewCommand::new("zr", move_right_one_view_box),
-        ViewCommand::new("zx", delete_curr_view_box),
-        ViewCommand::new("zv", split_curr_view_box_vertical),
-        ViewCommand::new("zh", split_curr_view_box_horizontal),
+        //
+        ViewCommand::new("zm", View::move_left_one_view_box),
+        ViewCommand::new("zi", View::move_right_one_view_box),
+        ViewCommand::new("zn", View::move_down_one_view_box),
+        ViewCommand::new("ze", View::move_up_one_view_box),
+        //
+        ViewCommand::new("zq", View::delete_curr_view_box),
+        //
+        ViewCommand::new("sv", View::split_curr_view_box_vertical),
+        ViewCommand::new("sh", View::split_curr_view_box_horizontal),
     ];
 
     let commands: &[Cmd] = &[

@@ -22,7 +22,7 @@ impl Buffer {
         self.update_list_use_current_line();
     }
 
-    // Inserts a character at the current position
+    /// Inserts a character at the current position
     pub fn insert_char(&mut self, c: char) {
         if c == '\n' {
             self.update_list_add_current();

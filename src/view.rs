@@ -182,7 +182,7 @@ impl View {
 
     /// # Returns
     /// The position (in `self.boxes`) of one `view_box` down, if it exists
-    pub fn position_view_box_down(&mut self) -> Option<usize> {
+    pub fn vb_down(&mut self) -> Option<usize> {
         let view_box = self.get_view_box();
 
         let (x, y) = view_box.get_lower_left();
@@ -191,7 +191,7 @@ impl View {
         self.position_of_box(predicate)
     }
 
-    pub fn position_view_box_up(&mut self) -> Option<usize> {
+    pub fn vb_up(&mut self) -> Option<usize> {
         let view_box = self.get_view_box();
 
         let (x, y) = (view_box.x, view_box.y);
@@ -201,7 +201,7 @@ impl View {
         self.position_of_box(predicate)
     }
 
-    pub fn position_view_box_left(&mut self) -> Option<usize> {
+    pub fn vb_left(&mut self) -> Option<usize> {
         let view_box = self.get_view_box();
 
         let (x, y) = (view_box.x, view_box.y);
@@ -211,7 +211,7 @@ impl View {
         self.position_of_box(predicate)
     }
 
-    pub fn position_view_box_right(&mut self) -> Option<usize> {
+    pub fn vb_right(&mut self) -> Option<usize> {
         let view_box = self.get_view_box();
 
         let (x, y) = view_box.get_upper_right();
@@ -221,8 +221,8 @@ impl View {
     }
 
     pub fn delete_curr_view_box(&mut self) {
-        let mut down = self.position_view_box_down();
-        let mut up = self.position_view_box_up();
+        let mut down = self.vb_down();
+        let mut up = self.vb_up();
 
         let view_box = self.boxes.remove(self.cursor);
         if let Some(ref mut down) = down

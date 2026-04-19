@@ -1,7 +1,6 @@
 use crate::{
     DEBUG, buffer::Buffer, file_io::try_get_git_hash, log, mode::Mode, register::RegisterHandler,
     status_bar::StatusBar, undo::UndoTree, view::View, view_box::ViewBox,
-    view_command::split_curr_view_box_horizontal,
 };
 use anyhow::Result;
 use ropey::Rope;
@@ -43,7 +42,7 @@ pub fn match_meta_command(
                     continue;
                 }
 
-                split_curr_view_box_horizontal(view);
+                view.split_curr_view_box_horizontal();
 
                 let anchor = view.cursor;
                 view.cursor = view.boxes.len() - 1;
@@ -63,7 +62,7 @@ pub fn match_meta_command(
                     continue;
                 }
 
-                split_curr_view_box_horizontal(view);
+                view.split_curr_view_box_horizontal();
 
                 let anchor = view.cursor;
                 view.cursor = view.boxes.len() - 1;
@@ -92,7 +91,15 @@ pub fn match_meta_command(
                 let buffer = view.get_buffer_mut();
                 buffer.set_row(num + 1);
             }
-            'q' => return Ok(true),
+            'q' => {
+                // TODO This doesn't work right at the moment
+                // The buffer isn't being flushed or the view box isn't be corrected or smth
+                if view.boxes.len() == 1 {
+                    return Ok(true);
+                }
+
+                view.delete_curr_view_box();
+            }
             c => log!("Unknown Meta-Command: {}", c),
         }
     }
