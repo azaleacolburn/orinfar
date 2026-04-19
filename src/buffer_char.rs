@@ -1,7 +1,5 @@
 use crate::{
-    DEBUG,
     buffer::Buffer,
-    log,
     undo::{Action, UndoTree},
 };
 use std::iter::once;
@@ -191,7 +189,7 @@ impl Buffer {
 
             if count == text.len() {
                 idxs_of_substitution.push(i + 1);
-                count = 0
+                count = 0;
             }
         }
 

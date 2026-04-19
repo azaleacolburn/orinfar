@@ -71,7 +71,7 @@ pub fn match_meta_command(
                 view.get_buffer_mut()
                     .replace_contents(&registers, undo_tree);
 
-                view.cursor = anchor
+                view.cursor = anchor;
             }
 
             's' => {
