@@ -111,6 +111,7 @@ impl ViewBox {
             && let Some(ex) = path.extension()
             && (ex == "c" || ex == "h")
         {
+            // NOTE
             // Expensive
             let hl_lines = self
                 .highlight()
@@ -139,6 +140,7 @@ impl ViewBox {
         // This is for clearing trailing lines that we missed
         if len_lines < self.height {
             execute!(stdout, MoveTo(self.x, self.y + len_lines))?;
+
             (len_lines..self.height).for_each(|_| {
                 execute!(stdout, Print(&clear_str), MoveDown(1), MoveToColumn(self.x))
                     .expect("Crossterm clearing trailing lines failed");

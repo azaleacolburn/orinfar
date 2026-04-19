@@ -263,6 +263,10 @@ impl View {
         let half_height = view_box.height / 2;
         let half_y = half_height + view_box.y;
 
+        if half_height == 1 {
+            return;
+        }
+
         let mut new_view_box = ViewBox::new(view_box.width, half_height, view_box.x, half_y);
 
         let original_height = view_box.height;
@@ -280,6 +284,11 @@ impl View {
 
         let half_width = view_box.width / 2;
         let half_x = half_width + view_box.x;
+
+        let left_padding = view_box.left_padding() as u16;
+        if half_width < left_padding {
+            return;
+        }
 
         let mut new_view_box = ViewBox::new(half_width, view_box.height, half_x, view_box.y);
 
