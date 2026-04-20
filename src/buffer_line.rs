@@ -1,10 +1,10 @@
-use std::iter::once;
-
 use crate::{
     buffer::Buffer,
     undo::{Action, UndoTree},
 };
+
 use ropey::{Rope, RopeSlice};
+use std::iter::once;
 
 impl Buffer {
     pub fn is_empty_line(&self) -> bool {
