@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{DEBUG, log, view::View};
+use crate::{DEBUG, io::log, log, view::View};
 use anyhow::Result;
 use ropey::Rope;
 use tree_sitter::Parser;

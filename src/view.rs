@@ -285,8 +285,8 @@ impl View {
         let half_width = view_box.width / 2;
         let half_x = half_width + view_box.x;
 
-        let left_padding = view_box.left_padding() as u16;
-        if half_width < left_padding {
+        let left_padding = view_box.left_padding();
+        if (half_width as usize) < left_padding {
             return;
         }
 

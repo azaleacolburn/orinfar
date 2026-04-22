@@ -8,6 +8,8 @@ pub struct Buffer {
     pub lines_for_updating: Vec<bool>,
     pub rope: Rope,
     pub cursor: usize,
+    /// The largest column since moving sideways
+    pub intended_column: usize,
 }
 
 impl Default for Buffer {
@@ -22,6 +24,7 @@ impl Buffer {
             has_changed: true,
             lines_for_updating: vec![true],
             rope: Rope::from(""),
+            intended_column: 0,
             cursor: 0,
         }
     }
