@@ -1,6 +1,6 @@
 use crate::{
-    Mode,
     buffer::Buffer,
+    mode::Mode,
     motion::Motion,
     register::RegisterHandler,
     text_object::{TextObject, TextObjectType},

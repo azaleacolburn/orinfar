@@ -1,7 +1,7 @@
 use crate::{
-    DEBUG, buffer::Buffer, file_io::try_get_git_hash, log, mode::Mode, register::RegisterHandler,
-    status_bar::StatusBar, undo::UndoTree, view::View, view_box::ViewBox,
-    view_command::split_curr_view_box_horizontal,
+    DEBUG, buffer::Buffer, file_io::try_get_git_hash, io::log, mode::Mode,
+    register::RegisterHandler, status_bar::StatusBar, undo::UndoTree, view::View,
+    view_box::ViewBox, view_command::split_curr_view_box_horizontal,
 };
 use anyhow::Result;
 use ropey::Rope;
