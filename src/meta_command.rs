@@ -8,7 +8,6 @@ use ropey::Rope;
 use std::path::PathBuf;
 use tree_sitter::Parser;
 
-#[allow(clippy::too_many_arguments)]
 /// # Returns
 /// A boolean indicating whether to break from the main program loop
 pub fn match_meta_command(
