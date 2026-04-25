@@ -1,6 +1,6 @@
 use crate::{
-    Mode,
     buffer::Buffer,
+    mode::Mode,
     register::RegisterHandler,
     undo::{Action, UndoTree},
 };

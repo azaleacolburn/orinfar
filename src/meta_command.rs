@@ -1,14 +1,13 @@
 use crate::{
-    DEBUG, buffer::Buffer, file_io::try_get_git_hash, log, mode::Mode, register::RegisterHandler,
-    status_bar::StatusBar, undo::UndoTree, view::View, view_box::ViewBox,
-    view_command::split_curr_view_box_horizontal,
+    DEBUG, buffer::Buffer, file_io::try_get_git_hash, io::log, mode::Mode,
+    register::RegisterHandler, status_bar::StatusBar, undo::UndoTree, view::View,
+    view_box::ViewBox, view_command::split_curr_view_box_horizontal,
 };
 use anyhow::Result;
 use ropey::Rope;
 use std::path::PathBuf;
 use tree_sitter::Parser;
 
-#[allow(clippy::too_many_arguments)]
 /// # Returns
 /// A boolean indicating whether to break from the main program loop
 pub fn match_meta_command(
