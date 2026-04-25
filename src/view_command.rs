@@ -1,4 +1,3 @@
-
 use crate::view::View;
 
 pub struct ViewCommand<'a> {

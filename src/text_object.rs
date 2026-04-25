@@ -30,7 +30,7 @@ impl<'a> TextObject<'a> {
         TextObject { name, command }
     }
 
-    // Returns the range that the text object occupies
+    /// Returns the range that the text object occupies
     pub fn around(&self, buffer: &Buffer) -> TOBounds {
         (self.command)(buffer)
     }
