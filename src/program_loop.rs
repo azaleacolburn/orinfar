@@ -1,6 +1,8 @@
 use crate::{
+    DEBUG,
     action::match_action,
     commands::Command as Cmd,
+    io::log,
     meta_command::match_meta_command,
     mode::Mode,
     motion::{Motion, next_row, prev_row},
@@ -90,6 +92,7 @@ pub fn program_loop<'a>(
                     view_commands,
                 ),
                 (KeyCode::Char(c), Mode::Normal) => {
+                    log!("c {}", c);
                     if !all_normal_chars.contains(&c) {
                         continue;
                     }

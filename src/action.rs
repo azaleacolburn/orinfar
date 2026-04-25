@@ -1,5 +1,8 @@
 use crate::{
+    DEBUG,
     commands::Command,
+    io::log,
+    log,
     mode::Mode,
     motion::Motion,
     operator::Operator,
@@ -41,6 +44,7 @@ pub fn match_action<'a>(
     let cmd: String = chained.iter().collect();
 
     if let Some(operation) = next_operation {
+        log!("operation");
         if last == 'i' {
             *text_object_type = Some(TextObjectType::Inside);
         } else if last == 'a' {
@@ -73,6 +77,7 @@ pub fn match_action<'a>(
         // TODO
         // If all motion names are a single character, we should just make them a character
         } else if let Some(motion) = motions.iter().find(|motion| last_char(motion.name) == last) {
+            log!("here");
             (0..*count).for_each(|_| {
                 operation.execute_motion(motion, buffer, register_handler, mode, undo_tree);
             });
@@ -103,6 +108,7 @@ pub fn match_action<'a>(
         reset(chained, count, next_operation, last_chained, last_count);
     } else if let Some(operator) = operators
         .iter()
+        .inspect(|operator| log!("operator: {}, last {}", operator.name, last))
         .find(|operator| last_char(operator.name) == last)
     {
         *next_operation = Some(operator);

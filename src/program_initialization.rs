@@ -118,7 +118,7 @@ pub fn start_program() -> Result<()> {
         // Finding operators
         Motion::inclusive("f", find),
         Motion::inclusive("F", find_back),
-        Motion::inclusive("t", find_until),
+        Motion::inclusive("c", find_until),
         // Paragraph operators
         Motion::inclusive("%", next_corresponding_bracket),
         Motion::inclusive("}", next_newline),
