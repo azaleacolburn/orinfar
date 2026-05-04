@@ -45,6 +45,7 @@ pub const fn count_line(str: &str) -> u16 {
     let bytes = str.as_bytes();
     let mut i = 0;
     let mut len_lines = 0;
+
     // For loops aren't supported in `const` blocks yet
     while i < bytes.len() {
         if bytes[i] == b'\n' {
@@ -59,6 +60,8 @@ pub const fn count_line(str: &str) -> u16 {
 pub const fn count_longest_line(str: &str) -> u16 {
     let mut longest_line = 0;
     let mut curr_line = 0;
+
+    // NOTE
     // For loops aren't supported in `const` blocks yet
     let bytes = str.as_bytes();
     let mut i = 0;
