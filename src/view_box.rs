@@ -1,4 +1,4 @@
-use crate::{buffer::Buffer, highlight_c::HLBlock};
+use crate::{DEBUG, buffer::Buffer, highlight_c::HLBlock};
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn},
@@ -293,13 +293,16 @@ impl ViewBox {
         }
     }
 
+    /// Prints a line highlighted based on `hl_blocks`.
     fn print_blocks(&self, hl_blocks: &[HLBlock], line: &str, stdout: &mut StdoutLock) {
         for hl in hl_blocks {
-            let text = if hl.to_end_of_line {
-                &line[hl.start..]
-            } else {
-                &line[hl.start..hl.end]
-            };
+            log!("start {} end {}", hl.start, hl.end);
+
+            if usize::abs_diff(hl.end, hl.start) > self.width.into() {
+                return;
+            }
+
+            let text = hl.slice_line(line);
 
             execute!(stdout, SetForegroundColor(hl.color), Print(text))
                 .expect("Crossterm print hl block command failed");

@@ -88,6 +88,27 @@ impl View {
 
         let git_hash = self.get_git_hash().unwrap_or("");
 
+        let status_bar_width: usize = info_str.len()
+            + path.len()
+            + 2
+            + 3
+            + 1
+            + file_size.len()
+            + reg_str.len()
+            + count_str.len()
+            + chained_str.len()
+            + git_hash.len();
+
+        if status_bar_width > self.width as usize {
+            // TODO Maybe add more breakpoints???
+            let abridged_size = info_str.len() + path.len() + 2 + 3 + 1 + file_size.len();
+            if abridged_size > status_bar_width {
+                return Ok(String::new());
+            }
+
+            return Ok(format!("{info_str}\"{path}\" {file_size}b"));
+        }
+
         let middle_buffer = (0..(self.width as usize)
                     - info_str.len()
                     - path.len()

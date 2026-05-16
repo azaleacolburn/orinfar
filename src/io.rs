@@ -77,7 +77,7 @@ pub fn write_data(key: &impl ToString, value: &impl ToString) {
 macro_rules! log {
     ($($arg:tt)*) => {
         if *DEBUG.get().unwrap() {
-            log(&format!($($arg)*))
+            crate::io::log(&format!($($arg)*))
         }
     };
 }

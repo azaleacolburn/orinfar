@@ -18,47 +18,39 @@ impl ViewBox {
     pub fn highlight(&self) -> Vec<Vec<HLBlock>> {
         if let Some(tree) = &self.parse_tree {
             let mut tree_hl_blocks = highlight_tree(tree);
+            let buffer_lines: usize = self.buffer.rope.len_lines();
 
-            // Append lines without hl_block lists
-            let buffer_lines = self.buffer.rope.len_lines();
-            let hl_lines = tree_hl_blocks.len();
+            let blank_hl_block = |line_idx| -> HLBlock {
+                let line = self.buffer.rope.get_line(line_idx).unwrap();
 
+                HLBlock {
+                    start: 0,
+                    end: if line_idx + 1 == buffer_lines {
+                        line.len_chars()
+                    } else {
+                        line.len_chars() - 1
+                    },
+                    color: Color::Grey,
+                    to_end_of_line: false,
+                }
+            };
+
+            // Add hl blocks for blank lines at the end of the document
+            let hl_lines: usize = tree_hl_blocks.len();
             if hl_lines < buffer_lines {
                 for line_idx in hl_lines..buffer_lines {
-                    let line = self.buffer.rope.get_line(line_idx).unwrap();
-
-                    let block = HLBlock {
-                        start: 0,
-                        end: if line_idx + 1 == buffer_lines {
-                            line.len_chars()
-                        } else {
-                            line.len_chars() - 1
-                        },
-                        color: Color::Grey,
-                        to_end_of_line: false,
-                    };
+                    let block = blank_hl_block(line_idx);
                     tree_hl_blocks.push(vec![block]);
                 }
             }
 
-            // Fill in empty lines
+            // Add hl blocks for blank lines in the middle of the document
             tree_hl_blocks
                 .iter_mut()
                 .enumerate()
                 .filter(|(_, l)| l.is_empty())
                 .for_each(|(line_idx, hl_blocks)| {
-                    let line = self.buffer.rope.get_line(line_idx).unwrap();
-                    let block = HLBlock {
-                        start: 0,
-                        end: if line_idx + 1 == buffer_lines {
-                            line.len_chars()
-                        } else {
-                            line.len_chars() - 1
-                        },
-                        color: Color::Grey,
-                        to_end_of_line: false,
-                    };
-
+                    let block = blank_hl_block(line_idx);
                     hl_blocks.push(block);
                 });
 
@@ -85,6 +77,16 @@ pub struct HLBlock {
     pub color: crossterm::style::Color,
     // If this is set, ignore `self.end` and make the block go to the end of the line
     pub to_end_of_line: bool,
+}
+
+impl<'a> HLBlock {
+    pub fn slice_line(&self, line: &'a str) -> &'a str {
+        if self.to_end_of_line {
+            &line[self.start..]
+        } else {
+            &line[self.start..self.end]
+        }
+    }
 }
 
 fn hl_group_from_node(node: Node, hl_blocks: &mut Vec<Vec<HLBlock>>) {
