@@ -1,4 +1,4 @@
-use crate::{DEBUG, buffer::Buffer, highlight_c::HLBlock};
+use crate::{DEBUG, buffer::Buffer, highlight_c::HLBlock, utility::contains_range};
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn},
@@ -294,9 +294,15 @@ impl ViewBox {
     }
 
     /// Prints a line highlighted based on `hl_blocks`.
+    /// The line has already been sliced to the correct size
     fn print_blocks(&self, hl_blocks: &[HLBlock], line: &str, stdout: &mut StdoutLock) {
         for hl in hl_blocks {
             log!("start {} end {}", hl.start, hl.end);
+
+            let hl_group_larger_than_line = hl.end > line.len() - 1;
+            // if !hl_group_larger_than_line {
+            //     return;
+            // }
 
             if usize::abs_diff(hl.end, hl.start) > self.width.into() {
                 return;

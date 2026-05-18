@@ -1,7 +1,7 @@
 use crossterm::style::Color;
 use tree_sitter::{Node, Point, Tree};
 
-use crate::{utility::is_symbol, view_box::ViewBox};
+use crate::{DEBUG, log, utility::is_symbol, view_box::ViewBox};
 
 impl ViewBox {
     pub fn parse(&mut self) -> Option<&Tree> {
@@ -81,6 +81,7 @@ pub struct HLBlock {
 
 impl<'a> HLBlock {
     pub fn slice_line(&self, line: &'a str) -> &'a str {
+        log!("len: {}", line.len());
         if self.to_end_of_line {
             &line[self.start..]
         } else {
