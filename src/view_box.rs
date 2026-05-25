@@ -74,12 +74,19 @@ impl ViewBox {
             adjusted = true;
         }
 
+        log!("col: {}", col);
+        log!("left: {}", self.left);
+        log!("width: {}", self.width);
+        // This doesn't take into account the gutter
+        let left_padding = self.left_padding();
+
         if self.left > col {
             self.left = col;
             adjusted = true;
-        } else if self.left + (self.width as usize) < col {
-            self.left = col - self.width as usize;
+        } else if self.left + (self.width as usize) < col + left_padding {
+            self.left = col + left_padding - self.width as usize;
             adjusted = true;
+            log!("adjusted to the right");
         }
 
         if adjusted {
