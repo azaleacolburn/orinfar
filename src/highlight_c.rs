@@ -65,7 +65,8 @@ pub enum HLEnd {
 pub struct HLBlock {
     pub start: usize,
     pub end: HLEnd,
-    pub color: crossterm::style::Color,
+    pub fg_color: crossterm::style::Color,
+    pub bg_color: crossterm::style::Color,
 }
 
 impl<'a> HLBlock {
@@ -73,16 +74,17 @@ impl<'a> HLBlock {
         HLBlock {
             start: 0,
             end: HLEnd::EndOfLine,
-            color: Color::DarkGrey,
+            fg_color: Color::DarkGrey,
+            bg_color: Color::Reset,
         }
     }
 
-    pub fn get_end(&self, line: &str) -> usize {
-        match self.end {
-            HLEnd::EndOfLine => line.len(),
-            HLEnd::Bounded(end) => end,
-        }
-    }
+    // pub fn get_end(&self, line: &str) -> usize {
+    //     match self.end {
+    //         HLEnd::EndOfLine => line.len(),
+    //         HLEnd::Bounded(end) => end,
+    //     }
+    // }
 
     pub fn get_end_unchecked(&self) -> usize {
         match self.end {
@@ -179,8 +181,13 @@ fn add_block_to_row(
 
     let block = HLBlock {
         start: start.column,
-        end: HLEnd::Bounded(end.column),
-        color,
+        end: if to_end_of_line {
+            HLEnd::EndOfLine
+        } else {
+            HLEnd::Bounded(end.column)
+        },
+        fg_color: color,
+        bg_color: Color::Reset,
     };
     hl_blocks[start.row].push(block);
 }
