@@ -333,25 +333,58 @@ impl Buffer {
         }
     }
 
+    pub fn find_next_on_line_from(&self, target: char, from: usize) -> Option<usize> {
+        self.find_next_gen(target, from, self.get_curr_line().len_chars())
+    }
+
+    pub fn find_next_on_line(&self, target: char) -> Option<usize> {
+        self.find_next_gen(target, self.cursor, self.get_curr_line().len_chars())
+    }
+
     pub fn find_next(&self, target: char) -> Option<usize> {
-        let mut cursor = self.cursor;
-        let last = self.rope.len_chars() - 1;
+        self.find_next_gen(target, self.cursor, self.rope.len_chars() - 1)
+    }
+
+    fn find_next_gen(&self, target: char, from: usize, stop_position: usize) -> Option<usize> {
+        let mut cursor = from;
+        if let Some(c) = self.rope.get_char(cursor)
+            && c == target
+        {
+            cursor += 1;
+        }
         loop {
             match self.rope.get_char(cursor) {
                 Some(c) if c == target => return Some(cursor),
-                Some(_) if cursor == last => return None,
+                Some(_) if cursor == stop_position => return None,
                 Some(_) => cursor += 1,
                 None => return None,
             }
         }
     }
 
+    pub fn find_prev_on_line_from(&self, target: char, from: usize) -> Option<usize> {
+        self.find_prev_gen(target, from, self.get_curr_line().len_chars())
+    }
+
+    pub fn find_prev_on_line(&self, target: char) -> Option<usize> {
+        self.find_prev_gen(target, self.cursor, self.get_start_of_line())
+    }
+
     pub fn find_prev(&self, target: char) -> Option<usize> {
-        let mut cursor = self.cursor;
+        self.find_prev_gen(target, self.cursor, 0)
+    }
+
+    fn find_prev_gen(&self, target: char, from: usize, stop_position: usize) -> Option<usize> {
+        let mut cursor = from;
+        if let Some(c) = self.rope.get_char(cursor)
+            && c == target
+        {
+            cursor -= 1;
+        }
         loop {
             match self.rope.get_char(cursor) {
                 Some(c) if c == target => return Some(cursor),
-                Some(_) if cursor == 0 => return None,
+                Some(_) if cursor == stop_position => return None,
                 Some(_) => cursor -= 1,
                 None => return None,
             }
