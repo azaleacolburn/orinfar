@@ -1,4 +1,4 @@
-use crate::{DEBUG, buffer::Buffer, highlight_c::HLBlock, utility::contains_range};
+use crate::{DEBUG, buffer::Buffer, highlight_c::HLBlock};
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn},
@@ -111,24 +111,18 @@ impl ViewBox {
             && let Some(ex) = path.extension()
             && (ex == "c" || ex == "h")
         {
-            // NOTE
-            // Expensive
-            let hl_lines = self
-                .highlight()
-                .into_iter()
-                .skip(self.top)
-                .take(self.height.into());
-
-            self.print_buffer_hl(
+            self.print_line_hl(
                 lines,
-                hl_lines,
+                // NOTE
+                // Expensive
+                self.highlight(),
                 stdout,
                 &mut padding_buffer,
                 left_padding,
                 &clear_str,
             );
         } else {
-            self.print_buffer_colorless(
+            self.print_lines_colorless(
                 lines,
                 stdout,
                 &mut padding_buffer,
@@ -150,43 +144,110 @@ impl ViewBox {
         Ok(())
     }
 
-    fn print_buffer_hl<'a>(
+    /// At this point, the highlight groups should
+    fn print_line_hl<'a>(
         &self,
         lines: impl Iterator<Item = (usize, (RopeSlice<'a>, &'a bool))>,
-        hl_lines: impl Iterator<Item = Vec<HLBlock>>,
+        hl_lines: Vec<Vec<HLBlock>>,
         stdout: &mut StdoutLock,
 
         padding_buffer: &mut String,
         left_padding: usize,
         clear_str: &str,
     ) {
-        lines
+        let hl_lines = hl_lines.into_iter().skip(self.top).take(self.height.into());
+        let lines = lines
             .zip(hl_lines)
-            .for_each(|((line_num, (line, should_update)), hl_blocks)| {
-                if !should_update {
-                    execute!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
-                    return;
-                }
-
-                self.clear_line_print_padding(
-                    padding_buffer,
-                    left_padding,
-                    clear_str,
-                    line_num,
-                    stdout,
-                );
-
-                let Some(line_len) = self.calculate_total_line_len(line, stdout) else {
-                    return;
-                };
-
-                let line = self.slice_line(line, left_padding, line_len);
-
-                self.print_blocks(&hl_blocks, &line, stdout);
+            .map(|((line_num, (line, should_update)), hl_blocks)| {
+                (line_num, line, hl_blocks, should_update)
             });
+
+        lines.for_each(|(line_num, line, hl_blocks, should_update)| {
+            if !should_update {
+                execute!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
+                return;
+            }
+
+            self.clear_line(clear_str, stdout);
+            self.print_padding(padding_buffer, left_padding, line_num, stdout);
+
+            let line_len = self.calculate_total_line_len(line);
+            if line_len == 0 {
+                execute!(stdout, MoveToColumn(self.x), MoveDown(1))
+                    .expect("Crossterm padding buffer print failed");
+                return;
+            }
+
+            // NOTE
+            // We don't need to slice the string, we can just choose the hl blocks we  want to print
+            let line = line.to_string();
+
+            let last_col = self.last_col(left_padding, line_len);
+            let hl_blocks = self.crop_hl_blocks(&hl_blocks, last_col);
+
+            if hl_blocks.is_empty() {
+                // log!("no hl blocks on line {}", line_num);
+                // execute!(stdout, MoveToColumn(self.x), MoveDown(1))
+                //     .expect("Crossterm padding buffer print failed");
+
+                return;
+            }
+
+            self.print_hl_blocks(&hl_blocks, &line, stdout);
+        });
     }
 
-    fn print_buffer_colorless<'a>(
+    // Returns a new list of hl blocks that only print the line from `[self.left, last_col)`
+    //
+    // - Eliminates hl blocks that don't overlap with the line at all
+    // - Crops hl blocks (on both ends) that go past the ends of the line
+    // - Leaves hl blocks that are fully within the line in tact
+    fn crop_hl_blocks(&self, hl_blocks: &[HLBlock], last_col: usize) -> Vec<HLBlock> {
+        let mut hl_blocks: Vec<HLBlock> = hl_blocks
+            .into_iter()
+            .filter(|hl| hl.start <= last_col && hl.end >= self.left)
+            .map(|n| n.clone())
+            .collect();
+
+        // NOTE
+        // If the only block is out of scope, we we don't need to render it :D
+        if hl_blocks.len() == 0 {
+            return vec![];
+        }
+
+        log!("uncropped block: {:?}", hl_blocks[0]);
+
+        // Crop first block
+        hl_blocks[0].start = usize::max(self.left, hl_blocks[0].start);
+
+        // Crop last block
+        if let Some(block) = hl_blocks.last_mut() {
+            block.end = usize::min(last_col, block.end);
+            if block.to_end_of_line {
+                block.to_end_of_line = false;
+                block.end = last_col;
+            }
+        }
+
+        return hl_blocks;
+    }
+
+    /// Prints a line highlighted based on `hl_blocks`.
+    /// The line has already been sliced to the correct size
+    /// The hl blocks have already been cropped
+    fn print_hl_blocks(&self, hl_blocks: &[HLBlock], line: &str, stdout: &mut StdoutLock) {
+        for hl in hl_blocks {
+            log!("block: {:?}", hl);
+            let text = hl.slice_text(line);
+            execute!(stdout, SetForegroundColor(hl.color), Print(text))
+                .expect("Crossterm print hl block command failed");
+        }
+
+        execute!(stdout, MoveToColumn(self.x), MoveDown(1))
+            .expect("Crossterm reset command failed");
+    }
+
+    fn print_lines_colorless<'a>(
         &self,
         lines: impl Iterator<Item = (usize, (RopeSlice<'a>, &'a bool))>,
         stdout: &mut StdoutLock,
@@ -201,19 +262,17 @@ impl ViewBox {
                 return;
             }
 
-            self.clear_line_print_padding(
-                padding_buffer,
-                left_padding,
-                clear_str,
-                line_num,
-                stdout,
-            );
+            self.clear_line(clear_str, stdout);
+            self.print_padding(padding_buffer, left_padding, line_num, stdout);
 
-            let Some(line_len) = self.calculate_total_line_len(line, stdout) else {
+            let line_len = self.calculate_total_line_len(line);
+            if line_len == 0 {
+                execute!(stdout, MoveToColumn(self.x), MoveDown(1))
+                    .expect("Crossterm padding buffer print failed");
                 return;
-            };
+            }
 
-            let line = self.slice_line(line, left_padding, line_len);
+            let line = self.slice_line(line, line_len);
 
             execute!(
                 stdout,
@@ -226,11 +285,14 @@ impl ViewBox {
         });
     }
 
-    fn clear_line_print_padding(
+    fn clear_line(&self, clear_str: &str, stdout: &mut StdoutLock) {
+        execute!(stdout, Print(&clear_str)).unwrap();
+    }
+
+    fn print_padding(
         &self,
         padding_buffer: &mut String,
         left_padding: usize,
-        clear_str: &str,
         line_num: usize,
         stdout: &mut StdoutLock,
     ) {
@@ -242,8 +304,6 @@ impl ViewBox {
         padding_buffer.push_str(&line_num);
         padding_buffer.push(' ');
 
-        execute!(stdout, Print(&clear_str)).unwrap();
-
         execute!(
             stdout,
             SetForegroundColor(Color::Grey),
@@ -254,7 +314,7 @@ impl ViewBox {
         padding_buffer.clear();
     }
 
-    fn calculate_total_line_len(&self, line: RopeSlice, stdout: &mut StdoutLock) -> Option<usize> {
+    fn calculate_total_line_len(&self, line: RopeSlice) -> usize {
         let mut total_line_len = line.len_chars();
         if total_line_len > 0
             && let Some(c) = line.get_char(total_line_len - 1)
@@ -263,24 +323,20 @@ impl ViewBox {
             total_line_len -= 1;
         }
 
-        if total_line_len == 0 {
-            execute!(stdout, MoveToColumn(self.x), MoveDown(1))
-                .expect("Crossterm padding buffer print failed");
-            return None;
-        }
-
-        Some(total_line_len)
+        total_line_len
     }
 
-    fn slice_line(&self, line: RopeSlice, left_padding: usize, line_len: usize) -> String {
+    /// Returns the last column in the line that's being rendered to the screen
+    fn last_col(&self, left_padding: usize, line_len: usize) -> usize {
         // Number of characters that we're able to display in the current line
         let display_line_len = self.width as usize - left_padding;
 
-        // Last column in the buffer that's being rendered to the screen
-        let last_col = usize::min(self.left + display_line_len, line_len);
+        usize::min(self.left + display_line_len, line_len)
+    }
 
+    fn slice_line(&self, line: RopeSlice, last_col: usize) -> String {
         // NOTE
-        // What was happening here waswhen we cropped the line
+        // What was happening here was when we cropped the line
         // we also cropped the newline character at the
         // end, meaning that we never moved down to the next row!
         if self.left >= last_col {
@@ -291,31 +347,6 @@ impl ViewBox {
                 .trim_matches('\n')
                 .to_string()
         }
-    }
-
-    /// Prints a line highlighted based on `hl_blocks`.
-    /// The line has already been sliced to the correct size
-    fn print_blocks(&self, hl_blocks: &[HLBlock], line: &str, stdout: &mut StdoutLock) {
-        for hl in hl_blocks {
-            log!("start {} end {}", hl.start, hl.end);
-
-            let hl_group_larger_than_line = hl.end > line.len() - 1;
-            // if !hl_group_larger_than_line {
-            //     return;
-            // }
-
-            if usize::abs_diff(hl.end, hl.start) > self.width.into() {
-                return;
-            }
-
-            let text = hl.slice_line(line);
-
-            execute!(stdout, SetForegroundColor(hl.color), Print(text))
-                .expect("Crossterm print hl block command failed");
-        }
-
-        execute!(stdout, MoveToColumn(self.x), MoveDown(1))
-            .expect("Crossterm reset command failed");
     }
 
     #[allow(clippy::too_many_arguments)]

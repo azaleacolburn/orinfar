@@ -70,6 +70,9 @@ impl ViewBox {
     }
 }
 
+// TODO
+// Turn this bad boy into an enum
+// Variants: eol, bounded
 #[derive(Debug, Clone)]
 pub struct HLBlock {
     pub start: usize,
@@ -80,8 +83,7 @@ pub struct HLBlock {
 }
 
 impl<'a> HLBlock {
-    pub fn slice_line(&self, line: &'a str) -> &'a str {
-        log!("len: {}", line.len());
+    pub fn slice_text(&self, line: &'a str) -> &'a str {
         if self.to_end_of_line {
             &line[self.start..]
         } else {

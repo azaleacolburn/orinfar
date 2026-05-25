@@ -102,7 +102,7 @@ impl View {
         if status_bar_width > self.width as usize {
             // TODO Maybe add more breakpoints???
             let abridged_size = info_str.len() + path.len() + 2 + 3 + 1 + file_size.len();
-            if abridged_size > status_bar_width {
+            if abridged_size > self.width as usize {
                 return Ok(String::new());
             }
 
