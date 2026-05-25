@@ -1,4 +1,4 @@
-use crate::buffer::Buffer;
+use crate::{DEBUG, buffer::Buffer};
 
 pub enum TextObjectType {
     Inside,
@@ -46,11 +46,38 @@ impl<'a> TextObject<'a> {
     }
 }
 
+/// Returns the positions of the matching characters `start` and `end`
+///
+/// ## Matching Priority:
+/// 1. Pair that you are currently on the opening character of
+/// 2. Pair with the opening behind you
+/// 3. Pair that you are currently on the closing character of
+/// 4. Pair with the opening in front of you
+///
+/// ## TODO
+/// - Prioritize the pair you are inside of,
+///   separate from the one that starts behind you
 pub fn find_matching(buffer: &Buffer, start: char, end: char) -> TOBounds {
-    let first = buffer.find_prev(start)?;
-    let second = buffer.find_next(end)?;
+    if buffer.get_curr_char() == start {
+        let second = buffer.find_next_on_line(end)?;
 
-    Some((first, second))
+        Some((buffer.cursor, second))
+    } else if let Some(first) = buffer.find_prev_on_line(start) {
+        let second = buffer.find_next_on_line_from(end, first)?;
+
+        Some((first, second))
+    } else if buffer.get_curr_char() == end {
+        let first = buffer.find_prev_on_line(start)?;
+
+        Some((first, buffer.cursor))
+    } else {
+        let first = buffer.find_next_on_line(start)?;
+        let second = buffer.find_next_on_line_from(end, first)?;
+
+        log!("first: {}\nsecond {}", first, second);
+
+        Some((first, second))
+    }
 }
 
 pub fn parentheses(buffer: &Buffer) -> TOBounds {
