@@ -34,6 +34,11 @@ use crossterm::terminal::size;
 
 #[allow(clippy::too_many_lines)]
 pub fn start_program() -> Result<()> {
+    let (cli, path) = Cli::parse_path()?;
+    if let Err(_b) = DEBUG.set(cli.debug) {
+        bail!("Failed to set DEBUG variable");
+    }
+
     let (cols, rows) = size()?;
     terminal_setup(rows, cols)?;
 
@@ -157,11 +162,6 @@ pub fn start_program() -> Result<()> {
     let count: u16 = 1;
     let chained: Vec<char> = vec![];
     let search_str: Vec<char> = vec![];
-
-    let (cli, path) = Cli::parse_path()?;
-    if let Err(_b) = DEBUG.set(cli.debug) {
-        bail!("Failed to set DEBUG variable");
-    }
 
     if !has_opened && path.is_none() {
         view.get_view_box().write_welcome_screen();
