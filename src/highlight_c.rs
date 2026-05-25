@@ -15,59 +15,47 @@ impl ViewBox {
         self.parse_tree.as_ref()
     }
 
+    /// Adds hl blocks for empty lines at the end of the document
+    pub fn append_empty_lines(&self, tree_hl_blocks: &mut Vec<Vec<HLBlock>>) {
+        let buffer_lines: usize = self.buffer.rope.len_lines();
+        let hl_lines: usize = tree_hl_blocks.len();
+        if hl_lines < buffer_lines {
+            for _ in hl_lines..buffer_lines {
+                tree_hl_blocks.push(vec![HLBlock::empty()]);
+            }
+        }
+    }
+
+    /// Adds blank hl blocks for empty lines in the middle of the document
+    pub fn fill_in_empty_lines(tree_hl_blocks: &mut Vec<Vec<HLBlock>>) {
+        tree_hl_blocks
+            .iter_mut()
+            .filter(|l| l.is_empty())
+            .for_each(|hl_blocks| {
+                hl_blocks.push(HLBlock::empty());
+            });
+    }
+
+    /// Returns a list of lines, each containing highlight blocks
+    /// Returns an empty list if `self.parse_tree.is_none()`
     pub fn highlight(&self) -> Vec<Vec<HLBlock>> {
         if let Some(tree) = &self.parse_tree {
             let mut tree_hl_blocks = highlight_tree(tree);
-            let buffer_lines: usize = self.buffer.rope.len_lines();
 
-            let blank_hl_block = |line_idx| -> HLBlock {
-                let line = self.buffer.rope.get_line(line_idx).unwrap();
-
-                HLBlock {
-                    start: 0,
-                    end: if line_idx + 1 == buffer_lines {
-                        line.len_chars()
-                    } else {
-                        line.len_chars() - 1
-                    },
-                    color: Color::Grey,
-                    to_end_of_line: false,
-                }
-            };
-
-            // Add hl blocks for blank lines at the end of the document
-            let hl_lines: usize = tree_hl_blocks.len();
-            if hl_lines < buffer_lines {
-                for line_idx in hl_lines..buffer_lines {
-                    let block = blank_hl_block(line_idx);
-                    tree_hl_blocks.push(vec![block]);
-                }
-            }
-
-            // Add hl blocks for blank lines in the middle of the document
-            tree_hl_blocks
-                .iter_mut()
-                .enumerate()
-                .filter(|(_, l)| l.is_empty())
-                .for_each(|(line_idx, hl_blocks)| {
-                    let block = blank_hl_block(line_idx);
-                    hl_blocks.push(block);
-                });
+            self.append_empty_lines(&mut tree_hl_blocks);
+            Self::fill_in_empty_lines(&mut tree_hl_blocks);
 
             return tree_hl_blocks;
         }
 
-        let hl_block = HLBlock {
-            start: 0,
-            end: 0,
-            to_end_of_line: true, // Technically true, but not needed
-            color: Color::Grey,
-        };
-
-        (0..self.buffer.rope.len_lines())
-            .map(|_| vec![hl_block.clone()])
-            .collect()
+        return vec![];
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum HLEnd {
+    Bounded(usize),
+    EndOfLine,
 }
 
 // TODO
@@ -76,18 +64,37 @@ impl ViewBox {
 #[derive(Debug, Clone)]
 pub struct HLBlock {
     pub start: usize,
-    pub end: usize,
+    pub end: HLEnd,
     pub color: crossterm::style::Color,
-    // If this is set, ignore `self.end` and make the block go to the end of the line
-    pub to_end_of_line: bool,
 }
 
 impl<'a> HLBlock {
+    pub fn empty() -> Self {
+        HLBlock {
+            start: 0,
+            end: HLEnd::EndOfLine,
+            color: Color::DarkGrey,
+        }
+    }
+
+    pub fn get_end(&self, line: &str) -> usize {
+        match self.end {
+            HLEnd::EndOfLine => line.len(),
+            HLEnd::Bounded(end) => end,
+        }
+    }
+
+    pub fn get_end_unchecked(&self) -> usize {
+        match self.end {
+            HLEnd::EndOfLine => panic!("Called unchecked function on wrong variant"),
+            HLEnd::Bounded(end) => end,
+        }
+    }
+
     pub fn slice_text(&self, line: &'a str) -> &'a str {
-        if self.to_end_of_line {
-            &line[self.start..]
-        } else {
-            &line[self.start..self.end]
+        match self.end {
+            HLEnd::Bounded(end) => &line[self.start..end],
+            HLEnd::EndOfLine => &line[self.start..],
         }
     }
 }
@@ -163,7 +170,7 @@ fn add_block_to_row(
 
     // Expand blocks backwards to consme un-highlighted sections
     if let Some(last_hl) = hl_blocks[start.row].last() {
-        start.column = last_hl.end;
+        start.column = last_hl.get_end_unchecked();
     } else if end.column != 0 && hl_blocks[start.row].is_empty() {
         // Expand block backwards if there's whitespace or other non-parsable content at the
         // beginning of the line
@@ -172,8 +179,7 @@ fn add_block_to_row(
 
     let block = HLBlock {
         start: start.column,
-        end: end.column,
-        to_end_of_line,
+        end: HLEnd::Bounded(end.column),
         color,
     };
     hl_blocks[start.row].push(block);
@@ -212,7 +218,64 @@ fn highlight_tree(tree: &Tree) -> Vec<Vec<HLBlock>> {
 }
 
 const KEYWORDS: &[&str] = &[
-    "for", "while", "if", "continue", "break", "return", "asm", "register", "extern",
+    "alignas",
+    "alignof",
+    "auto",
+    "bool",
+    "break",
+    "case",
+    "char",
+    "const",
+    "constexpr",
+    "continue",
+    "default",
+    "do",
+    "double",
+    "else",
+    "enum",
+    "extern",
+    "false",
+    "float",
+    "for",
+    "goto",
+    "if",
+    "inline",
+    "int",
+    "long",
+    "nullptr",
+    "register",
+    "restrict",
+    "return",
+    "short",
+    "signed",
+    "sizeof",
+    "static",
+    "static_assert",
+    "struct",
+    "switch",
+    "thread_local",
+    "true",
+    "typedef",
+    "typeof ",
+    "typeof_unqual",
+    "union",
+    "unsigned",
+    "void",
+    "volatile",
+    "while",
+    // "_Alignof",
+    // "_Atomic",
+    // "_BitInt",
+    // "_Bool",
+    // "_Complex",
+    // "_Decimal128",
+    // "_Decimal32",
+    // "_Decimal64",
+    // "_Generic",
+    // "_Imaginary",
+    // "_Noreturn",
+    // "_Static_assert",
+    // "_Thread_local",
 ];
 
 fn is_c_keyword(str: &str) -> bool {
@@ -236,6 +299,7 @@ const ORANGE: Color = Color::Rgb {
 };
 
 fn node_type_to_color(node_type: &str, parent_type: &str) -> Option<Color> {
+    log!("node_type {}", node_type);
     let color = match node_type {
         "#include" | "#define" | "#ifdef" | "#ifndef" | "#endif" => Color::DarkRed,
 
@@ -254,6 +318,10 @@ fn node_type_to_color(node_type: &str, parent_type: &str) -> Option<Color> {
 
         "number_literal" => Color::Magenta,
         "comment" | ";" | "." | "," => Color::DarkGrey,
+        // Common macros
+        // In the future a way to automatically determine
+        // which strings are macros would be really cool
+        "true" | "false" | "NULL" => Color::Magenta,
         str if is_operator(str) => ORANGE,
         str if str.chars().all(is_symbol) => Color::Grey,
         str if is_c_keyword(str) => Color::Red,

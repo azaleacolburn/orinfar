@@ -1,4 +1,7 @@
-use crate::{DEBUG, buffer::Buffer, highlight_c::HLBlock};
+use crate::{
+    buffer::Buffer,
+    highlight_c::{HLBlock, HLEnd},
+};
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn},
@@ -74,9 +77,6 @@ impl ViewBox {
             adjusted = true;
         }
 
-        log!("col: {}", col);
-        log!("left: {}", self.left);
-        log!("width: {}", self.width);
         // This doesn't take into account the gutter
         let left_padding = self.left_padding();
 
@@ -86,7 +86,6 @@ impl ViewBox {
         } else if self.left + (self.width as usize) < col + left_padding {
             self.left = col + left_padding - self.width as usize;
             adjusted = true;
-            log!("adjusted to the right");
         }
 
         if adjusted {
@@ -190,13 +189,9 @@ impl ViewBox {
             let line = line.to_string();
 
             let last_col = self.last_col(left_padding, line_len);
-            let hl_blocks = self.crop_hl_blocks(&hl_blocks, last_col);
+            let hl_blocks = self.crop_hl_blocks(&hl_blocks, last_col, line_len);
 
             if hl_blocks.is_empty() {
-                // log!("no hl blocks on line {}", line_num);
-                // execute!(stdout, MoveToColumn(self.x), MoveDown(1))
-                //     .expect("Crossterm padding buffer print failed");
-
                 return;
             }
 
@@ -209,30 +204,37 @@ impl ViewBox {
     // - Eliminates hl blocks that don't overlap with the line at all
     // - Crops hl blocks (on both ends) that go past the ends of the line
     // - Leaves hl blocks that are fully within the line in tact
-    fn crop_hl_blocks(&self, hl_blocks: &[HLBlock], last_col: usize) -> Vec<HLBlock> {
+    fn crop_hl_blocks(
+        &self,
+        hl_blocks: &[HLBlock],
+        last_col: usize,
+        line_len: usize,
+    ) -> Vec<HLBlock> {
         let mut hl_blocks: Vec<HLBlock> = hl_blocks
             .into_iter()
-            .filter(|hl| hl.start <= last_col && hl.end >= self.left)
+            .filter(|hl| {
+                hl.start <= last_col
+                    && match hl.end {
+                        HLEnd::Bounded(end) => end >= self.left,
+                        HLEnd::EndOfLine => line_len >= self.left,
+                    }
+            })
             .map(|n| n.clone())
             .collect();
 
-        // NOTE
-        // If the only block is out of scope, we we don't need to render it :D
+        // If the only blocks are out of scope, we don't need to render them :D
         if hl_blocks.len() == 0 {
             return vec![];
         }
-
-        log!("uncropped block: {:?}", hl_blocks[0]);
 
         // Crop first block
         hl_blocks[0].start = usize::max(self.left, hl_blocks[0].start);
 
         // Crop last block
         if let Some(block) = hl_blocks.last_mut() {
-            block.end = usize::min(last_col, block.end);
-            if block.to_end_of_line {
-                block.to_end_of_line = false;
-                block.end = last_col;
+            match block.end {
+                HLEnd::Bounded(end) => block.end = HLEnd::Bounded(usize::min(last_col, end)),
+                HLEnd::EndOfLine => block.end = HLEnd::Bounded(last_col),
             }
         }
 
@@ -244,7 +246,6 @@ impl ViewBox {
     /// The hl blocks have already been cropped
     fn print_hl_blocks(&self, hl_blocks: &[HLBlock], line: &str, stdout: &mut StdoutLock) {
         for hl in hl_blocks {
-            log!("block: {:?}", hl);
             let text = hl.slice_text(line);
             execute!(stdout, SetForegroundColor(hl.color), Print(text))
                 .expect("Crossterm print hl block command failed");
