@@ -1,5 +1,3 @@
-use std::ops::{Bound, RangeBounds};
-
 use crate::buffer::Buffer;
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, read};
@@ -44,13 +42,6 @@ impl<T> SplitOnce<T> for [T] {
 
 pub fn is_symbol(c: char) -> bool {
     "$`\'\":;~()\\+-=$#^[&]*<@%!{|}>/?.,".contains(c)
-}
-
-pub fn contains_range<T, R: RangeBounds<T>>(outer: R, inner: R) -> bool
-where
-    for<'a> Bound<&'a T>: PartialOrd<Bound<&'a T>>,
-{
-    outer.start_bound() <= inner.start_bound() && inner.end_bound() <= outer.end_bound()
 }
 
 /// # Errors

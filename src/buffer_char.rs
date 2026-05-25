@@ -362,7 +362,7 @@ impl Buffer {
         }
     }
 
-    pub fn find_prev_on_line_from(&self, target: char, from: usize) -> Option<usize> {
+    pub fn _find_prev_on_line_from(&self, target: char, from: usize) -> Option<usize> {
         self.find_prev_gen(target, from, self.get_curr_line().len_chars())
     }
 

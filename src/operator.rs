@@ -1,7 +1,6 @@
 use crate::{
     DEBUG,
     buffer::Buffer,
-    io::log,
     mode::Mode,
     motion::Motion,
     register::RegisterHandler,

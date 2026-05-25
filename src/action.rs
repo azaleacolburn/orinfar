@@ -1,7 +1,6 @@
 use crate::{
     DEBUG,
     commands::Command,
-    io::log,
     log,
     mode::Mode,
     motion::Motion,

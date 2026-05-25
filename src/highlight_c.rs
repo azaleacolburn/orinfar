@@ -27,7 +27,7 @@ impl ViewBox {
     }
 
     /// Adds blank hl blocks for empty lines in the middle of the document
-    pub fn fill_in_empty_lines(tree_hl_blocks: &mut Vec<Vec<HLBlock>>) {
+    pub fn fill_in_empty_lines(tree_hl_blocks: &mut [Vec<HLBlock>]) {
         tree_hl_blocks
             .iter_mut()
             .filter(|l| l.is_empty())
@@ -48,7 +48,7 @@ impl ViewBox {
             return tree_hl_blocks;
         }
 
-        return vec![];
+        vec![]
     }
 }
 
@@ -70,8 +70,8 @@ pub struct HLBlock {
 }
 
 impl<'a> HLBlock {
-    pub fn empty() -> Self {
-        HLBlock {
+    pub const fn empty() -> Self {
+        Self {
             start: 0,
             end: HLEnd::EndOfLine,
             fg_color: Color::DarkGrey,
@@ -323,12 +323,11 @@ fn node_type_to_color(node_type: &str, parent_type: &str) -> Option<Color> {
         "primitive_type" => Color::Yellow,
         "type_identifier" => Color::DarkMagenta,
 
-        "number_literal" => Color::Magenta,
         "comment" | ";" | "." | "," => Color::DarkGrey,
         // Common macros
         // In the future a way to automatically determine
         // which strings are macros would be really cool
-        "true" | "false" | "NULL" => Color::Magenta,
+        "number_literal" | "true" | "false" | "NULL" => Color::Magenta,
         str if is_operator(str) => ORANGE,
         str if str.chars().all(is_symbol) => Color::Grey,
         str if is_c_keyword(str) => Color::Red,

@@ -19,7 +19,7 @@ pub fn match_meta_command(
 ) -> Result<bool> {
     let (command, arg) = status_bar[1..]
         .split_once_a(|c| *c == ' ' || *c == '/')
-        .unwrap_or((&status_bar[1..], &[]));
+        .unwrap_or_else(|| (&status_bar[1..], &[]));
     let (command, arg): (String, String) = (command.iter().collect(), arg.iter().collect());
     match command.as_str() {
         "write" | "w" => view.write()?,
@@ -38,7 +38,7 @@ pub fn match_meta_command(
         }
 
         "open" | "o" => {
-            attach_buffer(arg, view.get_view_box());
+            attach_buffer(&arg, view.get_view_box());
             view.load_file()?;
 
             let view_box = view.get_view_box();
@@ -48,7 +48,7 @@ pub fn match_meta_command(
         "sub" | "s" => {
             let buffer = view.get_buffer_mut();
             log!("arg {}", arg);
-            substitute_cmd(buffer, arg, undo_tree);
+            substitute_cmd(buffer, &arg, undo_tree);
         }
 
         "dir" => {
@@ -101,7 +101,7 @@ pub fn match_meta_command(
     Ok(false)
 }
 
-pub fn substitute_cmd(buffer: &mut Buffer, arg: String, undo_tree: &mut UndoTree) {
+pub fn substitute_cmd(buffer: &mut Buffer, arg: &str, undo_tree: &mut UndoTree) {
     if arg.len() < 3 {
         return;
     }
@@ -153,7 +153,7 @@ pub fn print_directories(view: &mut View, undo_tree: &mut UndoTree) -> Result<()
     Ok(())
 }
 
-pub fn attach_buffer(arg: String, view_box: &mut ViewBox) {
+pub fn attach_buffer(arg: &str, view_box: &mut ViewBox) {
     let path_buf = PathBuf::from(arg.trim());
 
     // If we already have a file, we don't want to write the contents

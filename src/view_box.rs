@@ -174,10 +174,10 @@ impl ViewBox {
                 return;
             }
 
-            self.clear_line(clear_str, stdout);
+            Self::clear_line(clear_str, stdout);
             self.print_padding(padding_buffer, left_padding, line_num, stdout);
 
-            let line_len = self.calculate_total_line_len(line);
+            let line_len = Self::calculate_total_line_len(line);
             if line_len == 0 {
                 execute!(stdout, MoveToColumn(self.x), MoveDown(1))
                     .expect("Crossterm padding buffer print failed");
@@ -211,7 +211,7 @@ impl ViewBox {
         line_len: usize,
     ) -> Vec<HLBlock> {
         let mut hl_blocks: Vec<HLBlock> = hl_blocks
-            .into_iter()
+            .iter()
             .filter(|hl| {
                 hl.start <= last_col
                     && match hl.end {
@@ -219,11 +219,11 @@ impl ViewBox {
                         HLEnd::EndOfLine => line_len >= self.left,
                     }
             })
-            .map(|n| n.clone())
+            .map(std::clone::Clone::clone)
             .collect();
 
         // If the only blocks are out of scope, we don't need to render them :D
-        if hl_blocks.len() == 0 {
+        if hl_blocks.is_empty() {
             return vec![];
         }
 
@@ -238,7 +238,7 @@ impl ViewBox {
             }
         }
 
-        return hl_blocks;
+        hl_blocks
     }
 
     /// Prints a line highlighted based on `hl_blocks`.
@@ -275,10 +275,10 @@ impl ViewBox {
                 return;
             }
 
-            self.clear_line(clear_str, stdout);
+            Self::clear_line(clear_str, stdout);
             self.print_padding(padding_buffer, left_padding, line_num, stdout);
 
-            let line_len = self.calculate_total_line_len(line);
+            let line_len = Self::calculate_total_line_len(line);
             if line_len == 0 {
                 execute!(stdout, MoveToColumn(self.x), MoveDown(1))
                     .expect("Crossterm padding buffer print failed");
@@ -298,7 +298,7 @@ impl ViewBox {
         });
     }
 
-    fn clear_line(&self, clear_str: &str, stdout: &mut StdoutLock) {
+    fn clear_line(clear_str: &str, stdout: &mut StdoutLock) {
         execute!(stdout, Print(&clear_str)).unwrap();
     }
 
@@ -327,7 +327,7 @@ impl ViewBox {
         padding_buffer.clear();
     }
 
-    fn calculate_total_line_len(&self, line: RopeSlice) -> usize {
+    fn calculate_total_line_len(line: RopeSlice) -> usize {
         let mut total_line_len = line.len_chars();
         if total_line_len > 0
             && let Some(c) = line.get_char(total_line_len - 1)
