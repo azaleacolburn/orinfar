@@ -2,7 +2,6 @@ use crate::{
     DEBUG,
     action::match_action,
     commands::Command as Cmd,
-    io::log,
     meta_command::match_meta_command,
     mode::Mode,
     motion::{Motion, next_row, prev_row},

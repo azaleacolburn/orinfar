@@ -6,7 +6,7 @@ use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn},
     execute,
-    style::{Color, Print, SetForegroundColor},
+    style::{Color, Print, SetBackgroundColor, SetForegroundColor},
 };
 use ropey::RopeSlice;
 use std::{
@@ -247,8 +247,13 @@ impl ViewBox {
     fn print_hl_blocks(&self, hl_blocks: &[HLBlock], line: &str, stdout: &mut StdoutLock) {
         for hl in hl_blocks {
             let text = hl.slice_text(line);
-            execute!(stdout, SetForegroundColor(hl.color), Print(text))
-                .expect("Crossterm print hl block command failed");
+            execute!(
+                stdout,
+                SetForegroundColor(hl.fg_color),
+                SetBackgroundColor(hl.bg_color),
+                Print(text)
+            )
+            .expect("Crossterm print hl block command failed");
         }
 
         execute!(stdout, MoveToColumn(self.x), MoveDown(1))
