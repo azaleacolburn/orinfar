@@ -1,7 +1,7 @@
 [package]
 
 name = "orinfar"
-version = "0.0.3"
+version = "0.0.5"
 edition = "2024"
 description = "A Text Editor For Witches"
 license = "MIT"
@@ -17,10 +17,12 @@ crossterm = "0.29.0"
 ropey = "1.6.1"
 tree-sitter = "0.26.3"
 tree-sitter-c = "0.24.1"
-tree-sitter-highlight = "0.26.3"
 xdg = "3.0.0"
 
 [lints.clippy]
 pedantic      = { level = "deny", priority = -1 }
 nursery       = { level = "deny", priority = -1 }
 # unwrap_used   = "deny"
+
+[profile.release]
+lto = "fat"

@@ -1,6 +1,7 @@
 use crate::{
-    Mode,
+    DEBUG,
     buffer::Buffer,
+    mode::Mode,
     motion::Motion,
     register::RegisterHandler,
     text_object::{TextObject, TextObjectType},
@@ -281,6 +282,7 @@ pub fn change(
     mode: &mut Mode,
     undo_tree: &mut UndoTree,
 ) {
+    log!("change");
     iterate_range(
         mode,
         register_handler,

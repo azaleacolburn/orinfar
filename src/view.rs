@@ -1,7 +1,4 @@
-use crate::{
-    DEBUG, buffer::Buffer, io::try_get_git_hash, log, mode::Mode, status_bar::StatusBar,
-    undo::UndoTree, view_box::ViewBox,
-};
+use crate::{buffer::Buffer, mode::Mode, status_bar::StatusBar, view_box::ViewBox};
 use anyhow::Result;
 use crossterm::{
     cursor::{MoveTo, MoveToColumn, MoveToRow, SetCursorStyle, Show},
@@ -12,15 +9,13 @@ use crossterm::{
         enable_raw_mode,
     },
 };
-use ropey::Rope;
 use std::{
     io::{Write, stdout},
     path::PathBuf,
 };
-use tree_sitter::Parser;
 
 pub struct View {
-    boxes: Vec<ViewBox>,
+    pub boxes: Vec<ViewBox>,
     // Represents which index of the view box the cursor is in
     pub cursor: usize,
     width: u16,
@@ -49,7 +44,7 @@ impl View {
         &mut self.boxes[self.cursor]
     }
 
-    pub fn normal_unattached_status(&self, chained: &[char], count: u16, register: char) -> String {
+    pub fn normal_unattached_status(chained: &[char], count: u16, register: char) -> String {
         let info_str = "-- Unattached Buffer -- ".to_string();
 
         let count_str = if count == 1 {
@@ -93,6 +88,27 @@ impl View {
 
         let git_hash = self.get_git_hash().unwrap_or("");
 
+        let status_bar_width: usize = info_str.len()
+            + path.len()
+            + 2
+            + 3
+            + 1
+            + file_size.len()
+            + reg_str.len()
+            + count_str.len()
+            + chained_str.len()
+            + git_hash.len();
+
+        if status_bar_width > self.width as usize {
+            // TODO Maybe add more breakpoints???
+            let abridged_size = info_str.len() + path.len() + 2 + 3 + 1 + file_size.len();
+            if abridged_size > self.width as usize {
+                return Ok(String::new());
+            }
+
+            return Ok(format!("{info_str}\"{path}\" {file_size}b"));
+        }
+
         let middle_buffer = (0..(self.width as usize)
                     - info_str.len()
                     - path.len()
@@ -125,7 +141,7 @@ impl View {
             (Mode::Normal, Some(path)) => {
                 self.normal_attached_status(path, chained, count, register)?
             }
-            (Mode::Normal, None) => self.normal_unattached_status(chained, count, register),
+            (Mode::Normal, None) => Self::normal_unattached_status(chained, count, register),
             (Mode::Insert, _) => "-- INSERT --".into(),
             (Mode::Visual, _) => "-- VISUAL --".into(),
         };
@@ -176,7 +192,7 @@ impl View {
     }
 }
 
-/// ViewBox Manipulation Methods
+/// `ViewBox` Manipulation Methods
 impl View {
     pub fn position_of_box<P>(&self, predicate: P) -> Option<usize>
     where
@@ -268,6 +284,10 @@ impl View {
         let half_height = view_box.height / 2;
         let half_y = half_height + view_box.y;
 
+        if half_height == 1 {
+            return;
+        }
+
         let mut new_view_box = ViewBox::new(view_box.width, half_height, view_box.x, half_y);
 
         let original_height = view_box.height;
@@ -286,6 +306,11 @@ impl View {
         let half_width = view_box.width / 2;
         let half_x = half_width + view_box.x;
 
+        let left_padding = view_box.left_padding();
+        if (half_width as usize) < left_padding {
+            return;
+        }
+
         let mut new_view_box = ViewBox::new(half_width, view_box.height, half_x, view_box.y);
 
         let original_width = view_box.width;
@@ -296,97 +321,6 @@ impl View {
         }
 
         self.boxes.push(new_view_box);
-    }
-}
-
-impl View {
-    pub fn replace_buffer_contents(
-        &mut self,
-        contents: &impl ToString,
-        cursor: usize,
-        undo_tree: &mut UndoTree,
-    ) {
-        let str = contents.to_string();
-
-        let anchor = self.cursor;
-        self.cursor = cursor;
-
-        let buffer = self.get_buffer_mut();
-        buffer.replace_contents(str, undo_tree);
-
-        self.cursor = anchor;
-    }
-
-    pub fn load_file(&mut self) -> Result<()> {
-        if let Some(path) = self.get_path().cloned() {
-            let buffer = self.get_buffer_mut();
-            if !std::fs::exists(&path)? {
-                std::fs::write(path, buffer.rope.to_string())?;
-                return Ok(());
-            }
-
-            let contents = std::fs::read_to_string(path)?;
-            buffer.rope = Rope::from(contents);
-
-            buffer.lines_for_updating = (0..buffer.len()).map(|_| true).collect::<Vec<bool>>();
-            buffer.cursor = usize::min(buffer.cursor, buffer.rope.len_chars());
-            buffer.has_changed = true;
-        }
-
-        Ok(())
-    }
-
-    pub fn write(&self) -> Result<()> {
-        let buffer = self.get_buffer().to_string();
-        if let Some(path) = self.get_path() {
-            std::fs::write(path, buffer)?;
-        } else {
-            log!("WARNING: Cannot Write Unattached Buffer");
-        }
-
-        Ok(())
-    }
-
-    pub fn adjust(&mut self) -> bool {
-        let view_box = self.get_view_box();
-        view_box.adjust()
-    }
-
-    pub const fn boxes_len(&self) -> usize {
-        self.boxes.len()
-    }
-
-    pub fn set_path(&mut self, path: Option<PathBuf>) {
-        let view_box = &mut self.boxes[self.cursor];
-
-        if let Some(path) = &path
-            && let Some(ext) = path.extension()
-            && (ext == "c" || ext == "h")
-        {
-            let mut parser = Parser::new();
-            parser
-                .set_language(&tree_sitter_c::LANGUAGE.into())
-                .expect("Failed to load C parser");
-
-            view_box.parser = Some(parser);
-        }
-
-        let git_hash = try_get_git_hash(path.as_ref());
-        view_box.git_hash = git_hash;
-
-        view_box.path = path;
-    }
-
-    pub fn get_path(&self) -> Option<&PathBuf> {
-        let view_box = &self.boxes[self.cursor];
-
-        view_box.path.as_ref()
-    }
-
-    pub fn get_git_hash(&self) -> Option<&str> {
-        let view_box = &self.boxes[self.cursor];
-
-        view_box.git_hash.as_deref()
     }
 }
 
@@ -403,7 +337,7 @@ pub fn cleanup() -> Result<()> {
     Ok(())
 }
 
-pub fn setup(rows: u16, cols: u16) -> Result<()> {
+pub fn terminal_setup(rows: u16, cols: u16) -> Result<()> {
     let mut stdout = stdout().lock();
 
     execute!(

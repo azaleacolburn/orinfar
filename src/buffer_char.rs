@@ -177,16 +177,19 @@ impl Buffer {
     /// For example for the string 'hello world' and the substring 'world',
     /// the index `10` will be put in the list.
     pub fn find_occurences(&self, text: &[char]) -> Vec<usize> {
-        let mut curr: Vec<char> = Vec::with_capacity(text.len() - 1);
+        let mut count = 0;
         let mut idxs_of_substitution: Vec<usize> = Vec::with_capacity(4);
 
         for (i, char) in self.rope.chars().enumerate() {
-            if char == text[curr.len()] {
-                curr.push(char);
+            if char == text[count] {
+                count += 1;
+            } else {
+                count = 0;
             }
-            if curr.len() == text.len() {
+
+            if count == text.len() {
                 idxs_of_substitution.push(i + 1);
-                curr.clear();
+                count = 0;
             }
         }
 
@@ -304,28 +307,15 @@ impl Buffer {
             return;
         }
 
-        let mut i = str.len();
+        let mut i = 0;
         let mut cursor = self.cursor;
 
-        // NOTE
-        // Pretty sure I don't need this but idk for sure
-        // let within_bounds = self.rope.len_chars() > cursor - str.len();
-        // if within_bounds
-        //     && self.rope.slice(self.cursor..self.cursor + str.len())
-        //         == str.iter().collect::<String>()
-        // {
-        //     cursor += 1;
-        // }
-
-        while let Some(s) = self
-            .rope
-            .get_char(i32::max(0, cursor as i32 - str.len() as i32 + i as i32) as usize)
-        {
-            if s == str[i - 1] {
-                i -= 1;
+        while let Some(s) = self.rope.get_char(cursor - i) {
+            if s == str[str.len() - i - 1] {
+                i += 1;
             } else {
                 cursor -= 1;
-                i = str.len();
+                i = 0;
             }
 
             // We're at the beginning of the buffer
@@ -334,7 +324,7 @@ impl Buffer {
             }
 
             // We've found our string
-            if i == 0 {
+            if i == str.len() {
                 // NOTE
                 // You have to add `1`, otherwise we will overflow if the idx is 0
                 self.cursor = cursor + 1 - str.len();
@@ -343,25 +333,58 @@ impl Buffer {
         }
     }
 
+    pub fn find_next_on_line_from(&self, target: char, from: usize) -> Option<usize> {
+        self.find_next_gen(target, from, self.get_curr_line().len_chars())
+    }
+
+    pub fn find_next_on_line(&self, target: char) -> Option<usize> {
+        self.find_next_gen(target, self.cursor, self.get_curr_line().len_chars())
+    }
+
     pub fn find_next(&self, target: char) -> Option<usize> {
-        let mut cursor = self.cursor;
-        let last = self.rope.len_chars() - 1;
+        self.find_next_gen(target, self.cursor, self.rope.len_chars() - 1)
+    }
+
+    fn find_next_gen(&self, target: char, from: usize, stop_position: usize) -> Option<usize> {
+        let mut cursor = from;
+        if let Some(c) = self.rope.get_char(cursor)
+            && c == target
+        {
+            cursor += 1;
+        }
         loop {
             match self.rope.get_char(cursor) {
                 Some(c) if c == target => return Some(cursor),
-                Some(_) if cursor == last => return None,
+                Some(_) if cursor == stop_position => return None,
                 Some(_) => cursor += 1,
                 None => return None,
             }
         }
     }
 
+    pub fn _find_prev_on_line_from(&self, target: char, from: usize) -> Option<usize> {
+        self.find_prev_gen(target, from, self.get_curr_line().len_chars())
+    }
+
+    pub fn find_prev_on_line(&self, target: char) -> Option<usize> {
+        self.find_prev_gen(target, self.cursor, self.get_start_of_line())
+    }
+
     pub fn find_prev(&self, target: char) -> Option<usize> {
-        let mut cursor = self.cursor;
+        self.find_prev_gen(target, self.cursor, 0)
+    }
+
+    fn find_prev_gen(&self, target: char, from: usize, stop_position: usize) -> Option<usize> {
+        let mut cursor = from;
+        if let Some(c) = self.rope.get_char(cursor)
+            && c == target
+        {
+            cursor -= 1;
+        }
         loop {
             match self.rope.get_char(cursor) {
                 Some(c) if c == target => return Some(cursor),
-                Some(_) if cursor == 0 => return None,
+                Some(_) if cursor == stop_position => return None,
                 Some(_) => cursor -= 1,
                 None => return None,
             }

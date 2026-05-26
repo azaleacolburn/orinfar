@@ -20,6 +20,26 @@ macro_rules! unwrap_or_break {
     };
 }
 
+// TODO
+// Remove extension trait when `split_once` becomes stable
+// [Tracking Issue](https://github.com/rust-lang/rust/issues/112811)
+pub trait SplitOnce<T> {
+    fn split_once_a<F>(&self, pred: F) -> Option<(&[T], &[T])>
+    where
+        F: FnMut(&T) -> bool;
+}
+
+impl<T> SplitOnce<T> for [T] {
+    #[inline]
+    fn split_once_a<F>(&self, pred: F) -> Option<(&[T], &[T])>
+    where
+        F: FnMut(&T) -> bool,
+    {
+        let index = self.iter().position(pred)?;
+        Some((&self[..index], &self[index + 1..]))
+    }
+}
+
 pub fn is_symbol(c: char) -> bool {
     "$`\'\":;~()\\+-=$#^[&]*<@%!{|}>/?.,".contains(c)
 }

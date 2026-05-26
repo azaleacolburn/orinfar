@@ -2,7 +2,9 @@ use crate::{
     buffer::Buffer,
     undo::{Action, UndoTree},
 };
+
 use ropey::{Rope, RopeSlice};
+use std::iter::once;
 
 impl Buffer {
     pub fn is_empty_line(&self) -> bool {
@@ -24,6 +26,10 @@ impl Buffer {
     }
 
     /// Returns the first index (absolute) of the line represented by the given `line_idx`
+    // NOTE
+    // We need to allow this because it's used only by another unused function
+    // In the future we may need to open an issue on `cargo-clippy` about this
+    #[allow(dead_code)]
     pub fn get_start_of_n_line(&self, line_idx: usize) -> usize {
         self.rope.line_to_char(line_idx)
     }
@@ -130,10 +136,22 @@ impl Buffer {
         self.set_row(line + 1);
     }
 
-    pub fn replace_contents(&mut self, contents: String, undo_tree: &mut UndoTree) {
+    pub fn replace_contents(&mut self, contents: &str, undo_tree: &mut UndoTree) {
         self.has_changed = true;
         self.lines_for_updating.clear();
-        contents.lines().for_each(|_| self.update_list_add(0));
+
+        // NOTE
+        // Make sure to correctly add the trailing newline
+        if !contents.is_empty() && contents.chars().nth(contents.len() - 1).unwrap_or('\0') == '\n'
+        {
+            contents
+                .lines()
+                .chain(once(""))
+                .for_each(|_| self.update_list_add(0));
+        } else {
+            contents.lines().for_each(|_| self.update_list_add(0));
+        }
+
         if contents.is_empty() {
             self.update_list_add(0);
         }

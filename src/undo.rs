@@ -1,5 +1,4 @@
 use crate::buffer::Buffer;
-use crate::{DEBUG, io::log};
 
 #[derive(Debug, Clone)]
 pub enum Action {
@@ -73,8 +72,6 @@ impl UndoTree {
         let Some(action) = self.actions.pop() else {
             return;
         };
-
-        log!("Undoing Action: {:?}", action);
 
         match action {
             Action::Insert { text, position } => {

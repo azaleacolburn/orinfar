@@ -25,7 +25,7 @@ The editor is inspired by Vi, but has a few key differences, so you should read 
 - Not much else to say at the moment
 
 # User Manual
-Please read the [user manual](https://github.com/azaleacolburn/orinfar/tree/main/docs/MANUAL.md) before trying to edit text with Orinfar. While this text editor is mostly a subset of Vi, there are plenty of differences, both subtle and unsubtle.
+Please read the [user manual](https://github.com/azaleacolburn/orinfar/tree/main/docs/MANUAL.md) before trying to edit text with Orinfar. While this text editor is mostly a subset of Vi, there are plenty of differences, both subtle and obvious.
 
 # Implementation
 Eventually I'll get around to writing developer facing documentation.
@@ -40,17 +40,22 @@ I'll specify and revise this list when I get around to specific things and I hav
     - [ ] Redo System
     - [x] Status Bar (not comprehensively documented)
     - [x] Minimal Register System (not yet documented)
-    - [ ] Robust Register System (idk what that means exactly)
+    - [ ] Robust Register System (a poorly defined goal, at the moment)
     - [ ] Mark System
     - [x] Multiple View Boxes
-    - [ ] Text Objects
+    - [x] Text Objects
 - [ ] Advanced Features
-    - [ ] Syntax Highlighting (tree-sitter)
+    - [x] C Syntax Highlighting (tree-sitter)
+    - [ ] Markdown Syntax Highlighting
+    - [ ] Rust Syntax Highlighting
     - [ ] LSP Client Support
+- [ ] Important Chores
+    - [ ] Test Suite 
+    - [ ] Benchmarking Suite
 
 # Feature/Bug Requests
 
-If I haven't implemented your favorite Vi feature, or you've found some undesirable bug or behavior, feel free to reach out to me at `azaleacolburn[AT]gmail[DOT]com`.
+If I haven't implemented your favorite Vi feature, or you've found some undesirable bug or behavior, feel free to reach out to me at `azaleacolburn[AT]gmail[DOT]com`. Please do note, however, that many discrepencies between orinfar and Vi are intentional.
 
 
 # Known Bugs

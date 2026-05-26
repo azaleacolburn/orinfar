@@ -22,6 +22,7 @@
           inputsFrom = [ self.packages.${pkgs.stdenv.hostPlatform.system}.default ];
           buildInputs = [
             pkgs.clippy
+            pkgs.bacon
           ];
         };
       });
