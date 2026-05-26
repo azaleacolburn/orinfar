@@ -69,6 +69,8 @@ pub fn match_action<'a>(
                     );
                 });
 
+                *text_object_type = None;
+
                 reset(chained, count, next_operation, last_chained, last_count);
             }
         // WARNING
