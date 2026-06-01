@@ -79,13 +79,6 @@ impl<'a> HLBlock {
         }
     }
 
-    // pub fn get_end(&self, line: &str) -> usize {
-    //     match self.end {
-    //         HLEnd::EndOfLine => line.len(),
-    //         HLEnd::Bounded(end) => end,
-    //     }
-    // }
-
     pub fn get_end_unchecked(&self) -> usize {
         match self.end {
             HLEnd::EndOfLine => panic!("Called unchecked function on wrong variant"),
