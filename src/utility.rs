@@ -36,6 +36,7 @@ impl<T> SplitOnce<T> for [T] {
         F: FnMut(&T) -> bool,
     {
         let index = self.iter().position(pred)?;
+
         Some((&self[..index], &self[index + 1..]))
     }
 }

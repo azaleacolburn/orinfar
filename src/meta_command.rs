@@ -51,7 +51,7 @@ pub fn match_meta_command(
             substitute_cmd(buffer, &arg, undo_tree);
         }
 
-        "dir" => {
+        "dir" | "d" => {
             if view.get_buffer().rope.len_chars() == 0 {
                 print_directories(view, undo_tree)?;
                 return Ok(false);
