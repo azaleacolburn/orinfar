@@ -54,6 +54,7 @@ pub fn match_meta_command(
         "dir" => {
             if view.get_buffer().rope.len_chars() == 0 {
                 print_directories(view, undo_tree)?;
+                return Ok(false);
             }
 
             split_curr_view_box_horizontal(view);
