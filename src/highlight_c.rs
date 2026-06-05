@@ -299,7 +299,6 @@ const ORANGE: Color = Color::Rgb {
 };
 
 fn node_type_to_color(node_type: &str, parent_type: &str) -> Option<Color> {
-    log!("node_type {}", node_type);
     let color = match node_type {
         "#include" | "#define" | "#ifdef" | "#ifndef" | "#endif" => Color::DarkRed,
 

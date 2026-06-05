@@ -91,7 +91,6 @@ pub fn program_loop<'a>(
                     view_commands,
                 ),
                 (KeyCode::Char(c), Mode::Normal) => {
-                    log!("c {}", c);
                     if !all_normal_chars.contains(&c) {
                         continue;
                     }

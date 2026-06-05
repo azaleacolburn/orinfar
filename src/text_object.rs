@@ -74,8 +74,6 @@ pub fn find_matching(buffer: &Buffer, start: char, end: char) -> TOBounds {
         let first = buffer.find_next_on_line(start)?;
         let second = buffer.find_next_on_line_from(end, first)?;
 
-        log!("first: {}\nsecond {}", first, second);
-
         Some((first, second))
     }
 }

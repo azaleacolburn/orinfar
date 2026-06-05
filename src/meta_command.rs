@@ -47,7 +47,6 @@ pub fn match_meta_command(
 
         "sub" | "s" => {
             let buffer = view.get_buffer_mut();
-            log!("arg {}", arg);
             substitute_cmd(buffer, &arg, undo_tree);
         }
 
@@ -68,7 +67,6 @@ pub fn match_meta_command(
 
         "reg" => {
             let registers = register_handler.to_string();
-            log!("registers: {}", registers);
 
             if view.get_buffer().rope.len_chars() == 0 {
                 view.get_buffer_mut()
