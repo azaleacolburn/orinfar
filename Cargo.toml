@@ -8,7 +8,8 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/azaleacolburn/orinfar"
 authors = ["Azalea Colburn azaleacolburn@gmail.com"]
-keywords = ["text", "editor", "files", "vi", "vim"]
+keywords = ["vi", "vim", "minimal"]
+categories = ["text-editor"]
 
 [dependencies]
 anyhow = "1.0.98"
@@ -22,6 +23,7 @@ xdg = "3.0.0"
 [lints.clippy]
 pedantic      = { level = "deny", priority = -1 }
 nursery       = { level = "deny", priority = -1 }
+cargo         = { level = "deny", priority = -1 }
 # unwrap_used   = "deny"
 
 [profile.release]
