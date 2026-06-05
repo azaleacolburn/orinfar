@@ -3,9 +3,7 @@ use crate::{
     global_state::GlobalState,
     motion::Motion,
     operator::Operator,
-    register::RegisterHandler,
     text_object::{TextObject, TextObjectType},
-    undo::UndoTree,
     utility::last_char,
     view::View,
     view_command::ViewCommand,
@@ -18,8 +16,6 @@ pub fn match_action<'a>(
     last_chained: &mut Vec<char>,
     last_count: &mut u32,
 
-    register_handler: &mut RegisterHandler,
-    undo_tree: &mut UndoTree,
     view: &mut View,
 
     commands: &[Command],
@@ -43,7 +39,12 @@ pub fn match_action<'a>(
             global_state.text_object_type = Some(TextObjectType::Around);
         } else if last_char(operation.name) == last {
             (0..global_state.count).for_each(|_| {
-                operation.entire_line(buffer, register_handler, &mut global_state.mode, undo_tree);
+                operation.entire_line(
+                    buffer,
+                    &mut global_state.register_handler,
+                    &mut global_state.mode,
+                    &mut global_state.undo_tree,
+                );
             });
 
             reset(global_state, last_chained, last_count);
@@ -56,9 +57,9 @@ pub fn match_action<'a>(
                         text_object,
                         to_type,
                         buffer,
-                        register_handler,
+                        &mut global_state.register_handler,
                         &mut global_state.mode,
-                        undo_tree,
+                        &mut global_state.undo_tree,
                     );
                 });
 
@@ -71,9 +72,9 @@ pub fn match_action<'a>(
                 operation.execute_motion(
                     motion,
                     buffer,
-                    register_handler,
+                    &mut global_state.register_handler,
                     &mut global_state.mode,
-                    undo_tree,
+                    &mut global_state.undo_tree,
                 );
             });
 
@@ -81,7 +82,12 @@ pub fn match_action<'a>(
         }
     } else if let Some(command) = commands.iter().find(|motion| motion.name == cmd) {
         (0..global_state.count).for_each(|_| {
-            command.execute(buffer, register_handler, &mut global_state.mode, undo_tree);
+            command.execute(
+                buffer,
+                &mut global_state.register_handler,
+                &mut global_state.mode,
+                &mut global_state.undo_tree,
+            );
         });
 
         reset(global_state, last_chained, last_count);

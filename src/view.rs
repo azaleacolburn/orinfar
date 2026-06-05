@@ -152,13 +152,9 @@ impl View {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn flush(
-        &self,
-        global_state: &GlobalState,
-        status_bar: &StatusBar,
-        register: char,
-        adjusted: bool,
-    ) -> Result<()> {
+    pub fn flush(&self, global_state: &GlobalState, adjusted: bool) -> Result<()> {
+        let register = global_state.register_handler.get_curr_reg();
+
         let mut errors = self.boxes.iter().enumerate().filter_map(|(i, view_box)| {
             let adjusted = adjusted && i == self.cursor;
             view_box.flush(adjusted).err()
@@ -170,7 +166,7 @@ impl View {
         let mut stdout = stdout().lock();
 
         let status_message = self.status_message(
-            status_bar,
+            &global_state.status_bar,
             &global_state.mode,
             &global_state.chained,
             global_state.count,
@@ -186,7 +182,7 @@ impl View {
 
         // TODO Figure out what was going on here
         let (new_col, new_row) = if matches!(global_state.mode, Mode::Meta | Mode::Search) {
-            (status_bar.idx(), self.height + 1)
+            (global_state.status_bar.idx(), self.height + 1)
         } else {
             let view_box = &self.boxes[self.cursor];
             view_box.cursor_position()

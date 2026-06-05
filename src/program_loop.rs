@@ -1,18 +1,7 @@
 use crate::{
-    action::match_action,
-    commands::Command as Cmd,
-    count::change_count,
-    global_state::GlobalState,
-    meta_command::match_meta_command,
-    mode::Mode,
-    motion::Motion,
-    operator::Operator,
-    register::RegisterHandler,
-    status_bar::StatusBar,
-    text_object::TextObject,
-    undo::{Action, UndoTree},
-    view::View,
-    view_command::ViewCommand,
+    action::match_action, commands::Command as Cmd, count::change_count, global_state::GlobalState,
+    meta_command::match_meta_command, mode::Mode, motion::Motion, operator::Operator,
+    text_object::TextObject, undo::Action, view::View, view_command::ViewCommand,
 };
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, read};
@@ -33,10 +22,6 @@ pub fn program_loop<'a>(
     all_normal_chars: &[char],
 
     mut global_state: GlobalState<'a>,
-
-    mut status_bar: StatusBar,
-    mut register_handler: RegisterHandler,
-    mut undo_tree: UndoTree,
     mut view: View,
 ) -> Result<()> {
     let mut last_count = 1;
@@ -54,11 +39,11 @@ pub fn program_loop<'a>(
 
                 (KeyCode::Char(':'), Mode::Normal) => {
                     global_state.mode = Mode::Meta;
-                    status_bar.push(':');
+                    global_state.status_bar.push(':');
                 }
                 (KeyCode::Char('/'), Mode::Normal) => {
                     global_state.mode.search();
-                    status_bar.push('/');
+                    global_state.status_bar.push('/');
                 }
                 (KeyCode::Char('n'), Mode::Normal) => {
                     buffer.goto_next_string(&global_state.search_str)
@@ -70,8 +55,6 @@ pub fn program_loop<'a>(
                     &mut global_state,
                     &mut last_chained,
                     &mut last_count,
-                    &mut register_handler,
-                    &mut undo_tree,
                     &mut view,
                     commands,
                     operators,
@@ -89,8 +72,6 @@ pub fn program_loop<'a>(
                         &mut global_state,
                         &mut last_chained,
                         &mut last_count,
-                        &mut register_handler,
-                        &mut undo_tree,
                         &mut view,
                         commands,
                         operators,
@@ -112,7 +93,7 @@ pub fn program_loop<'a>(
                     global_state.mode.normal();
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
-                    buffer.backspace(&mut undo_tree);
+                    buffer.backspace(&mut global_state.undo_tree);
                 }
                 (KeyCode::Char(c), Mode::Insert) => {
                     buffer.insert_char(c);
@@ -120,7 +101,7 @@ pub fn program_loop<'a>(
                     buffer.update_list_use_current_line();
 
                     let action = Action::insert(buffer.cursor - 1, &c);
-                    undo_tree.new_action_merge(action);
+                    global_state.undo_tree.new_action_merge(action);
                 }
                 (KeyCode::Tab, Mode::Insert) => {
                     // NOTE
@@ -136,37 +117,37 @@ pub fn program_loop<'a>(
                     let newline = buffer.insert_newline();
 
                     let action = Action::insert(buffer.cursor - newline.len(), &newline);
-                    undo_tree.new_action(action);
+                    global_state.undo_tree.new_action(action);
                 }
 
                 (KeyCode::Enter, Mode::Meta) => {
-                    if match_meta_command(
-                        &mut status_bar,
-                        &mut view,
-                        &register_handler,
-                        &mut undo_tree,
-                        &mut global_state.mode,
-                    )? {
+                    if match_meta_command(&mut global_state, &mut view)? {
                         break 'main;
                     }
                 }
 
                 (KeyCode::Char(c), Mode::Meta | Mode::Search) => {
-                    status_bar.push(c);
+                    global_state.status_bar.push(c);
                 }
                 (KeyCode::Esc, Mode::Meta | Mode::Search) => {
                     global_state.mode.normal();
-                    status_bar.clear();
+                    global_state.status_bar.clear();
                 }
                 (KeyCode::Backspace, Mode::Meta | Mode::Search) => {
-                    status_bar.delete();
+                    global_state.status_bar.delete();
                 }
                 (_, Mode::Meta) => {}
 
                 (KeyCode::Enter, Mode::Search) => {
-                    global_state.search_str = status_bar.buffer().split_at(1).1.chars().collect();
+                    global_state.search_str = global_state
+                        .status_bar
+                        .buffer()
+                        .split_at(1)
+                        .1
+                        .chars()
+                        .collect();
                     global_state.mode.normal();
-                    status_bar.clear();
+                    global_state.status_bar.clear();
                 }
 
                 (KeyCode::Left, _) => buffer.prev_char(),
@@ -180,12 +161,7 @@ pub fn program_loop<'a>(
             let _ = view.get_view_box().parse();
 
             let adjusted = view.adjust();
-            view.flush(
-                &global_state,
-                &status_bar,
-                register_handler.get_curr_reg(),
-                adjusted,
-            )?;
+            view.flush(&global_state, adjusted)?;
         }
     }
 

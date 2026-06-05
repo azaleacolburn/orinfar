@@ -8,17 +8,14 @@ use crate::{
         last_row, paste, replace, set_curr_register, undo,
     },
     global_state::GlobalState,
-    logging::{data_file, log_dir, log_file, write_data},
+    logging::{setup_logging_and_data, write_data},
     motion::Motion,
     operator::{Operator, change, delete, yank},
     panic_hook,
     program_loop::program_loop,
-    register::RegisterHandler,
-    status_bar::StatusBar,
     text_object::{
         TextObject, curly_braces, grav, parentheses, quotations, single_quotations, square_braces,
     },
-    undo::UndoTree,
     view::{View, cleanup, terminal_setup},
     view_command::{
         ViewCommand, center_viewbox_on_cursor, delete_curr_view_box, move_down_one_view_box,
@@ -41,32 +38,7 @@ pub fn start_program() -> Result<()> {
 
     panic_hook::add_panic_hook(&cleanup);
 
-    // This could fail if the dir already exists, so we don't care if this fails
-    if let Err(err) = std::fs::create_dir(log_dir())
-        && err.to_string() != "File exists (os error 17)"
-    {
-        return Err(err.into());
-    }
-    std::fs::File::create(log_file())?;
-    let data_path = data_file();
-    if !data_path.exists() {
-        std::fs::File::create(&data_path)?;
-    }
-
-    let data = std::fs::read_to_string(&data_path)?;
-
-    let mut has_opened = false;
-    data.lines().for_each(|l| {
-        let Some((k, v)) = l.split_once(':') else {
-            panic!("Invalid Data File");
-        };
-
-        has_opened |= ("has_opened", "true") == (k.trim(), v.trim());
-    });
-
-    let undo_tree = UndoTree::new();
-    let register_handler = RegisterHandler::new();
-    let status_bar: StatusBar = StatusBar::new();
+    let data = setup_logging_and_data()?;
 
     let view_commands: &[ViewCommand] = &[
         ViewCommand::new("zz", center_viewbox_on_cursor),
@@ -151,10 +123,9 @@ pub fn start_program() -> Result<()> {
         enumerate_normal_chars(commands, operators, motions, text_objects, view_commands);
 
     let mut view: View = View::new(cols, rows);
-
     let global_state = GlobalState::new();
 
-    if !has_opened && path.is_none() {
+    if !data.has_opened && path.is_none() {
         view.get_view_box().write_welcome_screen();
         write_data(&"has_opened", &"true");
     }
@@ -164,12 +135,7 @@ pub fn start_program() -> Result<()> {
 
     let _ = view.get_view_box().parse();
 
-    view.flush(
-        &global_state,
-        &status_bar,
-        register_handler.get_curr_reg(),
-        false,
-    )?;
+    view.flush(&global_state, false)?;
 
     program_loop(
         commands,
@@ -179,9 +145,6 @@ pub fn start_program() -> Result<()> {
         view_commands,
         &all_normal_chars,
         global_state,
-        status_bar,
-        register_handler,
-        undo_tree,
         view,
     )?;
 

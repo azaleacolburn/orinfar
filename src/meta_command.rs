@@ -1,6 +1,6 @@
 use crate::{
-    DEBUG, buffer::Buffer, file_io::try_get_git_hash, mode::Mode, register::RegisterHandler,
-    status_bar::StatusBar, undo::UndoTree, utility::SplitOnce, view::View, view_box::ViewBox,
+    DEBUG, buffer::Buffer, file_io::try_get_git_hash, global_state::GlobalState, mode::Mode,
+    undo::UndoTree, utility::SplitOnce, view::View, view_box::ViewBox,
     view_command::split_curr_view_box_horizontal,
 };
 use anyhow::Result;
@@ -10,16 +10,10 @@ use tree_sitter::Parser;
 
 /// # Returns
 /// A boolean indicating whether to break from the main program loop
-pub fn match_meta_command(
-    status_bar: &mut StatusBar,
-    view: &mut View,
-    register_handler: &RegisterHandler,
-    undo_tree: &mut UndoTree,
-    mode: &mut Mode,
-) -> Result<bool> {
-    let (command, arg) = status_bar[1..]
+pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Result<bool> {
+    let (command, arg) = global_state.status_bar[1..]
         .split_once_a(|c| *c == ' ' || *c == '/')
-        .unwrap_or_else(|| (&status_bar[1..], &[]));
+        .unwrap_or_else(|| (&global_state.status_bar[1..], &[]));
     let (command, arg): (String, String) = (command.iter().collect(), arg.iter().collect());
     match command.as_str() {
         "write" | "w" => view.write()?,
@@ -47,12 +41,12 @@ pub fn match_meta_command(
 
         "sub" | "s" => {
             let buffer = view.get_buffer_mut();
-            substitute_cmd(buffer, &arg, undo_tree);
+            substitute_cmd(buffer, &arg, &mut global_state.undo_tree);
         }
 
         "dir" | "d" => {
             if view.get_buffer().rope.len_chars() == 0 {
-                print_directories(view, undo_tree)?;
+                print_directories(view, &mut global_state.undo_tree)?;
                 return Ok(false);
             }
 
@@ -61,16 +55,16 @@ pub fn match_meta_command(
             let anchor = view.cursor;
             view.cursor = view.boxes.len() - 1;
 
-            print_directories(view, undo_tree)?;
+            print_directories(view, &mut global_state.undo_tree)?;
             view.cursor = anchor;
         }
 
         "reg" => {
-            let registers = register_handler.to_string();
+            let registers = &mut global_state.register_handler.to_string();
 
             if view.get_buffer().rope.len_chars() == 0 {
                 view.get_buffer_mut()
-                    .replace_contents(&registers, undo_tree);
+                    .replace_contents(&registers, &mut global_state.undo_tree);
             }
 
             split_curr_view_box_horizontal(view);
@@ -79,7 +73,7 @@ pub fn match_meta_command(
             view.cursor = view.boxes.len() - 1;
 
             view.get_buffer_mut()
-                .replace_contents(&registers, undo_tree);
+                .replace_contents(&registers, &mut global_state.undo_tree);
 
             view.cursor = anchor;
         }
@@ -94,8 +88,8 @@ pub fn match_meta_command(
         }
     }
 
-    *mode = Mode::Normal;
-    status_bar.clear();
+    global_state.mode = Mode::Normal;
+    global_state.status_bar.clear();
 
     Ok(false)
 }
