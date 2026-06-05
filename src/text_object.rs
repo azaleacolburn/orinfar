@@ -25,6 +25,9 @@ pub struct TextObject<'a> {
 // This is cool, but I think the best course of action is the boring one:
 // 1. Move more (if not all) motion logic into the `Buffer` struct
 // 2. Utilize the shared logic in both the sets of motion and text object functions
+
+// TODO
+// Currently, there isn't a counting mechanism to match the corresponding bracket, which is sad
 impl<'a> TextObject<'a> {
     pub fn new(name: &'a str, command: fn(buffer: &Buffer) -> TOBounds) -> Self {
         TextObject { name, command }

@@ -58,15 +58,12 @@ pub enum HLEnd {
     EndOfLine,
 }
 
-// TODO
-// Turn this bad boy into an enum
-// Variants: eol, bounded
 #[derive(Debug, Clone)]
 pub struct HLBlock {
     pub start: usize,
     pub end: HLEnd,
-    pub fg_color: crossterm::style::Color,
-    pub bg_color: crossterm::style::Color,
+    pub fg_color: Color,
+    pub bg_color: Color,
 }
 
 impl<'a> HLBlock {
