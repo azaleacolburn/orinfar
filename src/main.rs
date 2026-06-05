@@ -18,7 +18,7 @@ mod mode;
 mod motion;
 mod operator;
 mod panic_hook;
-mod program_initialization;
+mod program_init;
 mod program_loop;
 mod register;
 mod status_bar;
@@ -32,5 +32,5 @@ mod view_command;
 pub static DEBUG: OnceLock<bool> = OnceLock::new();
 
 pub fn main() -> Result<()> {
-    program_initialization::start_program()
+    program_init::start_program()
 }
