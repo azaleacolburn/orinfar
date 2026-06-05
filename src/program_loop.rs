@@ -185,18 +185,11 @@ pub fn program_loop<'a>(
                     status_bar.clear();
                 }
 
-                (KeyCode::Left, _) => {
-                    buffer.prev_char();
-                }
-                (KeyCode::Right, _) => {
-                    buffer.next_char();
-                }
-                (KeyCode::Up, _) => {
-                    prev_row(buffer);
-                }
-                (KeyCode::Down, _) => {
-                    next_row(buffer);
-                }
+                (KeyCode::Left, _) => buffer.prev_char(),
+                (KeyCode::Right, _) => buffer.next_char(),
+                (KeyCode::Up, _) => prev_row(buffer),
+                (KeyCode::Down, _) => next_row(buffer),
+
                 _ => continue,
             }
 

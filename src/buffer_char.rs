@@ -95,12 +95,9 @@ impl Buffer {
         }
     }
 
-    pub fn prev_char(&mut self) -> Option<char> {
-        if self.cursor == 0 {
-            None
-        } else {
+    pub fn prev_char(&mut self) {
+        if self.cursor > 0 {
             self.cursor -= 1;
-            Some(self.rope.char(self.cursor))
         }
     }
 
