@@ -387,4 +387,8 @@ impl Buffer {
             }
         }
     }
+
+    pub fn clamp_cursor(&mut self) {
+        self.cursor = usize::min(self.cursor, usize::max(self.rope.len_chars(), 1) - 1);
+    }
 }

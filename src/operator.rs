@@ -42,6 +42,7 @@ impl<'a> Operator<'a> {
         undo_tree: &mut UndoTree,
     ) {
         let mut end = motion.evaluate(buffer);
+
         // NOTE
         // So I'm pretty sure the delete behavior thing isn't fixable
         // Like the word c vs word cc thing
@@ -244,7 +245,7 @@ pub fn delete(
     let action = Action::delete(buffer.cursor, &text);
     undo_tree.new_action(action);
 
-    buffer.cursor = usize::min(buffer.cursor, usize::max(buffer.rope.len_chars(), 1) - 1);
+    buffer.clamp_cursor();
 }
 
 fn yank_char(register_handler: &mut RegisterHandler, buffer: &mut Buffer) {
@@ -272,7 +273,7 @@ pub fn yank(
         false,
     );
 
-    buffer.cursor = usize::min(buffer.cursor, usize::max(buffer.rope.len_chars(), 1) - 1);
+    buffer.clamp_cursor();
 }
 
 pub fn change(
@@ -302,5 +303,5 @@ pub fn change(
     let action = Action::delete(buffer.cursor, &text);
     undo_tree.new_action(action);
 
-    buffer.cursor = usize::min(buffer.cursor, usize::max(buffer.rope.len_chars(), 1) - 1);
+    buffer.clamp_cursor();
 }
