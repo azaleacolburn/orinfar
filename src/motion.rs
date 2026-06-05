@@ -1,5 +1,4 @@
 use crate::{
-    DEBUG,
     buffer::Buffer,
     utility::{is_symbol, on_next_input},
 };
@@ -163,41 +162,35 @@ impl Buffer {
         buffer.set_col(buffer.first_non_whitespace_col());
     }
 
-    pub fn find(buffer: &mut Buffer) {
-        fn find(key: KeyCode, buffer: &mut Buffer) {
-            if let KeyCode::Char(target) = key
-                && let Some(position) = buffer.find_next(target)
-            {
-                buffer.cursor = position;
-            }
+    fn find_generic(&mut self, key: KeyCode, traverse: impl Fn(&Buffer, char) -> Option<usize>) {
+        if let KeyCode::Char(target) = key
+            && let Some(position) = traverse(self, target)
+        {
+            self.cursor = position;
         }
+    }
 
-        on_next_input(buffer, find).expect("Failed to get character to find");
+    pub fn find(buffer: &mut Buffer) {
+        let find_forward =
+            |key: KeyCode, buffer: &mut Buffer| buffer.find_generic(key, Buffer::find_next);
+
+        on_next_input(buffer, find_forward).expect("Failed to get character to find");
     }
 
     pub fn find_until(buffer: &mut Buffer) {
-        fn find_until(key: KeyCode, buffer: &mut Buffer) {
-            if let KeyCode::Char(target) = key
-                && let Some(position) = buffer.find_next(target)
-            {
-                buffer.cursor = position;
-                if buffer.cursor != 0 {
-                    buffer.cursor -= 1;
-                }
+        let find_until = |key: KeyCode, buffer: &mut Buffer| {
+            buffer.find_generic(key, Buffer::find_next);
+            if buffer.cursor != 0 {
+                buffer.cursor -= 1;
             }
-        }
+        };
 
         on_next_input(buffer, find_until).expect("Failed to get character to find");
     }
 
     pub fn find_back(buffer: &mut Buffer) {
-        fn find_back(key: KeyCode, buffer: &mut Buffer) {
-            if let KeyCode::Char(target) = key
-                && let Some(position) = buffer.find_prev(target)
-            {
-                buffer.cursor = position;
-            }
-        }
+        let find_back =
+            |key: KeyCode, buffer: &mut Buffer| buffer.find_generic(key, Buffer::find_prev);
 
         on_next_input(buffer, find_back).expect("Failed to get character to find");
     }
