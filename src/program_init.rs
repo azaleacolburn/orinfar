@@ -2,11 +2,12 @@ use crate::{
     DEBUG,
     action::enumerate_normal_chars,
     buffer::Buffer,
+    cli::Cli,
     commands::{
         Command as Cmd, append, cut, first_row, insert, insert_new_line, insert_new_line_above,
         last_row, paste, replace, set_curr_register, undo,
     },
-    io::{Cli, data_file, log_dir, log_file, write_data},
+    logging::{data_file, log_dir, log_file, write_data},
     mode::Mode,
     motion::Motion,
     operator::{Operator, change, delete, yank},

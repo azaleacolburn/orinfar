@@ -76,6 +76,7 @@ impl View {
 
 pub fn try_get_git_hash(path: Option<&PathBuf>) -> Option<String> {
     let mut git_hash: Option<String> = None;
+
     if let Some(path) = path {
         let path = if path.is_dir() {
             path

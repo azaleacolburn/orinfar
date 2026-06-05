@@ -150,7 +150,7 @@ impl ViewBox {
         Ok(())
     }
 
-    /// At this point, the highlight groups should
+    /// At this point, the highlight groups should have been cropped to fit within the line
     fn print_line_hl<'a>(
         &self,
         lines: impl Iterator<Item = (usize, (RopeSlice<'a>, &'a bool))>,
