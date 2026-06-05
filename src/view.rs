@@ -1,4 +1,6 @@
-use crate::{buffer::Buffer, mode::Mode, status_bar::StatusBar, view_box::ViewBox};
+use crate::{
+    buffer::Buffer, global_state::GlobalState, mode::Mode, status_bar::StatusBar, view_box::ViewBox,
+};
 use anyhow::Result;
 use crossterm::{
     cursor::{MoveTo, MoveToColumn, MoveToRow, SetCursorStyle, Show},
@@ -44,7 +46,7 @@ impl View {
         &mut self.boxes[self.cursor]
     }
 
-    pub fn normal_unattached_status(chained: &[char], count: u16, register: char) -> String {
+    pub fn normal_unattached_status(chained: &[char], count: u32, register: char) -> String {
         let info_str = "-- Unattached Buffer -- ".to_string();
 
         let count_str = if count == 1 {
@@ -66,7 +68,7 @@ impl View {
         &self,
         path: &PathBuf,
         chained: &[char],
-        count: u16,
+        count: u32,
         register: char,
     ) -> Result<String> {
         let info_str = "Editing File: ".to_string();
@@ -133,7 +135,7 @@ impl View {
         status_bar: &StatusBar,
         mode: &Mode,
         chained: &[char],
-        count: u16,
+        count: u32,
         register: char,
     ) -> Result<String> {
         let status_message = match (mode, self.get_path()) {
@@ -152,10 +154,8 @@ impl View {
     #[allow(clippy::too_many_arguments)]
     pub fn flush(
         &self,
+        global_state: &GlobalState,
         status_bar: &StatusBar,
-        mode: &Mode,
-        chained: &[char],
-        count: u16,
         register: char,
         adjusted: bool,
     ) -> Result<()> {
@@ -169,7 +169,13 @@ impl View {
 
         let mut stdout = stdout().lock();
 
-        let status_message = self.status_message(status_bar, mode, chained, count, register)?;
+        let status_message = self.status_message(
+            status_bar,
+            &global_state.mode,
+            &global_state.chained,
+            global_state.count,
+            register,
+        )?;
         execute!(
             stdout,
             SetForegroundColor(Color::White),
@@ -179,7 +185,7 @@ impl View {
         )?;
 
         // TODO Figure out what was going on here
-        let (new_col, new_row) = if matches!(mode, Mode::Meta | Mode::Search) {
+        let (new_col, new_row) = if matches!(global_state.mode, Mode::Meta | Mode::Search) {
             (status_bar.idx(), self.height + 1)
         } else {
             let view_box = &self.boxes[self.cursor];

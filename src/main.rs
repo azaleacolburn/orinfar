@@ -10,7 +10,9 @@ mod buffer_line;
 mod buffer_update;
 mod cli;
 mod commands;
+mod count;
 mod file_io;
+mod global_state;
 mod highlight_c;
 #[macro_use]
 mod logging;

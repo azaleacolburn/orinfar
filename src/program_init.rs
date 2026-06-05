@@ -7,8 +7,8 @@ use crate::{
         Command as Cmd, append, cut, first_row, insert, insert_new_line, insert_new_line_above,
         last_row, paste, replace, set_curr_register, undo,
     },
+    global_state::GlobalState,
     logging::{data_file, log_dir, log_file, write_data},
-    mode::Mode,
     motion::Motion,
     operator::{Operator, change, delete, yank},
     panic_hook,
@@ -16,8 +16,7 @@ use crate::{
     register::RegisterHandler,
     status_bar::StatusBar,
     text_object::{
-        TextObject, TextObjectType, curly_braces, grav, parentheses, quotations, single_quotations,
-        square_braces,
+        TextObject, curly_braces, grav, parentheses, quotations, single_quotations, square_braces,
     },
     undo::UndoTree,
     view::{View, cleanup, terminal_setup},
@@ -147,19 +146,13 @@ pub fn start_program() -> Result<()> {
         TextObject::new("`", grav),
     ];
 
-    let next_operation: Option<&Operator> = None;
-    let text_object_type: Option<TextObjectType> = None;
-
     // Used for not putting excluded chars in the chain
     let all_normal_chars =
         enumerate_normal_chars(commands, operators, motions, text_objects, view_commands);
 
     let mut view: View = View::new(cols, rows);
 
-    let mode = Mode::Normal;
-    let count: u16 = 1;
-    let chained: Vec<char> = vec![];
-    let search_str: Vec<char> = vec![];
+    let global_state = GlobalState::new();
 
     if !has_opened && path.is_none() {
         view.get_view_box().write_welcome_screen();
@@ -172,10 +165,8 @@ pub fn start_program() -> Result<()> {
     let _ = view.get_view_box().parse();
 
     view.flush(
+        &global_state,
         &status_bar,
-        &mode,
-        &chained,
-        count,
         register_handler.get_curr_reg(),
         false,
     )?;
@@ -186,17 +177,12 @@ pub fn start_program() -> Result<()> {
         motions,
         text_objects,
         view_commands,
-        count,
-        chained,
-        next_operation,
-        text_object_type,
         &all_normal_chars,
-        search_str,
+        global_state,
         status_bar,
         register_handler,
         undo_tree,
         view,
-        mode,
     )?;
 
     cleanup()

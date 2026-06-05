@@ -1,13 +1,15 @@
 use crate::{
     action::match_action,
     commands::Command as Cmd,
+    count::change_count,
+    global_state::GlobalState,
     meta_command::match_meta_command,
     mode::Mode,
     motion::Motion,
     operator::Operator,
     register::RegisterHandler,
     status_bar::StatusBar,
-    text_object::{TextObject, TextObjectType},
+    text_object::TextObject,
     undo::{Action, UndoTree},
     view::View,
     view_command::ViewCommand,
@@ -28,20 +30,14 @@ pub fn program_loop<'a>(
     motions: &[Motion],
     text_objects: &[TextObject],
     view_commands: &[ViewCommand],
-
-    mut count: u16,
-    mut chained: Vec<char>,
-    mut next_operation: Option<&'a Operator<'a>>,
-    mut text_object_type: Option<TextObjectType>,
     all_normal_chars: &[char],
 
-    mut search_str: Vec<char>,
+    mut global_state: GlobalState<'a>,
 
     mut status_bar: StatusBar,
     mut register_handler: RegisterHandler,
     mut undo_tree: UndoTree,
     mut view: View,
-    mut mode: Mode,
 ) -> Result<()> {
     let mut last_count = 1;
     let mut last_chained: Vec<char> = vec![];
@@ -51,38 +47,32 @@ pub fn program_loop<'a>(
         buffer.update_list_reset();
 
         if let Event::Key(event) = read()? {
-            match (event.code, mode.clone()) {
+            match (event.code, global_state.mode.clone()) {
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
-                    let c = u16::try_from(c.to_digit(10).expect("Numeric digit not in base 10"))
-                        .unwrap();
-                    if count == 1 {
-                        count = 0;
-                    }
-                    count *= 10;
-                    count += c;
+                    change_count(c, &mut global_state.count)
                 }
 
                 (KeyCode::Char(':'), Mode::Normal) => {
-                    mode = Mode::Meta;
+                    global_state.mode = Mode::Meta;
                     status_bar.push(':');
                 }
                 (KeyCode::Char('/'), Mode::Normal) => {
-                    mode.search();
+                    global_state.mode.search();
                     status_bar.push('/');
                 }
-                (KeyCode::Char('n'), Mode::Normal) => buffer.goto_next_string(&search_str),
-                (KeyCode::Char('N'), Mode::Normal) => buffer.goto_prev_string(&search_str),
+                (KeyCode::Char('n'), Mode::Normal) => {
+                    buffer.goto_next_string(&global_state.search_str)
+                }
+                (KeyCode::Char('N'), Mode::Normal) => {
+                    buffer.goto_prev_string(&global_state.search_str)
+                }
                 (KeyCode::Char('.'), Mode::Normal) => match_action(
-                    &mut chained,
-                    &mut next_operation,
-                    &mut text_object_type,
-                    &mut count,
+                    &mut global_state,
                     &mut last_chained,
                     &mut last_count,
                     &mut register_handler,
                     &mut undo_tree,
                     &mut view,
-                    &mut mode,
                     commands,
                     operators,
                     motions,
@@ -93,19 +83,15 @@ pub fn program_loop<'a>(
                     if !all_normal_chars.contains(&c) {
                         continue;
                     }
-                    chained.push(c);
+                    global_state.chained.push(c);
 
                     match_action(
-                        &mut chained,
-                        &mut next_operation,
-                        &mut text_object_type,
-                        &mut count,
+                        &mut global_state,
                         &mut last_chained,
                         &mut last_count,
                         &mut register_handler,
                         &mut undo_tree,
                         &mut view,
-                        &mut mode,
                         commands,
                         operators,
                         motions,
@@ -115,15 +101,15 @@ pub fn program_loop<'a>(
                 }
 
                 (KeyCode::Esc, Mode::Normal) => {
-                    chained.clear();
-                    count = 1;
-                    next_operation = None;
+                    global_state.chained.clear();
+                    global_state.count = 1;
+                    global_state.next_operation = None;
                 }
                 (KeyCode::Esc, Mode::Insert) => {
                     if buffer.cursor != buffer.get_start_of_line() {
                         buffer.cursor -= 1;
                     }
-                    mode.normal();
+                    global_state.mode.normal();
                 }
                 (KeyCode::Backspace, Mode::Insert) => {
                     buffer.backspace(&mut undo_tree);
@@ -159,7 +145,7 @@ pub fn program_loop<'a>(
                         &mut view,
                         &register_handler,
                         &mut undo_tree,
-                        &mut mode,
+                        &mut global_state.mode,
                     )? {
                         break 'main;
                     }
@@ -169,7 +155,7 @@ pub fn program_loop<'a>(
                     status_bar.push(c);
                 }
                 (KeyCode::Esc, Mode::Meta | Mode::Search) => {
-                    mode.normal();
+                    global_state.mode.normal();
                     status_bar.clear();
                 }
                 (KeyCode::Backspace, Mode::Meta | Mode::Search) => {
@@ -178,8 +164,8 @@ pub fn program_loop<'a>(
                 (_, Mode::Meta) => {}
 
                 (KeyCode::Enter, Mode::Search) => {
-                    search_str = status_bar.buffer().split_at(1).1.chars().collect();
-                    mode.normal();
+                    global_state.search_str = status_bar.buffer().split_at(1).1.chars().collect();
+                    global_state.mode.normal();
                     status_bar.clear();
                 }
 
@@ -195,10 +181,8 @@ pub fn program_loop<'a>(
 
             let adjusted = view.adjust();
             view.flush(
+                &global_state,
                 &status_bar,
-                &mode,
-                &chained,
-                count,
                 register_handler.get_curr_reg(),
                 adjusted,
             )?;
