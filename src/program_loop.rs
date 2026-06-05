@@ -34,7 +34,7 @@ pub fn program_loop<'a>(
         if let Event::Key(event) = read()? {
             match (event.code, global_state.mode.clone()) {
                 (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
-                    change_count(c, &mut global_state.count)
+                    change_count(c, &mut global_state.count);
                 }
 
                 (KeyCode::Char(':'), Mode::Normal) => {
@@ -46,10 +46,10 @@ pub fn program_loop<'a>(
                     global_state.status_bar.push('/');
                 }
                 (KeyCode::Char('n'), Mode::Normal) => {
-                    buffer.goto_next_string(&global_state.search_str)
+                    buffer.goto_next_string(&global_state.search_str);
                 }
                 (KeyCode::Char('N'), Mode::Normal) => {
-                    buffer.goto_prev_string(&global_state.search_str)
+                    buffer.goto_prev_string(&global_state.search_str);
                 }
                 (KeyCode::Char('.'), Mode::Normal) => match_action(
                     &mut global_state,

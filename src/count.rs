@@ -1,5 +1,5 @@
-pub fn change_count(c: char, count: &mut u32) {
-    let c = u32::try_from(c.to_digit(10).expect("Numeric digit not in base 10")).unwrap();
+pub const fn change_count(c: char, count: &mut u32) {
+    let c = c.to_digit(10).expect("Numeric digit not in base 10");
     if *count == 1 {
         *count = 0;
     }

@@ -44,7 +44,7 @@ impl Motion {
 
 // Word Manipulation
 impl Buffer {
-    pub fn word(buffer: &mut Buffer) {
+    pub fn word(buffer: &mut Self) {
         if buffer.get_curr_line().len_chars() == buffer.get_col() {
             return;
         }
@@ -73,7 +73,7 @@ impl Buffer {
         }
     }
 
-    pub fn back(buffer: &mut Buffer) {
+    pub fn back(buffer: &mut Self) {
         if buffer.cursor == 0 {
             return;
         }
@@ -114,7 +114,7 @@ impl Buffer {
         }
     }
 
-    pub fn end_of_word(buffer: &mut Buffer) {
+    pub fn end_of_word(buffer: &mut Self) {
         if buffer.get_curr_line().len_chars() == buffer.get_col() {
             return;
         }
@@ -162,7 +162,7 @@ impl Buffer {
 
 // Find Single Characters
 impl Buffer {
-    fn find_generic(&mut self, key: KeyCode, traverse: impl Fn(&Buffer, char) -> Option<usize>) {
+    fn find_generic(&mut self, key: KeyCode, traverse: impl Fn(&Self, char) -> Option<usize>) {
         if let KeyCode::Char(target) = key
             && let Some(position) = traverse(self, target)
         {
@@ -170,16 +170,16 @@ impl Buffer {
         }
     }
 
-    pub fn find(buffer: &mut Buffer) {
+    pub fn find(buffer: &mut Self) {
         let find_forward =
-            |key: KeyCode, buffer: &mut Buffer| buffer.find_generic(key, Buffer::find_next);
+            |key: KeyCode, buffer: &mut Self| buffer.find_generic(key, Self::find_next);
 
         on_next_input(buffer, find_forward).expect("Failed to get character to find");
     }
 
-    pub fn find_until(buffer: &mut Buffer) {
-        let find_until = |key: KeyCode, buffer: &mut Buffer| {
-            buffer.find_generic(key, Buffer::find_next);
+    pub fn find_until(buffer: &mut Self) {
+        let find_until = |key: KeyCode, buffer: &mut Self| {
+            buffer.find_generic(key, Self::find_next);
             if buffer.cursor != 0 {
                 buffer.cursor -= 1;
             }
@@ -188,9 +188,8 @@ impl Buffer {
         on_next_input(buffer, find_until).expect("Failed to get character to find");
     }
 
-    pub fn find_back(buffer: &mut Buffer) {
-        let find_back =
-            |key: KeyCode, buffer: &mut Buffer| buffer.find_generic(key, Buffer::find_prev);
+    pub fn find_back(buffer: &mut Self) {
+        let find_back = |key: KeyCode, buffer: &mut Self| buffer.find_generic(key, Self::find_prev);
 
         on_next_input(buffer, find_back).expect("Failed to get character to find");
     }
@@ -203,7 +202,7 @@ impl Buffer {
     ///
     /// # Returns
     /// - `Some` containing The character in `list` that was found first
-    ///     (equivalent to `self.get_curr_char()` after calling this function)
+    ///   (equivalent to `self.get_curr_char()` after calling this function)
     /// - `None` if no such character was found
     fn find_from_list_on_line(&mut self, list: &[char]) -> Option<char> {
         let anchor = self.cursor;
@@ -310,17 +309,13 @@ impl Buffer {
                 anchor,
             ),
             _ => unreachable!(),
-        };
+        }
     }
 }
 
 // Newline
 impl Buffer {
-    fn generic_newline(
-        &mut self,
-        is_at_end: impl Fn(&Buffer) -> bool,
-        traverse: impl Fn(&mut Buffer) -> (),
-    ) {
+    fn generic_newline(&mut self, is_at_end: impl Fn(&Self) -> bool, traverse: impl Fn(&mut Self)) {
         while self.is_empty_line() {
             if is_at_end(self) {
                 return;
@@ -338,18 +333,18 @@ impl Buffer {
 
     /// Moves the cursor to the next empty line after a non-empty line
     pub fn next_newline(&mut self) {
-        self.generic_newline(Buffer::is_last_row, Buffer::next_row);
+        self.generic_newline(Self::is_last_row, Self::next_row);
     }
 
     /// Moves the cursor to the next empty line after a non-empty line
     pub fn prev_newline(&mut self) {
-        self.generic_newline(Buffer::is_first_row, Buffer::prev_row);
+        self.generic_newline(Self::is_first_row, Self::prev_row);
     }
 }
 
 // Misc
 impl Buffer {
-    pub fn beginning_of_line(buffer: &mut Buffer) {
+    pub fn beginning_of_line(buffer: &mut Self) {
         buffer.set_col(buffer.first_non_whitespace_col());
     }
 }

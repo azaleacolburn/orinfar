@@ -26,7 +26,6 @@ use crate::{
 use anyhow::{Result, bail};
 use crossterm::terminal::size;
 
-#[allow(clippy::too_many_lines)]
 pub fn start_program() -> Result<()> {
     let (cli, path) = Cli::parse_path()?;
     if let Err(_b) = DEBUG.set(cli.debug) {

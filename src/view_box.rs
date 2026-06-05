@@ -362,7 +362,6 @@ impl ViewBox {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn flush(&self, adjusted: bool) -> Result<()> {
         let mut stdout = stdout().lock();
         let left_padding = self.left_padding();

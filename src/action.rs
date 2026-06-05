@@ -113,11 +113,7 @@ pub fn match_action<'a>(
     }
 }
 
-pub fn reset<'a>(
-    global_state: &mut GlobalState,
-    last_chained: &mut Vec<char>,
-    last_count: &mut u32,
-) {
+pub fn reset(global_state: &mut GlobalState, last_chained: &mut Vec<char>, last_count: &mut u32) {
     last_chained.clone_from(&global_state.chained);
     *last_count = global_state.count;
 

@@ -64,7 +64,7 @@ pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Re
 
             if view.get_buffer().rope.len_chars() == 0 {
                 view.get_buffer_mut()
-                    .replace_contents(&registers, &mut global_state.undo_tree);
+                    .replace_contents(registers, &mut global_state.undo_tree);
             }
 
             split_curr_view_box_horizontal(view);
@@ -73,7 +73,7 @@ pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Re
             view.cursor = view.boxes.len() - 1;
 
             view.get_buffer_mut()
-                .replace_contents(&registers, &mut global_state.undo_tree);
+                .replace_contents(registers, &mut global_state.undo_tree);
 
             view.cursor = anchor;
         }

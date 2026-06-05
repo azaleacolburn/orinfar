@@ -151,7 +151,6 @@ impl View {
         Ok(status_message)
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn flush(&self, global_state: &GlobalState, adjusted: bool) -> Result<()> {
         let register = global_state.register_handler.get_curr_reg();
 

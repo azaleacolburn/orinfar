@@ -95,7 +95,7 @@ impl Buffer {
         }
     }
 
-    pub fn prev_char(&mut self) {
+    pub const fn prev_char(&mut self) {
         if self.cursor > 0 {
             self.cursor -= 1;
         }
