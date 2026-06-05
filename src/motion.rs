@@ -42,6 +42,7 @@ impl<'a> Motion<'a> {
     }
 }
 
+// Word Manipulation
 impl Buffer {
     pub fn word(buffer: &mut Buffer) {
         if buffer.get_curr_line().len_chars() == buffer.get_col() {
@@ -157,11 +158,10 @@ impl Buffer {
             }
         }
     }
+}
 
-    pub fn beginning_of_line(buffer: &mut Buffer) {
-        buffer.set_col(buffer.first_non_whitespace_col());
-    }
-
+// Find Single Characters
+impl Buffer {
     fn find_generic(&mut self, key: KeyCode, traverse: impl Fn(&Buffer, char) -> Option<usize>) {
         if let KeyCode::Char(target) = key
             && let Some(position) = traverse(self, target)
@@ -194,7 +194,10 @@ impl Buffer {
 
         on_next_input(buffer, find_back).expect("Failed to get character to find");
     }
+}
 
+// Find Matching
+impl Buffer {
     /// Moves `self.cursor` to the next occurence of any character in `list` on the current line.
     /// Does not modify `self` if no such character is present
     ///
@@ -309,7 +312,10 @@ impl Buffer {
             _ => unreachable!(),
         };
     }
+}
 
+// Newline
+impl Buffer {
     fn generic_newline(
         &mut self,
         is_at_end: impl Fn(&Buffer) -> bool,
@@ -338,5 +344,12 @@ impl Buffer {
     /// Moves the cursor to the next empty line after a non-empty line
     pub fn prev_newline(&mut self) {
         self.generic_newline(Buffer::is_first_row, Buffer::prev_row);
+    }
+}
+
+// Misc
+impl Buffer {
+    pub fn beginning_of_line(buffer: &mut Buffer) {
+        buffer.set_col(buffer.first_non_whitespace_col());
     }
 }
