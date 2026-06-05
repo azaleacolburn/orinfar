@@ -127,11 +127,28 @@ impl Buffer {
         self.rope.line(self.rope.char_to_line(self.cursor))
     }
 
-    pub fn prev_line(&mut self) {
+    pub fn prev_row(&mut self) {
+        if self.get_row() == 0 {
+            return;
+        }
+
         self.set_row(self.get_row() - 1);
+
+        let len = self.get_curr_line().len_chars();
+
+        let col = if len > 0 {
+            usize::min(self.get_col(), len - 1)
+        } else {
+            0
+        };
+        self.set_col(col);
     }
 
-    pub fn next_line(&mut self) {
+    pub fn next_row(&mut self) {
+        if self.is_last_row() {
+            return;
+        }
+
         let line = self.get_row();
         self.set_row(line + 1);
     }

@@ -4,7 +4,7 @@ use crate::{
     commands::Command as Cmd,
     meta_command::match_meta_command,
     mode::Mode,
-    motion::{Motion, next_row, prev_row},
+    motion::Motion,
     operator::Operator,
     register::RegisterHandler,
     status_bar::StatusBar,
@@ -187,8 +187,8 @@ pub fn program_loop<'a>(
 
                 (KeyCode::Left, _) => buffer.prev_char(),
                 (KeyCode::Right, _) => buffer.next_char(),
-                (KeyCode::Up, _) => prev_row(buffer),
-                (KeyCode::Down, _) => next_row(buffer),
+                (KeyCode::Up, _) => buffer.prev_row(),
+                (KeyCode::Down, _) => buffer.next_row(),
 
                 _ => continue,
             }
