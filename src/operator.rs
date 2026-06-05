@@ -1,5 +1,4 @@
 use crate::{
-    DEBUG,
     buffer::Buffer,
     mode::Mode,
     motion::Motion,

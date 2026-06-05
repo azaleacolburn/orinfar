@@ -106,25 +106,25 @@ pub fn start_program() -> Result<()> {
 
     let motions: &[Motion] = &[
         // HJKL
-        Motion::inclusive("h", Buffer::prev_char),
-        Motion::inclusive("j", Buffer::next_row),
-        Motion::inclusive("k", Buffer::prev_row),
-        Motion::inclusive("l", Buffer::next_char),
+        Motion::inclusive('h', Buffer::prev_char),
+        Motion::inclusive('j', Buffer::next_row),
+        Motion::inclusive('k', Buffer::prev_row),
+        Motion::inclusive('l', Buffer::next_char),
         // Word operators
-        Motion::exclusive("w", Buffer::word),
-        Motion::exclusive("b", Buffer::back),
-        Motion::inclusive("e", Buffer::end_of_word),
+        Motion::exclusive('w', Buffer::word),
+        Motion::exclusive('b', Buffer::back),
+        Motion::inclusive('e', Buffer::end_of_word),
         // Line operators
-        Motion::inclusive("$", Buffer::end_of_line),
-        Motion::inclusive("_", Buffer::beginning_of_line),
+        Motion::inclusive('$', Buffer::end_of_line),
+        Motion::inclusive('_', Buffer::beginning_of_line),
         // Finding operators
-        Motion::inclusive("f", Buffer::find),
-        Motion::inclusive("F", Buffer::find_back),
-        Motion::inclusive("c", Buffer::find_until),
+        Motion::inclusive('f', Buffer::find),
+        Motion::inclusive('F', Buffer::find_back),
+        Motion::inclusive('c', Buffer::find_until),
         // Paragraph operators
-        Motion::inclusive("%", Buffer::next_corresponding_bracket),
-        Motion::inclusive("}", Buffer::next_newline),
-        Motion::inclusive("{", Buffer::prev_newline),
+        Motion::inclusive('%', Buffer::next_corresponding_bracket),
+        Motion::inclusive('}', Buffer::next_newline),
+        Motion::inclusive('{', Buffer::prev_newline),
     ];
 
     let text_objects: &[TextObject] = &[

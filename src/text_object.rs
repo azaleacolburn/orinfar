@@ -1,4 +1,4 @@
-use crate::{DEBUG, buffer::Buffer};
+use crate::buffer::Buffer;
 
 pub enum TextObjectType {
     Inside,

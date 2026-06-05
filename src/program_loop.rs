@@ -1,5 +1,4 @@
 use crate::{
-    DEBUG,
     action::match_action,
     commands::Command as Cmd,
     meta_command::match_meta_command,

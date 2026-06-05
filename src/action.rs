@@ -1,7 +1,5 @@
 use crate::{
-    DEBUG,
     commands::Command,
-    log,
     mode::Mode,
     motion::Motion,
     operator::Operator,
@@ -76,7 +74,7 @@ pub fn match_action<'a>(
         // This only works for single character motions
         // TODO
         // If all motion names are a single character, we should just make them a character
-        } else if let Some(motion) = motions.iter().find(|motion| last_char(motion.name) == last) {
+        } else if let Some(motion) = motions.iter().find(|motion| motion.name == last) {
             (0..*count).for_each(|_| {
                 operation.execute_motion(motion, buffer, register_handler, mode, undo_tree);
             });
@@ -96,9 +94,7 @@ pub fn match_action<'a>(
 
         reset(chained, count, next_operation, last_chained, last_count);
     } else if chained.len() == 1
-        && let Some(motion) = motions
-            .iter()
-            .find(|motion| motion.name.chars().last().unwrap() == last)
+        && let Some(motion) = motions.iter().find(|motion| motion.name == last)
     {
         (0..*count).for_each(|_| {
             motion.apply(buffer);
@@ -137,7 +133,7 @@ pub fn enumerate_normal_chars(
 ) -> Vec<char> {
     let command_chars = commands.iter().flat_map(|cmd| cmd.name.chars());
     let operator_chars = operators.iter().flat_map(|cmd| cmd.name.chars());
-    let motion_chars = motions.iter().flat_map(|cmd| cmd.name.chars());
+    let motion_chars = motions.iter().map(|cmd| cmd.name);
     let text_object_chars = text_objects.iter().flat_map(|cmd| cmd.name.chars());
     let view_command_chars = view_commands.iter().flat_map(|cmd| cmd.name.chars());
 

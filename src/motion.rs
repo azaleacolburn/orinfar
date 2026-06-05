@@ -4,14 +4,14 @@ use crate::{
 };
 use crossterm::event::KeyCode;
 
-pub struct Motion<'a> {
-    pub name: &'a str,
+pub struct Motion {
+    pub name: char,
     command: fn(buffer: &mut Buffer),
     pub inclusive: bool,
 }
 
-impl<'a> Motion<'a> {
-    pub fn exclusive(name: &'a str, command: fn(buffer: &mut Buffer)) -> Self {
+impl Motion {
+    pub fn exclusive(name: char, command: fn(buffer: &mut Buffer)) -> Self {
         Self {
             name,
             command,
@@ -19,7 +19,7 @@ impl<'a> Motion<'a> {
         }
     }
 
-    pub fn inclusive(name: &'a str, command: fn(buffer: &mut Buffer)) -> Self {
+    pub fn inclusive(name: char, command: fn(buffer: &mut Buffer)) -> Self {
         Self {
             name,
             command,
