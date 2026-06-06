@@ -236,6 +236,7 @@ pub fn indent(
     let start_of_line = buffer.get_start_of_line();
 
     buffer.insert_n_times_at(' ', 4, start_of_line);
+    buffer.cursor += 4;
 
     let action = Action::insert(start_of_line, &"    ");
     undo_tree.new_action(action);
@@ -256,7 +257,9 @@ pub fn unindent(
 
     if let Some("    ") = maybe_tab {
         buffer.rope.remove(start_of_line..start_of_line + 4);
+        // Needed because we're using a raw rope method
         buffer.update_list_use_current_line();
+        buffer.cursor -= 4;
 
         let action = Action::delete(start_of_line, &"    ");
         undo_tree.new_action(action);

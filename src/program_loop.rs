@@ -104,13 +104,9 @@ pub fn program_loop<'a>(
                     global_state.undo_tree.new_action_merge(action);
                 }
                 (KeyCode::Tab, Mode::Insert) => {
-                    // NOTE
-                    // Iterates two separate times because we want the insertation batched and
-                    // the traversal to happen after
                     buffer.insert_n_times(' ', 4);
-                    (0..4).for_each(|_| {
-                        buffer.next_char();
-                    });
+                    buffer.cursor += 4;
+
                     buffer.update_list_use_current_line();
                 }
                 (KeyCode::Enter, Mode::Insert) => {

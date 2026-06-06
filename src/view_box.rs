@@ -108,7 +108,7 @@ impl ViewBox {
         execute!(stdout, Hide, MoveTo(self.x, self.y))?;
         let mut padding_buffer = String::with_capacity(left_padding);
 
-        let clear_str: String = (0..self.width).map(|_| ' ').collect();
+        let clear_str: String = (0..=self.width).map(|_| ' ').collect();
 
         // NOTE
         // Taking the length to avoid having to clone all of lines
