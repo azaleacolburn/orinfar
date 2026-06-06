@@ -40,31 +40,22 @@ impl Buffer {
         self.rope.line_to_char(line_idx)
     }
 
-    pub fn get_first_non_whitespace_col(&self) -> usize {
+    pub fn get_first_non_whitespace_col(&self) -> Option<usize> {
         let mut start_of_line = self.get_start_of_line();
         let end_of_line = self.get_end_of_line();
         let anchor = start_of_line;
 
         while let Some(c) = self.rope.get_char(start_of_line)
             && c.is_whitespace()
-            && start_of_line < end_of_line
         {
             start_of_line += 1;
+
+            if start_of_line >= end_of_line {
+                return None;
+            }
         }
 
-        start_of_line - anchor
-    }
-
-    pub fn first_non_whitespace_col(&self) -> usize {
-        let mut start_of_line = self.get_start_of_line();
-        let anchor = start_of_line;
-        while let Some(c) = self.rope.get_char(start_of_line)
-            && c.is_whitespace()
-        {
-            start_of_line += 1;
-        }
-
-        start_of_line - anchor
+        Some(start_of_line - anchor)
     }
 
     pub fn get_start_of_line(&self) -> usize {
@@ -102,28 +93,12 @@ impl Buffer {
 
     /// Called by the '$' motion
     pub fn end_of_line(&mut self) {
-        let end_of_line = self.get_end_of_line();
-        self.cursor = end_of_line;
-    }
-
-    pub fn _get_until_end_of_line(&self) -> RopeSlice<'_> {
-        assert!(self.cursor <= self.rope.len_chars());
-
-        let line_idx = self.rope.char_to_line(self.cursor);
-        let line = self
-            .rope
-            .get_line(line_idx)
-            .expect("Line index not present in buffer");
-        line.slice(self.cursor..)
-    }
-
-    pub fn _find_char_in_current_line(&self, c: char) -> Option<usize> {
-        let line = self.get_curr_line();
-        line.chars().position(|ch| ch == c)
+        self.cursor = self.get_end_of_line();
     }
 
     pub fn get_curr_line(&self) -> RopeSlice<'_> {
         assert!(self.cursor <= self.rope.len_chars());
+
         self.rope.line(self.rope.char_to_line(self.cursor))
     }
 

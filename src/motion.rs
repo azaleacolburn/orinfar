@@ -346,6 +346,7 @@ impl Buffer {
 // Misc
 impl Buffer {
     pub fn beginning_of_line(buffer: &mut Self) {
-        buffer.set_col(buffer.first_non_whitespace_col());
+        let col = buffer.get_first_non_whitespace_col().unwrap_or(0);
+        buffer.set_col(col);
     }
 }
