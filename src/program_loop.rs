@@ -1,7 +1,7 @@
 use crate::{
     action::match_action, commands::Command as Cmd, count::change_count, global_state::GlobalState,
     meta_command::match_meta_command, mode::Mode, motion::Motion, operator::Operator,
-    text_object::TextObject, undo::Action, view::View, view_command::ViewCommand,
+    shell_commands, text_object::TextObject, undo::Action, view::View, view_command::ViewCommand,
 };
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, read};
@@ -40,6 +40,10 @@ pub fn program_loop<'a>(
                 (KeyCode::Char(':'), Mode::Normal) => {
                     global_state.mode = Mode::Meta;
                     global_state.status_bar.push(':');
+                }
+                (KeyCode::Char('#'), Mode::Normal) => {
+                    global_state.mode = Mode::Shell;
+                    global_state.status_bar.push('#');
                 }
                 (KeyCode::Char('/'), Mode::Normal) => {
                     global_state.mode.search();
@@ -121,18 +125,24 @@ pub fn program_loop<'a>(
                         break 'main;
                     }
                 }
+                (KeyCode::Enter, Mode::Shell) => {
+                    let _ = shell_commands::command(
+                        &mut global_state.status_bar,
+                        &mut global_state.mode,
+                    );
+                }
 
-                (KeyCode::Char(c), Mode::Meta | Mode::Search) => {
+                (KeyCode::Char(c), Mode::Meta | Mode::Search | Mode::Shell) => {
                     global_state.status_bar.push(c);
                 }
-                (KeyCode::Esc, Mode::Meta | Mode::Search) => {
+                (KeyCode::Esc, Mode::Meta | Mode::Search | Mode::Shell) => {
                     global_state.mode.normal();
                     global_state.status_bar.clear();
                 }
-                (KeyCode::Backspace, Mode::Meta | Mode::Search) => {
+                (KeyCode::Backspace, Mode::Meta | Mode::Search | Mode::Shell) => {
                     global_state.status_bar.delete();
                 }
-                (_, Mode::Meta) => {}
+                (_, Mode::Meta | Mode::Shell) => {}
 
                 (KeyCode::Enter, Mode::Search) => {
                     global_state.search_str = global_state

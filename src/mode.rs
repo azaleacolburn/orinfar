@@ -11,6 +11,7 @@ pub enum Mode {
     Meta,
     Search,
     Visual,
+    Shell,
 }
 
 impl Mode {
@@ -41,6 +42,7 @@ impl Display for Mode {
             Self::Meta => "meta",
             Self::Search => "search",
             Self::Visual => "visual",
+            Self::Shell => "system",
         };
 
         f.write_str(str)

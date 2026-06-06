@@ -139,7 +139,7 @@ impl View {
         register: char,
     ) -> Result<String> {
         let status_message = match (mode, self.get_path()) {
-            (Mode::Meta | Mode::Search, _) => status_bar.buffer(),
+            (Mode::Meta | Mode::Search | Mode::Shell, _) => status_bar.buffer(),
             (Mode::Normal, Some(path)) => {
                 self.normal_attached_status(path, chained, count, register)?
             }
@@ -180,12 +180,13 @@ impl View {
         )?;
 
         // TODO Figure out what was going on here
-        let (new_col, new_row) = if matches!(global_state.mode, Mode::Meta | Mode::Search) {
-            (global_state.status_bar.idx(), self.height + 1)
-        } else {
-            let view_box = &self.boxes[self.cursor];
-            view_box.cursor_position()
-        };
+        let (new_col, new_row) =
+            if matches!(global_state.mode, Mode::Meta | Mode::Search | Mode::Shell) {
+                (global_state.status_bar.idx(), self.height + 1)
+            } else {
+                let view_box = &self.boxes[self.cursor];
+                view_box.cursor_position()
+            };
         execute!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
 
         stdout.flush()?;

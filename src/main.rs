@@ -14,6 +14,7 @@ mod count;
 mod file_io;
 mod global_state;
 mod highlight_c;
+mod shell_commands;
 #[macro_use]
 mod logging;
 mod meta_command;

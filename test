@@ -1,0 +1,10 @@
+Cargo.lock
+Cargo.toml
+docs
+flake.lock
+flake.nix
+LICENSE
+README.md
+src
+target
+test
