@@ -339,6 +339,35 @@ impl Buffer {
         }
     }
 
+    fn find_gen(
+        &self,
+        target: char,
+        from: usize,
+        stop_position: usize,
+        direction: i8,
+    ) -> Option<usize> {
+        let mut cursor = from as isize;
+        if let Some(c) = self.rope.get_char(cursor as usize)
+            && c == target
+        {
+            cursor += direction as isize;
+        }
+
+        loop {
+            match self.rope.get_char(cursor as usize) {
+                Some(c) if c == target => return Some(cursor as usize),
+                Some(_) if cursor as usize == stop_position => return None,
+                Some(_) => cursor += direction as isize,
+                None => return None,
+            }
+        }
+    }
+
+    // Find next
+    fn find_next_gen(&self, target: char, from: usize, stop_position: usize) -> Option<usize> {
+        self.find_gen(target, from, stop_position, 1)
+    }
+
     pub fn find_next_on_line_from(&self, target: char, from: usize) -> Option<usize> {
         self.find_next_gen(target, from, self.get_curr_line().len_chars())
     }
@@ -351,21 +380,9 @@ impl Buffer {
         self.find_next_gen(target, self.cursor, self.rope.len_chars() - 1)
     }
 
-    fn find_next_gen(&self, target: char, from: usize, stop_position: usize) -> Option<usize> {
-        let mut cursor = from;
-        if let Some(c) = self.rope.get_char(cursor)
-            && c == target
-        {
-            cursor += 1;
-        }
-        loop {
-            match self.rope.get_char(cursor) {
-                Some(c) if c == target => return Some(cursor),
-                Some(_) if cursor == stop_position => return None,
-                Some(_) => cursor += 1,
-                None => return None,
-            }
-        }
+    // Find Prev
+    fn find_prev_gen(&self, target: char, from: usize, stop_position: usize) -> Option<usize> {
+        self.find_gen(target, from, stop_position, -1)
     }
 
     pub fn _find_prev_on_line_from(&self, target: char, from: usize) -> Option<usize> {
@@ -378,22 +395,5 @@ impl Buffer {
 
     pub fn find_prev(&self, target: char) -> Option<usize> {
         self.find_prev_gen(target, self.cursor, 0)
-    }
-
-    fn find_prev_gen(&self, target: char, from: usize, stop_position: usize) -> Option<usize> {
-        let mut cursor = from;
-        if let Some(c) = self.rope.get_char(cursor)
-            && c == target
-        {
-            cursor -= 1;
-        }
-        loop {
-            match self.rope.get_char(cursor) {
-                Some(c) if c == target => return Some(cursor),
-                Some(_) if cursor == stop_position => return None,
-                Some(_) => cursor -= 1,
-                None => return None,
-            }
-        }
     }
 }
