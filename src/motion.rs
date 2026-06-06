@@ -166,7 +166,7 @@ impl Buffer {
         if let KeyCode::Char(target) = key
             && let Some(position) = traverse(self, target)
         {
-            self.cursor = position;
+            self.set_cursor(position);
         }
     }
 
@@ -219,7 +219,7 @@ impl Buffer {
             return Some(c);
         }
 
-        self.cursor = anchor;
+        self.set_cursor(anchor);
         None
     }
 
@@ -249,7 +249,7 @@ impl Buffer {
 
         loop {
             if exit_condition(self.cursor) {
-                self.cursor = anchor;
+                self.set_cursor(anchor);
                 return;
             }
 

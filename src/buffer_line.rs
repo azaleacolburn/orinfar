@@ -136,6 +136,8 @@ impl Buffer {
 
         let len = self.get_curr_line().len_chars();
 
+        // TODO
+        // Update to keep track of maximum col since cursor has moved left or right
         let col = if len > 0 {
             usize::min(self.get_col(), len - 1)
         } else {
@@ -177,8 +179,6 @@ impl Buffer {
         undo_tree.new_action(action);
 
         self.rope = Rope::from(contents);
-        if self.cursor > self.rope.len_chars() {
-            self.cursor = 0;
-        }
+        self.clamp_cursor();
     }
 }

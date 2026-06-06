@@ -5,6 +5,15 @@ use crate::{
 use std::iter::once;
 
 impl Buffer {
+    pub fn set_cursor(&mut self, cursor: usize) {
+        self.cursor = cursor;
+        self.clamp_cursor();
+    }
+
+    pub fn clamp_cursor(&mut self) {
+        self.cursor = usize::min(self.cursor, usize::max(self.rope.len_chars(), 1) - 1);
+    }
+
     pub fn delete_curr_char(&mut self) {
         if self.cursor == self.rope.len_chars() {
             return;
@@ -43,10 +52,12 @@ impl Buffer {
     pub fn insert_newline(&mut self) -> String {
         let first_col = self.get_first_non_whitespace_col();
         self.update_list_add_current();
+
         self.rope.insert_char(self.cursor, '\n');
-        self.cursor += 1;
+        self.set_cursor(self.cursor + 1);
+
         self.insert_char_n_times(' ', first_col);
-        self.cursor += first_col;
+        self.set_cursor(self.cursor + first_col);
 
         once('\n')
             .chain((0..first_col).map(|_| ' '))
@@ -82,9 +93,7 @@ impl Buffer {
     }
 
     pub fn next_char(&mut self) {
-        if self.cursor < self.rope.len_chars() {
-            self.cursor += 1;
-        }
+        self.set_cursor(self.cursor + 1);
     }
 
     pub fn get_prev_char(&self) -> Option<char> {
@@ -96,6 +105,8 @@ impl Buffer {
     }
 
     pub const fn prev_char(&mut self) {
+        // We can't rely on `self.set_cursor` to clamp
+        // because we would encounter an underflow first
         if self.cursor > 0 {
             self.cursor -= 1;
         }
@@ -107,10 +118,9 @@ impl Buffer {
         self.cursor - start_idx
     }
 
-    // This is where we are
     pub fn set_col(&mut self, col: usize) {
         let start_idx = self.get_start_of_line();
-        self.cursor = start_idx + col;
+        self.set_cursor(start_idx + col);
     }
 
     pub fn get_row(&self) -> usize {
@@ -128,7 +138,7 @@ impl Buffer {
         let start_of_next_row = self.rope.line_to_char(row);
 
         let new_position = usize::min(start_of_next_row + col, end_next_row);
-        self.cursor = new_position;
+        self.set_cursor(new_position);
     }
 
     pub fn count_spaces_backwards(&self) -> usize {
@@ -238,15 +248,14 @@ impl Buffer {
             }
         }
 
-        if self.cursor > self.rope.len_chars() {
-            self.cursor = self.rope.len_chars();
-        }
+        self.clamp_cursor();
     }
 
     pub fn backspace(&mut self, undo_tree: &mut UndoTree) {
         if self.cursor == 0 {
             return;
         }
+
         self.cursor -= 1;
         let char = self.get_curr_char();
 
@@ -293,7 +302,7 @@ impl Buffer {
                 i = 0;
             }
             if i == str.len() {
-                self.cursor = cursor;
+                self.set_cursor(cursor);
                 return;
             }
         }
@@ -324,7 +333,7 @@ impl Buffer {
             if i == str.len() {
                 // NOTE
                 // You have to add `1`, otherwise we will overflow if the idx is 0
-                self.cursor = cursor + 1 - str.len();
+                self.set_cursor(cursor + 1 - str.len());
                 return;
             }
         }
@@ -386,9 +395,5 @@ impl Buffer {
                 None => return None,
             }
         }
-    }
-
-    pub fn clamp_cursor(&mut self) {
-        self.cursor = usize::min(self.cursor, usize::max(self.rope.len_chars(), 1) - 1);
     }
 }
