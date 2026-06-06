@@ -20,9 +20,9 @@
       devShells = forEachPkgs (pkgs: {
         default = pkgs.mkShell {
           inputsFrom = [ self.packages.${pkgs.stdenv.hostPlatform.system}.default ];
-          buildInputs = [
-            pkgs.clippy
-            pkgs.bacon
+          buildInputs = with pkgs; [
+            clippy
+            bacon
           ];
         };
       });
