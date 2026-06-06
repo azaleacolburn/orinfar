@@ -6,7 +6,9 @@ macro_rules! unwrap_or_return {
     ( $e:expr ) => {
         match $e {
             Some(x) => x,
-            None => return,
+            None => {
+                return;
+            }
         }
     };
 }
@@ -17,6 +19,15 @@ macro_rules! unwrap_or_break {
             Some(x) => x,
             None => break,
         }
+    };
+}
+
+/// Trys to convert the value `$e` into the type `$t`
+/// Evaluates into `$e` of the new type `$t` on success
+/// Returns from the current function on failure
+macro_rules! try_into_or_return {
+    ($t:ty, $e:expr) => {
+        unwrap_or_return!(<$t>::try_from($e).ok())
     };
 }
 
@@ -58,8 +69,9 @@ pub fn on_next_input(buffer: &mut Buffer, closure: fn(KeyCode, &mut Buffer)) -> 
     Ok(())
 }
 
+/// Returns `\0` if the string is empty
 pub fn last_char(str: &str) -> char {
-    str.chars().last().unwrap()
+    str.chars().last().unwrap_or('\0')
 }
 
 pub const fn count_line(str: &str) -> u16 {

@@ -152,7 +152,7 @@ pub fn iterate_range(
     will_delete: bool,
 ) {
     let anchor = buffer.cursor;
-    let count = i32::try_from(end).unwrap() - i32::try_from(anchor).unwrap();
+    let count = try_into_or_return!(i32, end) - try_into_or_return!(i32, anchor);
     initial_callback(register_handler, buffer, mode);
 
     let initial_register_contents = register_handler.get_reg().to_string();

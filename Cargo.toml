@@ -21,10 +21,14 @@ tree-sitter-c = "0.24.1"
 xdg = "3.0.0"
 
 [lints.clippy]
+suspicious    = { level = "deny", priority = -1 }
+complexity    = { level = "deny", priority = -1 }
+perf          = { level = "deny", priority = -1 }
+style         = { level = "deny", priority = -1 }
 pedantic      = { level = "deny", priority = -1 }
 nursery       = { level = "deny", priority = -1 }
 cargo         = { level = "deny", priority = -1 }
-# unwrap_used   = "deny"
+unwrap_used   = "deny"
 
 [profile.release]
 lto = "fat"

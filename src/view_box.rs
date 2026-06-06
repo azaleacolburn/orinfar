@@ -105,12 +105,15 @@ impl ViewBox {
             .skip(self.top)
             .take(self.height.into());
 
-        let len_lines = u16::try_from(lines.len()).unwrap();
-
         execute!(stdout, Hide, MoveTo(self.x, self.y))?;
         let mut padding_buffer = String::with_capacity(left_padding);
 
         let clear_str: String = (0..self.width).map(|_| ' ').collect();
+
+        // NOTE
+        // Taking the length to avoid having to clone all of lines
+        // Since its used in the statement below
+        let maybe_len_lines = u16::try_from(lines.len()).ok();
 
         if let Some(_tree) = self.parse_tree.as_ref()
             && let Some(path) = self.path.as_ref()
@@ -138,7 +141,9 @@ impl ViewBox {
         }
 
         // This is for clearing trailing lines that we missed
-        if len_lines < self.height {
+        if let Some(len_lines) = maybe_len_lines
+            && len_lines < self.height
+        {
             execute!(stdout, MoveTo(self.x, self.y + len_lines))?;
 
             (len_lines..self.height).for_each(|_| {
@@ -394,15 +399,23 @@ impl ViewBox {
     /// Given that the cursor is in the given view box
     pub fn cursor_position(&self) -> (u16, u16) {
         let left_padding = self.left_padding();
-        let col = self.buffer.get_col();
-        let row = self.buffer.get_row();
+        let buffer_col = self.buffer.get_col();
+        let buffer_row = self.buffer.get_row();
 
-        let row = self.y + u16::try_from(row - self.top).unwrap();
-        let col = self.x
+        // NOTE
+        // We can't be on a row number smaller than the top row being rendered
+        // unless this function is called after the cursor has moved
+        // but before `ViewBox::adjust` has been called
+        //
+        // Of course, the difference between the buffer row and the top row
+        // can't be greater than the size of the screen, which for all screens
+        // I know about, should be fewer rows tall than `u16::MAX`
+        let absolute_row = self.y + u16::try_from(buffer_row - self.top).unwrap_or(0);
+        let absolute_col = self.x
             + u16::min(
-                u16::try_from(col - self.left + left_padding).unwrap(),
+                u16::try_from(buffer_col - self.left + left_padding).unwrap_or(0),
                 self.width,
             );
-        (col, row)
+        (absolute_col, absolute_row)
     }
 }

@@ -212,28 +212,28 @@ impl Buffer {
         undo_tree: &mut UndoTree,
         undoing: bool,
     ) {
-        let offset = i32::try_from(new.len()).unwrap() - i32::try_from(original.len()).unwrap();
+        let new_len = unwrap_or_return!(i32::try_from(new.len()).ok());
+        let original_len = unwrap_or_return!(i32::try_from(original.len()).ok());
+        let mut offset = new_len - original_len;
 
-        for (i, end_idx) in idxs_of_substitution.iter().enumerate() {
-            let offset = i32::try_from(i).unwrap() * offset;
-            let end_idx = i32::try_from(*end_idx).unwrap();
-            let original_len = i32::try_from(original.len()).unwrap();
+        let to_i32s =
+            |(i, end_idx): (usize, &usize)| match (i32::try_from(i), i32::try_from(*end_idx)) {
+                (Ok(i), Ok(idx)) => Some((i, idx)),
+                _ => None,
+            };
 
-            assert!(
-                end_idx >= original_len + offset,
-                "end_idx {} original len {} offset {}",
-                end_idx,
-                original.len(),
-                offset
-            );
-            let start_idx = usize::try_from(end_idx - original_len + offset).unwrap();
+        for (i, end_idx) in idxs_of_substitution.iter().enumerate().filter_map(to_i32s) {
+            offset *= i;
 
-            self.rope
-                .remove(start_idx..usize::try_from(end_idx + offset).unwrap());
-            self.rope.insert(start_idx, new);
+            let raw_start_idx = end_idx - original_len + offset;
+            let new_start_idx = unwrap_or_return!(usize::try_from(raw_start_idx).ok());
+            let new_end_idx = unwrap_or_return!(usize::try_from(end_idx + offset).ok());
+
+            self.rope.remove(new_start_idx..new_end_idx);
+            self.rope.insert(new_start_idx, new);
 
             if !undoing {
-                let action = Action::replace(vec![start_idx + new.len()], &original, &new);
+                let action = Action::replace(vec![new_start_idx + new.len()], &original, &new);
                 undo_tree.new_action_merge(action);
             }
         }

@@ -36,16 +36,16 @@ impl ViewBox {
         }
 
         self.buffer.rope = Rope::from(contents);
-        (0..u16::try_from(vertical_padding).unwrap() / 2 + WELCOME_HEIGHT)
+        let vertical_padding = try_into_or_return!(u16, vertical_padding);
+        (0..vertical_padding / 2 + WELCOME_HEIGHT)
             .for_each(|_| self.buffer.update_list_add_current());
         self.buffer.has_changed = true;
     }
 }
 
 fn write_line_centered(line: &str, contents: &mut String, width: u16) {
-    let padding = (0..(width - u16::try_from(line.len()).unwrap()) / 2)
-        .map(|_| ' ')
-        .collect::<String>();
+    let end = usize::from(width) - line.len();
+    let padding = (0..end / 2).map(|_| ' ').collect::<String>();
     contents.push_str(&padding);
     contents.push_str(line.trim_matches('\n'));
     contents.push_str(&padding);

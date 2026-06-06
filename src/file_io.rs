@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::{DEBUG, log, view::View};
 use anyhow::Result;
@@ -81,10 +81,12 @@ pub fn try_get_git_hash(path: Option<&PathBuf>) -> Option<String> {
         let path = if path.is_dir() {
             path
         } else {
-            path.parent().unwrap()
+            // NOTE
+            // I believe the only time this will fail is in the root directory
+            path.parent().unwrap_or_else(|| Path::new("/"))
         }
         .to_str()
-        .unwrap();
+        .unwrap_or("");
 
         let git_stem = if path.is_empty() {
             String::from(".git")
@@ -94,9 +96,9 @@ pub fn try_get_git_hash(path: Option<&PathBuf>) -> Option<String> {
 
         let head_path = format!("{git_stem}/HEAD");
 
-        if let Ok(head_str) = std::fs::read_to_string(head_path).map(|s| s.trim().to_string()) {
-            let head = head_str.split(' ').nth(1).unwrap();
-
+        if let Ok(head_str) = std::fs::read_to_string(head_path).map(|s| s.trim().to_string())
+            && let Some(head) = head_str.split(' ').nth(1)
+        {
             let ref_path = format!("{git_stem}/{head}");
             git_hash = std::fs::read_to_string(ref_path)
                 .ok()

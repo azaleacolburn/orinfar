@@ -13,8 +13,9 @@ impl StatusBar {
         }
     }
 
+    /// Returns 0 if `self.idx` > `u16::MAX`
     pub fn idx(&self) -> u16 {
-        u16::try_from(self.idx).unwrap()
+        u16::try_from(self.idx).unwrap_or(0)
     }
 
     pub fn buffer(&self) -> String {

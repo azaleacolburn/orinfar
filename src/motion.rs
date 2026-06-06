@@ -253,7 +253,8 @@ impl Buffer {
                 return;
             }
 
-            self.cursor = usize::try_from(i32::try_from(self.cursor).unwrap() + direction).unwrap();
+            let cursor = try_into_or_return!(i32, self.cursor);
+            self.cursor = try_into_or_return!(usize, cursor + direction);
             c = self.get_curr_char();
 
             if c == start_character {
