@@ -25,6 +25,8 @@ mod program_init;
 mod program_loop;
 mod register;
 mod status_bar;
+#[cfg(test)]
+mod tests;
 mod text_object;
 mod tutorial;
 mod undo;
