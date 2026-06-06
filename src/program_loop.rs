@@ -107,7 +107,7 @@ pub fn program_loop<'a>(
                     // NOTE
                     // Iterates two separate times because we want the insertation batched and
                     // the traversal to happen after
-                    buffer.insert_char_n_times(' ', 4);
+                    buffer.insert_n_times(' ', 4);
                     (0..4).for_each(|_| {
                         buffer.next_char();
                     });

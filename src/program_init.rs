@@ -4,8 +4,8 @@ use crate::{
     buffer::Buffer,
     cli::Cli,
     commands::{
-        Command as Cmd, append, cut, first_row, insert, insert_new_line, insert_new_line_above,
-        last_row, paste, replace, set_curr_register, undo,
+        Command as Cmd, append, cut, first_row, indent, insert, insert_new_line,
+        insert_new_line_above, last_row, paste, replace, set_curr_register, undo, unindent,
     },
     global_state::GlobalState,
     logging::{setup_logging_and_data, write_data},
@@ -67,6 +67,8 @@ pub fn start_program() -> Result<()> {
         Cmd::new("u", undo),
         Cmd::new("p", paste),
         Cmd::new("\"", set_curr_register),
+        Cmd::new(">", indent),
+        Cmd::new("<", unindent),
     ];
 
     let operators: &[Operator] = &[

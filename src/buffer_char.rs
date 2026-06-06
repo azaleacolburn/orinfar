@@ -32,11 +32,17 @@ impl Buffer {
     }
 
     // Inserts a character at the current position
-    pub fn insert_char(&mut self, c: char) {
+    pub fn insert_char_at(&mut self, c: char, cursor: usize) {
         if c == '\n' {
             self.update_list_add_current();
         }
-        self.rope.insert_char(self.cursor, c);
+        self.rope.insert_char(cursor, c);
+        self.update_list_use_current_line();
+    }
+
+    // Inserts a character at the current position
+    pub fn insert_char(&mut self, c: char) {
+        self.insert_char_at(c, self.cursor);
     }
 
     /// Inserts a newline at the current position, then adds spaces to the new line until the last
@@ -56,7 +62,7 @@ impl Buffer {
         self.rope.insert_char(self.cursor, '\n');
         self.set_cursor(self.cursor + 1);
 
-        self.insert_char_n_times(' ', first_col);
+        self.insert_n_times(' ', first_col);
         self.set_cursor(self.cursor + first_col);
 
         once('\n')
@@ -64,11 +70,15 @@ impl Buffer {
             .collect::<String>()
     }
 
-    pub fn insert_char_n_times(&mut self, c: char, n: usize) {
+    pub fn insert_n_times_at(&mut self, c: char, n: usize, cursor: usize) {
         if c == '\n' {
             (0..n).for_each(|_| self.update_list_add_current());
         }
-        (0..n).for_each(|_| self.insert_char(c));
+        (0..n).for_each(|_| self.insert_char_at(c, cursor));
+    }
+
+    pub fn insert_n_times(&mut self, c: char, n: usize) {
+        self.insert_n_times_at(c, n, self.cursor);
     }
 
     pub fn get_curr_char(&self) -> char {

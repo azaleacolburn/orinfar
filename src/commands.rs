@@ -221,3 +221,46 @@ pub fn first_row(
 ) {
     buffer.set_row(0);
 }
+
+pub fn indent(
+    buffer: &mut Buffer,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+    undo_tree: &mut UndoTree,
+) {
+    // Indenting an empty line just seems weird
+    if buffer.is_empty_line() {
+        return;
+    }
+
+    let start_of_line = buffer.get_start_of_line();
+
+    buffer.insert_n_times_at(' ', 4, start_of_line);
+
+    let action = Action::insert(start_of_line, &"    ");
+    undo_tree.new_action(action);
+}
+
+pub fn unindent(
+    buffer: &mut Buffer,
+    _register_handler: &mut RegisterHandler,
+    _mode: &mut Mode,
+    undo_tree: &mut UndoTree,
+) {
+    if buffer.get_curr_line().len_chars() < 4 {
+        return;
+    }
+
+    let start_of_line = buffer.get_start_of_line();
+    let maybe_tab = buffer.rope.slice(start_of_line..start_of_line + 4).as_str();
+
+    if let Some("    ") = maybe_tab {
+        buffer.rope.remove(start_of_line..start_of_line + 4);
+        buffer.update_list_use_current_line();
+
+        let action = Action::delete(start_of_line, &"    ");
+        undo_tree.new_action(action);
+
+        buffer.clamp_cursor();
+    }
+}
