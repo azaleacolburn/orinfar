@@ -74,7 +74,7 @@ pub fn last_char(str: &str) -> char {
     str.chars().last().unwrap_or('\0')
 }
 
-pub const fn count_line(str: &str) -> u16 {
+pub const fn count_lines(str: &str) -> u16 {
     let bytes = str.as_bytes();
     let mut i = 0;
     let mut len_lines = 0;

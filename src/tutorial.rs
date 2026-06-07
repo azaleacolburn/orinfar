@@ -1,5 +1,5 @@
 use crate::{
-    utility::{count_line, count_longest_line},
+    utility::{count_lines, count_longest_line},
     view_box::ViewBox,
 };
 use ropey::Rope;
@@ -15,7 +15,7 @@ If you have any bugs to report, features to suggest, documentation updates, or j
     please check out our [GITHUB REPOSITORY](https://github.com/azaleacolburn/orinfar)
 ";
 
-const WELCOME_HEIGHT: u16 = count_line(WELCOME_TEXT);
+const WELCOME_HEIGHT: u16 = count_lines(WELCOME_TEXT);
 const WELCOME_WIDTH: u16 = count_longest_line(WELCOME_TEXT);
 
 impl ViewBox {
