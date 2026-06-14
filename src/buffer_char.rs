@@ -232,27 +232,18 @@ impl Buffer {
         undo_tree: &mut UndoTree,
         undoing: bool,
     ) {
-        let new_len = unwrap_or_return!(i32::try_from(new.len()).ok());
-        let original_len = unwrap_or_return!(i32::try_from(original.len()).ok());
-        let mut offset = new_len - original_len;
+        let mut offset = new.len() - original.len();
 
-        let to_i32s =
-            |(i, end_idx): (usize, &usize)| match (i32::try_from(i), i32::try_from(*end_idx)) {
-                (Ok(i), Ok(idx)) => Some((i, idx)),
-                _ => None,
-            };
-
-        for (i, end_idx) in idxs_of_substitution.iter().enumerate().filter_map(to_i32s) {
+        for (i, end_idx) in idxs_of_substitution.iter().enumerate() {
             offset *= i;
 
-            let raw_start_idx = end_idx - original_len + offset;
-            let new_start_idx = unwrap_or_return!(usize::try_from(raw_start_idx).ok());
-            let new_end_idx = unwrap_or_return!(usize::try_from(end_idx + offset).ok());
+            let new_start_idx = end_idx - original.len() + offset;
+            let new_end_idx = end_idx + offset;
 
             self.rope.remove(new_start_idx..new_end_idx);
             self.rope.insert(new_start_idx, new);
 
-            if !undoing {
+            if undoing {
                 let action = Action::replace(vec![new_start_idx + new.len()], &original, &new);
                 undo_tree.new_action_merge(action);
             }

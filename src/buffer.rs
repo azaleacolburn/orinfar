@@ -1,7 +1,10 @@
 use ropey::Rope;
 use std::fmt::Display;
 
-// The cursor is always guaranteed to be within the bounds of the buffer
+/// An object representing an underlying text buffer, usually held by a `ViewBox`.
+/// Any actions invalid taken on the buffer will result in an early return from the responsible
+/// `Buffer` function, rather an error be returned or the program crash.
+/// The cursor (`self.cursor`) is always guaranteed to be within the bounds of the text buffer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Buffer {
     pub has_changed: bool,
