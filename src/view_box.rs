@@ -1,5 +1,6 @@
 use crate::{
     buffer::Buffer,
+    file_io::try_get_git_hash,
     highlight_c::{HLBlock, HLEnd},
 };
 use anyhow::Result;
@@ -18,7 +19,7 @@ use tree_sitter::{Parser, Tree};
 pub struct ViewBox {
     // Components inherant to the view box
     pub buffer: Buffer,
-    pub path: Option<PathBuf>,
+    path: Option<PathBuf>,
     pub git_hash: Option<String>,
 
     pub parser: Option<Parser>,
@@ -417,5 +418,28 @@ impl ViewBox {
                 self.width,
             );
         (absolute_col, absolute_row)
+    }
+
+    pub fn set_path(&mut self, path: Option<PathBuf>) {
+        if let Some(path) = &path
+            && let Some(ext) = path.extension()
+            && (ext == "c" || ext == "h")
+        {
+            let mut parser = Parser::new();
+            parser
+                .set_language(&tree_sitter_c::LANGUAGE.into())
+                .expect("Failed to load C parser");
+
+            self.parser = Some(parser);
+        }
+
+        let git_hash = try_get_git_hash(path.as_ref());
+        self.git_hash = git_hash;
+
+        self.path = path;
+    }
+
+    pub fn path(&self) -> Option<&PathBuf> {
+        self.path.as_ref()
     }
 }

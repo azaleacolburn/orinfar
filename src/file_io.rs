@@ -1,34 +1,41 @@
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use crate::{DEBUG, log, view::View};
 use anyhow::Result;
 use ropey::Rope;
-use tree_sitter::Parser;
 
 impl View {
     pub fn load_file(&mut self) -> Result<()> {
-        if let Some(path) = self.get_path().cloned() {
-            let buffer = self.get_buffer_mut();
-            if !std::fs::exists(&path)? {
-                std::fs::write(path, buffer.rope.to_string())?;
-                return Ok(());
-            }
+        let Some(path) = self.get_path().cloned() else {
+            return Ok(());
+        };
 
-            let contents = std::fs::read_to_string(path)?;
-            buffer.rope = Rope::from(contents);
-
-            buffer.lines_for_updating = (0..buffer.len()).map(|_| true).collect::<Vec<bool>>();
-            buffer.cursor = usize::min(buffer.cursor, buffer.rope.len_chars());
-            buffer.has_changed = true;
+        let buffer = self.get_buffer_mut();
+        if !fs::exists(&path)? {
+            fs::write(path, buffer.rope.to_string())?;
+            return Ok(());
         }
+
+        let contents = fs::read_to_string(path)?;
+        buffer.rope = Rope::from(contents);
+
+        buffer.lines_for_updating = (0..buffer.len()).map(|_| true).collect::<Vec<bool>>();
+        buffer.cursor = usize::min(buffer.cursor, buffer.rope.len_chars());
+        buffer.has_changed = true;
 
         Ok(())
     }
 
     pub fn write(&self) -> Result<()> {
-        let buffer = self.get_buffer().to_string();
         match self.get_path() {
-            Some(path) => std::fs::write(path, buffer)?,
+            Some(path) => {
+                let buffer = self.get_buffer().to_string();
+                fs::write(path, buffer)?
+            }
+
             None => log!("WARNING: Cannot Write Unattached Buffer"),
         }
 
@@ -43,28 +50,13 @@ impl View {
     pub fn set_path(&mut self, path: Option<PathBuf>) {
         let view_box = &mut self.boxes[self.cursor];
 
-        if let Some(path) = &path
-            && let Some(ext) = path.extension()
-            && (ext == "c" || ext == "h")
-        {
-            let mut parser = Parser::new();
-            parser
-                .set_language(&tree_sitter_c::LANGUAGE.into())
-                .expect("Failed to load C parser");
-
-            view_box.parser = Some(parser);
-        }
-
-        let git_hash = try_get_git_hash(path.as_ref());
-        view_box.git_hash = git_hash;
-
-        view_box.path = path;
+        view_box.set_path(path)
     }
 
     pub fn get_path(&self) -> Option<&PathBuf> {
         let view_box = &self.boxes[self.cursor];
 
-        view_box.path.as_ref()
+        view_box.path()
     }
 
     pub fn get_git_hash(&self) -> Option<&str> {

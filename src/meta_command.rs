@@ -156,14 +156,14 @@ pub fn attach_buffer(arg: &str, view_box: &mut ViewBox) {
 
     // If we already have a file, we don't want to write the contents
     // to a new empty file
-    if let Some(_path) = &view_box.path {
+    if let Some(_path) = &view_box.path() {
         view_box.buffer.rope = Rope::new();
         view_box.buffer.cursor = 0;
         view_box.buffer.lines_for_updating = Vec::new();
         view_box.buffer.has_changed = true;
     }
-    view_box.path = Some(path_buf.clone());
-    view_box.git_hash = try_get_git_hash(view_box.path.as_ref());
+    view_box.set_path(Some(path_buf.clone()));
+    view_box.git_hash = try_get_git_hash(view_box.path());
 
     if let Some(ext) = path_buf.extension()
         && (ext == "c" || ext == "h")
