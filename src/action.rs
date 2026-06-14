@@ -19,7 +19,7 @@ pub fn match_action<'a>(
     view: &mut View,
 
     commands: &[Command],
-    operators: &'a [Operator<'a>],
+    operators: &'a [Operator],
     motions: &[Motion],
     text_objects: &[TextObject],
     view_commands: &[ViewCommand],
@@ -37,7 +37,7 @@ pub fn match_action<'a>(
             global_state.text_object_type = Some(TextObjectType::Inside);
         } else if last == 'a' {
             global_state.text_object_type = Some(TextObjectType::Around);
-        } else if last_char(operation.name) == last {
+        } else if operation.name == last {
             (0..global_state.count).for_each(|_| {
                 operation.entire_line(
                     buffer,
@@ -105,10 +105,7 @@ pub fn match_action<'a>(
         });
 
         reset(global_state, last_chained, last_count);
-    } else if let Some(operator) = operators
-        .iter()
-        .find(|operator| last_char(operator.name) == last)
-    {
+    } else if let Some(operator) = operators.iter().find(|operator| operator.name == last) {
         global_state.next_operation = Some(operator);
     }
 }
@@ -130,7 +127,7 @@ pub fn enumerate_normal_chars(
     view_commands: &[ViewCommand],
 ) -> Vec<char> {
     let command_chars = commands.iter().flat_map(|cmd| cmd.name.chars());
-    let operator_chars = operators.iter().flat_map(|cmd| cmd.name.chars());
+    let operator_chars = operators.iter().map(|cmd| cmd.name);
     let motion_chars = motions.iter().map(|cmd| cmd.name);
     let text_object_chars = text_objects.iter().flat_map(|cmd| cmd.name.chars());
     let view_command_chars = view_commands.iter().flat_map(|cmd| cmd.name.chars());

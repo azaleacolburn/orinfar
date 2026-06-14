@@ -4,7 +4,7 @@ use crate::{
 };
 
 pub struct GlobalState<'a> {
-    pub next_operation: Option<&'a Operator<'a>>,
+    pub next_operation: Option<&'a Operator>,
     pub text_object_type: Option<TextObjectType>,
 
     pub mode: Mode,

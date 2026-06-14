@@ -72,9 +72,9 @@ pub fn start_program() -> Result<()> {
     ];
 
     let operators: &[Operator] = &[
-        Operator::new("d", delete),
-        Operator::new("y", yank),
-        Operator::new("t", change),
+        Operator::new('d', delete),
+        Operator::new('y', yank),
+        Operator::new('t', change),
     ];
 
     let motions: &[Motion] = &[

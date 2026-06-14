@@ -15,7 +15,7 @@ use crossterm::event::{Event, KeyCode, read};
 #[allow(clippy::too_many_lines)]
 pub fn program_loop<'a>(
     commands: &[Cmd],
-    operators: &'a [Operator<'a>],
+    operators: &'a [Operator],
     motions: &[Motion],
     text_objects: &[TextObject],
     view_commands: &[ViewCommand],

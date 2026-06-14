@@ -7,8 +7,8 @@ use crate::{
     undo::{Action, UndoTree},
 };
 
-pub struct Operator<'a> {
-    pub name: &'a str,
+pub struct Operator {
+    pub name: char,
     command: fn(
         end: usize,
         buffer: &mut Buffer,
@@ -18,9 +18,9 @@ pub struct Operator<'a> {
     ),
 }
 
-impl<'a> Operator<'a> {
+impl Operator {
     pub fn new(
-        name: &'a str,
+        name: char,
         command: fn(
             end: usize,
             buffer: &mut Buffer,
