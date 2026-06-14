@@ -8,13 +8,18 @@ use ropey::Rope;
 use std::path::PathBuf;
 use tree_sitter::Parser;
 
+// TODO
+// Eventually match from a list of `MatchCommand`s to make them easier to manage
+// (this is fine for now though)
+
 /// # Returns
 /// A boolean indicating whether to break from the main program loop
 pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Result<bool> {
-    let (command, arg) = global_state.status_bar[1..]
+    let (command, arg): (&[char], &[char]) = global_state.status_bar[1..]
         .split_once_a(|c| *c == ' ' || *c == '/')
         .unwrap_or_else(|| (&global_state.status_bar[1..], &[]));
     let (command, arg): (String, String) = (command.iter().collect(), arg.iter().collect());
+
     match command.as_str() {
         "write" | "w" => view.write()?,
         "quit" | "q" => return Ok(true),
@@ -23,7 +28,7 @@ pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Re
             return Ok(true);
         }
 
-        "undo" | "u" => view.set_path(None),
+        "unattach" | "u" => view.set_path(None),
 
         "load" | "l" => {
             view.load_file()?;
