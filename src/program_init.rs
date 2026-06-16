@@ -39,6 +39,8 @@ pub fn start_program() -> Result<()> {
 
     let data = setup_logging_and_data()?;
 
+    let languages = 
+
     let view_commands: &[ViewCommand] = &[
         ViewCommand::new("zz", center_viewbox_on_cursor),
         // View Box related

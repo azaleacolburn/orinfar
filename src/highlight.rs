@@ -1,7 +1,6 @@
+use crate::view_box::ViewBox;
 use crossterm::style::Color;
 use tree_sitter::{Node, Point, Tree};
-
-use crate::{utility::is_symbol, view_box::ViewBox};
 
 impl ViewBox {
     pub fn parse(&mut self) -> Option<&Tree> {
@@ -91,7 +90,11 @@ impl<'a> HLBlock {
     }
 }
 
-fn hl_group_from_node(node: Node, hl_blocks: &mut Vec<Vec<HLBlock>>) {
+fn hl_group_from_node(
+    node: Node,
+    hl_blocks: &mut Vec<Vec<HLBlock>>,
+    node_type_to_color: fn(&str, &str) -> Option<Color>,
+) {
     let node_type = node.kind();
 
     let Some(parent) = node.parent() else { return };
@@ -182,13 +185,16 @@ fn add_block_to_row(
     hl_blocks[start.row].push(block);
 }
 
-fn highlight_tree(tree: &Tree) -> Vec<Vec<HLBlock>> {
+fn highlight_tree(
+    tree: &Tree,
+    node_type_to_color: fn(&str, &str) -> Option<Color>,
+) -> Vec<Vec<HLBlock>> {
     let mut hl_blocks: Vec<Vec<HLBlock>> = Vec::new();
     let mut cursor = tree.walk();
 
     // Depth-first search with a cursor instead of recursion
     'TREE_WALK: loop {
-        hl_group_from_node(cursor.node(), &mut hl_blocks);
+        hl_group_from_node(cursor.node(), &mut hl_blocks, node_type_to_color);
 
         if cursor.goto_first_child() {
             continue;
@@ -214,114 +220,10 @@ fn highlight_tree(tree: &Tree) -> Vec<Vec<HLBlock>> {
     hl_blocks
 }
 
-const KEYWORDS: &[&str] = &[
-    "alignas",
-    "alignof",
-    "auto",
-    "bool",
-    "break",
-    "case",
-    "char",
-    "const",
-    "constexpr",
-    "continue",
-    "default",
-    "do",
-    "double",
-    "else",
-    "enum",
-    "extern",
-    "false",
-    "float",
-    "for",
-    "goto",
-    "if",
-    "inline",
-    "int",
-    "long",
-    "nullptr",
-    "register",
-    "restrict",
-    "return",
-    "short",
-    "signed",
-    "sizeof",
-    "static",
-    "static_assert",
-    "struct",
-    "switch",
-    "thread_local",
-    "true",
-    "typedef",
-    "typeof ",
-    "typeof_unqual",
-    "union",
-    "unsigned",
-    "void",
-    "volatile",
-    "while",
-    // "_Alignof",
-    // "_Atomic",
-    // "_BitInt",
-    // "_Bool",
-    // "_Complex",
-    // "_Decimal128",
-    // "_Decimal32",
-    // "_Decimal64",
-    // "_Generic",
-    // "_Imaginary",
-    // "_Noreturn",
-    // "_Static_assert",
-    // "_Thread_local",
-];
-
-fn is_c_keyword(str: &str) -> bool {
-    KEYWORDS.contains(&str)
-}
-
-const OPERATORS: &[&str] = &[
-    "+", "-", "/", "*", "++", "--", "+=", "-=", "<", ">", "||", "&&", "<=", ">=", "||=", "&&=",
-    "!", "!=", "==", "=", "&", "|", "^", "~", "<<", ">>", "|=", "&=", "~=", "^=", "->",
-];
-
-fn is_operator(str: &str) -> bool {
-    OPERATORS.contains(&str)
-}
-
+// NOTE
 // My special orange since my colorscheme (everforest) isn't actually base16 compliant
-const ORANGE: Color = Color::Rgb {
+pub const ORANGE: Color = Color::Rgb {
     r: 230,
     g: 152,
     b: 117,
 };
-
-fn node_type_to_color(node_type: &str, parent_type: &str) -> Option<Color> {
-    let color = match node_type {
-        "#include" | "#define" | "#ifdef" | "#ifndef" | "#endif" => Color::DarkRed,
-
-        "string_content" | "character" | "\"" | "\'" | "system_lib_string" => Color::Green,
-        "identifier"
-            if parent_type == "function_declarator" || parent_type == "call_expression" =>
-        {
-            Color::Green
-        }
-
-        "identifier" | "preproc_arg" => Color::Grey,
-        "field_identifier" => Color::Blue,
-
-        "primitive_type" => Color::Yellow,
-        "type_identifier" => Color::DarkMagenta,
-
-        "comment" | ";" | "." | "," => Color::DarkGrey,
-        // Common macros
-        // In the future a way to automatically determine
-        // which strings are macros would be really cool
-        "number_literal" | "true" | "false" | "NULL" => Color::Magenta,
-        str if is_operator(str) => ORANGE,
-        str if str.chars().all(is_symbol) => Color::Grey,
-        str if is_c_keyword(str) => Color::Red,
-        _ => return None,
-    };
-
-    Some(color)
-}

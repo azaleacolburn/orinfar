@@ -1,7 +1,8 @@
 use crate::{
     buffer::Buffer,
     file_io::try_get_git_hash,
-    highlight_c::{HLBlock, HLEnd},
+    highlight::{HLBlock, HLEnd},
+    language::OrinLanguage,
 };
 use anyhow::Result;
 use crossterm::{
@@ -16,13 +17,13 @@ use std::{
 };
 use tree_sitter::{Parser, Tree};
 
-pub struct ViewBox {
+pub struct ViewBox<'a> {
     // Components inherant to the view box
     pub buffer: Buffer,
     path: Option<PathBuf>,
     pub git_hash: Option<String>,
 
-    pub parser: Option<Parser>,
+    pub parser: Option<(Parser, OrinLanguage<'a>)>,
     pub parse_tree: Option<Tree>,
 
     // The x and y corrdinates of the upper right hand corner of where the buffer will be displayed
@@ -39,7 +40,7 @@ pub struct ViewBox {
     pub width: u16,
 }
 
-impl ViewBox {
+impl<'a> ViewBox<'a> {
     /// # Arguments
     /// - cols: the number of cols this view box has
     /// - rows: the number of rows this view box has
@@ -157,9 +158,9 @@ impl ViewBox {
     }
 
     /// At this point, the highlight groups should have been cropped to fit within the line
-    fn print_line_hl<'a>(
+    fn print_line_hl<'b>(
         &self,
-        lines: impl Iterator<Item = (usize, (RopeSlice<'a>, &'a bool))>,
+        lines: impl Iterator<Item = (usize, (RopeSlice<'b>, &'b bool))>,
         hl_lines: Vec<Vec<HLBlock>>,
         stdout: &mut StdoutLock,
 
@@ -266,9 +267,9 @@ impl ViewBox {
             .expect("Crossterm reset command failed");
     }
 
-    fn print_lines_colorless<'a>(
+    fn print_lines_colorless<'b>(
         &self,
-        lines: impl Iterator<Item = (usize, (RopeSlice<'a>, &'a bool))>,
+        lines: impl Iterator<Item = (usize, (RopeSlice<'b>, &'b bool))>,
         stdout: &mut StdoutLock,
 
         padding_buffer: &mut String,
@@ -423,14 +424,15 @@ impl ViewBox {
     pub fn set_path(&mut self, path: Option<PathBuf>) {
         if let Some(path) = &path
             && let Some(ext) = path.extension()
-            && (ext == "c" || ext == "h")
+            && let Some(ext) = ext.to_str()
+            && let Some(language) = OrinLanguage::from_ext(ext)
         {
             let mut parser = Parser::new();
-            parser
-                .set_language(&tree_sitter_c::LANGUAGE.into())
-                .expect("Failed to load C parser");
 
-            self.parser = Some(parser);
+            parser
+                .set_language(&language.lang)
+                .expect("Failed to load C parser");
+            self.parser = Some((parser, language));
         }
 
         let git_hash = try_get_git_hash(path.as_ref());

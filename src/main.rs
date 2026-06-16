@@ -8,14 +8,17 @@ mod buffer;
 mod buffer_char;
 mod buffer_line;
 mod buffer_update;
+mod c;
 mod cli;
 mod commands;
 mod count;
 mod file_io;
 mod global_state;
-mod highlight_c;
+mod highlight;
 #[macro_use]
 mod logging;
+mod language;
+mod markdown;
 mod meta_command;
 mod mode;
 mod motion;
