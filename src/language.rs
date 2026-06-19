@@ -1,20 +1,20 @@
 use crate::{c::c_node_to_color, markdown::md_node_to_color};
 use crossterm::style::Color;
 
-pub struct OrinLanguage<'a> {
-    pub extensions: &'a [&'a str],
+pub struct OrinLanguage {
+    pub extensions: Vec<String>,
     pub highlight: fn(&str, &str) -> Option<Color>,
     pub lang: tree_sitter::Language,
 }
 
-impl<'a> OrinLanguage<'a> {
-    pub fn new(
+impl OrinLanguage {
+    pub fn new<'a>(
         extensions: &'a [&'a str],
         lang: tree_sitter::Language,
         highlight: fn(&str, &str) -> Option<Color>,
     ) -> Self {
         OrinLanguage {
-            extensions,
+            extensions: extensions.iter().map(|s| s.to_string()).collect(),
             lang,
             highlight,
         }

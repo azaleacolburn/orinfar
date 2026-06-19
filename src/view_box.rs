@@ -2,7 +2,7 @@ use crate::{
     buffer::Buffer,
     file_io::try_get_git_hash,
     highlight::{HLBlock, HLEnd},
-    language::OrinLanguage,
+    language::{self, OrinLanguage},
 };
 use anyhow::Result;
 use crossterm::{
@@ -17,13 +17,13 @@ use std::{
 };
 use tree_sitter::{Parser, Tree};
 
-pub struct ViewBox<'a> {
+pub struct ViewBox {
     // Components inherant to the view box
     pub buffer: Buffer,
     path: Option<PathBuf>,
     pub git_hash: Option<String>,
 
-    pub parser: Option<(Parser, OrinLanguage<'a>)>,
+    pub parser: Option<(Parser, OrinLanguage)>,
     pub parse_tree: Option<Tree>,
 
     // The x and y corrdinates of the upper right hand corner of where the buffer will be displayed
@@ -40,7 +40,7 @@ pub struct ViewBox<'a> {
     pub width: u16,
 }
 
-impl<'a> ViewBox<'a> {
+impl ViewBox {
     /// # Arguments
     /// - cols: the number of cols this view box has
     /// - rows: the number of rows this view box has
@@ -118,9 +118,12 @@ impl<'a> ViewBox<'a> {
         let maybe_len_lines = u16::try_from(lines.len()).ok();
 
         if let Some(_tree) = self.parse_tree.as_ref()
+            && let Some((_parser, language)) = self.parser.as_ref()
             && let Some(path) = self.path.as_ref()
             && let Some(ex) = path.extension()
-            && (ex == "c" || ex == "h")
+            && language
+                .extensions
+                .contains(&ex.to_str().unwrap().to_string())
         {
             self.print_line_hl(
                 lines,
@@ -435,9 +438,7 @@ impl<'a> ViewBox<'a> {
             self.parser = Some((parser, language));
         }
 
-        let git_hash = try_get_git_hash(path.as_ref());
-        self.git_hash = git_hash;
-
+        self.git_hash = try_get_git_hash(path.as_ref());
         self.path = path;
     }
 

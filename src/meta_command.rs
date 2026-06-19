@@ -1,12 +1,11 @@
 use crate::{
-    DEBUG, buffer::Buffer, file_io::try_get_git_hash, global_state::GlobalState, mode::Mode,
-    undo::UndoTree, utility::SplitOnce, view::View, view_box::ViewBox,
+    DEBUG, buffer::Buffer, global_state::GlobalState, mode::Mode, undo::UndoTree,
+    utility::SplitOnce, view::View, view_box::ViewBox,
     view_command::split_curr_view_box_horizontal,
 };
 use anyhow::Result;
 use ropey::Rope;
 use std::path::PathBuf;
-use tree_sitter::Parser;
 
 // TODO
 // Eventually match from a list of `MatchCommand`s to make them easier to manage
@@ -14,7 +13,7 @@ use tree_sitter::Parser;
 
 /// # Returns
 /// A boolean indicating whether to break from the main program loop
-pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Result<bool> {
+pub fn match_meta_command<'a>(global_state: &mut GlobalState, view: &'a mut View) -> Result<bool> {
     let (command, arg): (&[char], &[char]) = global_state.status_bar[1..]
         .split_once_a(|c| *c == ' ' || *c == '/')
         .unwrap_or_else(|| (&global_state.status_bar[1..], &[]));
@@ -162,17 +161,6 @@ pub fn attach_buffer(arg: &str, view_box: &mut ViewBox) {
         view_box.buffer.lines_for_updating = Vec::new();
         view_box.buffer.has_changed = true;
     }
+
     view_box.set_path(Some(path_buf.clone()));
-    view_box.git_hash = try_get_git_hash(view_box.path());
-
-    if let Some(ext) = path_buf.extension()
-        && (ext == "c" || ext == "h")
-    {
-        let mut parser = Parser::new();
-        parser
-            .set_language(&tree_sitter_c::LANGUAGE.into())
-            .expect("Failed to load C parser");
-
-        view_box.parser = Some(parser);
-    }
 }

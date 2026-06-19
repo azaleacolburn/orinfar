@@ -8,7 +8,8 @@ impl ViewBox {
             let source: Vec<u8> = self.buffer.rope.bytes().collect();
             // TODO
             // Edit the `Tree` and pass it to the `parse` function
-            self.parse_tree = self.parser.as_mut()?.parse(source, None);
+            let (parser, _language) = self.parser.as_mut()?;
+            self.parse_tree = parser.parse(source, None);
         }
 
         self.parse_tree.as_ref()
@@ -38,16 +39,20 @@ impl ViewBox {
     /// Returns a list of lines, each containing highlight blocks
     /// Returns an empty list if `self.parse_tree.is_none()`
     pub fn highlight(&self) -> Vec<Vec<HLBlock>> {
-        if let Some(tree) = &self.parse_tree {
-            let mut tree_hl_blocks = highlight_tree(tree);
+        let Some(tree) = &self.parse_tree else {
+            return vec![];
+        };
 
-            self.append_empty_lines(&mut tree_hl_blocks);
-            Self::fill_in_empty_lines(&mut tree_hl_blocks);
+        let Some((_parser, language)) = &self.parser else {
+            return vec![];
+        };
 
-            return tree_hl_blocks;
-        }
+        let mut tree_hl_blocks = highlight_tree(tree, language.highlight);
 
-        vec![]
+        self.append_empty_lines(&mut tree_hl_blocks);
+        Self::fill_in_empty_lines(&mut tree_hl_blocks);
+
+        tree_hl_blocks
     }
 }
 
@@ -157,6 +162,8 @@ fn add_block_to_row(
     hl_blocks: &mut Vec<Vec<HLBlock>>,
     to_end_of_line: bool,
 ) {
+    assert_eq!(start.row, end.row);
+
     if start.row + 1 >= hl_blocks.len() {
         for _ in hl_blocks.len()..=start.row {
             hl_blocks.push(Vec::new());
@@ -172,13 +179,15 @@ fn add_block_to_row(
         start.column = 0;
     }
 
+    let end = if to_end_of_line {
+        HLEnd::EndOfLine
+    } else {
+        HLEnd::Bounded(end.column)
+    };
+
     let block = HLBlock {
         start: start.column,
-        end: if to_end_of_line {
-            HLEnd::EndOfLine
-        } else {
-            HLEnd::Bounded(end.column)
-        },
+        end,
         fg_color: color,
         bg_color: Color::Reset,
     };
