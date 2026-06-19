@@ -80,6 +80,13 @@ impl<'a> HLBlock {
         }
     }
 
+    pub fn get_end(&self) -> Option<usize> {
+        match self.end {
+            HLEnd::EndOfLine => None,
+            HLEnd::Bounded(end) => Some(end),
+        }
+    }
+
     pub fn get_end_unchecked(&self) -> usize {
         match self.end {
             HLEnd::EndOfLine => panic!("Called unchecked function on wrong variant"),
@@ -155,6 +162,7 @@ fn hl_group_from_node(
 }
 
 /// Assumes that `start.row == end.row`
+/// The length of the row not including the new  
 fn add_block_to_row(
     mut start: Point,
     end: Point,
@@ -170,8 +178,14 @@ fn add_block_to_row(
         }
     }
 
-    // Expand blocks backwards to consme un-highlighted sections
+    // Expand blocks backwards to consume un-highlighted sections
     if let Some(last_hl) = hl_blocks[start.row].last() {
+        // NOTE
+        // You cannot add a hl block to a row where the last hl block goes to the end
+        // start.column = match last_hl.end {
+        //     HLEnd::Bounded(n) => n,
+        //     HLEnd::EndOfLine => {last_hl.end = HLEnd::Bounded(line_len);},
+        // }
         start.column = last_hl.get_end_unchecked();
     } else if end.column != 0 && hl_blocks[start.row].is_empty() {
         // Expand block backwards if there's whitespace or other non-parsable content at the
