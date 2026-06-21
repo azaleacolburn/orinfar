@@ -1,6 +1,4 @@
-use std::any::Any;
-
-use crate::{DEBUG, buffer::Buffer, log, logn, view_command::move_up_one_view_box};
+use crate::{DEBUG, buffer::Buffer, log, logn};
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, read};
 use tree_sitter::{Tree, TreeCursor};
@@ -136,10 +134,10 @@ pub fn traverse_tree<T: Default>(
         }
 
         'BACKTRACKING: loop {
-            if !cursor.goto_parent() {
-                break 'TREE_WALK;
-            } else {
+            if cursor.goto_parent() {
                 move_up_hook(&mut state);
+            } else {
+                break 'TREE_WALK;
             }
 
             if cursor.goto_next_sibling() {
@@ -151,6 +149,7 @@ pub fn traverse_tree<T: Default>(
     state
 }
 
+#[allow(dead_code)]
 pub fn print_tree(tree: &Tree) {
     let node_action = |cursor: &TreeCursor<'_>, depth: &mut usize| {
         let node = cursor.node();

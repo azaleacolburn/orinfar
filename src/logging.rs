@@ -66,7 +66,7 @@ pub fn log_no_newline(contents: &impl ToString) {
         .expect("unable to open file");
 
     // append data to the file
-    file.write_all(format!("{}", contents.to_string()).as_bytes())
+    file.write_all(contents.to_string().as_bytes())
         .expect("unable to append data");
 }
 

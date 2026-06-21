@@ -157,28 +157,25 @@ pub fn iterate_range(
 
     let initial_register_contents = register_handler.get_reg().to_string();
 
-    match count {
-        1.. => {
-            if will_delete {
-                (0..=count).for_each(|_| iter_callback(register_handler, buffer));
-            } else {
-                (0..=count).for_each(|_| {
-                    iter_callback(register_handler, buffer);
-                    if buffer.cursor + 1 < buffer.rope.len_chars() {
-                        buffer.next_char();
-                    }
-                });
-            }
-        }
-        ..=0 => {
-            (0..=count.abs()).for_each(|_| {
+    if let 1.. = count {
+        if will_delete {
+            (0..=count).for_each(|_| iter_callback(register_handler, buffer));
+        } else {
+            (0..=count).for_each(|_| {
                 iter_callback(register_handler, buffer);
+                if buffer.cursor + 1 < buffer.rope.len_chars() {
+                    buffer.next_char();
+                }
             });
+        }
+    } else {
+        (0..=count.abs()).for_each(|_| {
+            iter_callback(register_handler, buffer);
+        });
 
-            let final_register_contents = register_handler.get_reg();
-            if initial_register_contents != final_register_contents {
-                register_handler.set_reg(final_register_contents.chars().rev().collect::<String>());
-            }
+        let final_register_contents = register_handler.get_reg();
+        if initial_register_contents != final_register_contents {
+            register_handler.set_reg(final_register_contents.chars().rev().collect::<String>());
         }
     }
 

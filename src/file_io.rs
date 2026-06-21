@@ -33,7 +33,7 @@ impl View {
         match self.get_path() {
             Some(path) => {
                 let buffer = self.get_buffer().to_string();
-                fs::write(path, buffer)?
+                fs::write(path, buffer)?;
             }
 
             None => log!("WARNING: Cannot Write Unattached Buffer"),
@@ -50,7 +50,7 @@ impl View {
     pub fn set_path(&mut self, path: Option<PathBuf>) {
         let view_box = &mut self.boxes[self.cursor];
 
-        view_box.set_path(path)
+        view_box.set_path(path);
     }
 
     pub fn get_path(&self) -> Option<&PathBuf> {

@@ -13,8 +13,8 @@ impl OrinLanguage {
         lang: tree_sitter::Language,
         highlight: fn(&str, &str, &str) -> Option<Color>,
     ) -> Self {
-        OrinLanguage {
-            extensions: extensions.iter().map(|s| s.to_string()).collect(),
+        Self {
+            extensions: extensions.iter().map(|s| (*s).to_string()).collect(),
             lang,
             highlight,
         }

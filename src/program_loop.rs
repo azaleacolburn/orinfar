@@ -36,7 +36,7 @@ pub fn program_loop<'a>(
 
         match (event.code, global_state.mode.clone()) {
             (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
-                update_count(c, &mut global_state.count)
+                update_count(c, &mut global_state.count);
             }
 
             (KeyCode::Char(':'), Mode::Normal) => {

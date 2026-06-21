@@ -345,7 +345,7 @@ impl Buffer {
         target: char,
         from: usize,
         stop_position: usize,
-        traverse: impl Fn(&mut usize) -> (),
+        traverse: impl Fn(&mut usize),
     ) -> Option<usize> {
         let mut cursor = from;
         if let Some(c) = self.rope.get_char(cursor)
@@ -367,7 +367,7 @@ impl Buffer {
     // Find next
     fn find_next_gen(&self, target: char, from: usize, stop_position: usize) -> Option<usize> {
         self.find_gen(target, from, stop_position, |cursor: &mut usize| {
-            *cursor += 1
+            *cursor += 1;
         })
     }
 
@@ -386,7 +386,7 @@ impl Buffer {
     // Find Prev
     fn find_prev_gen(&self, target: char, from: usize, stop_position: usize) -> Option<usize> {
         self.find_gen(target, from, stop_position, |cursor: &mut usize| {
-            *cursor -= 1
+            *cursor -= 1;
         })
     }
 

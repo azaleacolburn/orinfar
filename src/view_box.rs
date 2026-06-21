@@ -2,7 +2,7 @@ use crate::{
     buffer::Buffer,
     file_io::try_get_git_hash,
     highlight::{HLBlock, HLEnd},
-    language::{self, OrinLanguage},
+    language::OrinLanguage,
 };
 use anyhow::Result;
 use crossterm::{
@@ -121,9 +121,8 @@ impl ViewBox {
             && let Some((_parser, language)) = self.parser.as_ref()
             && let Some(path) = self.path.as_ref()
             && let Some(ex) = path.extension()
-            && language
-                .extensions
-                .contains(&ex.to_str().unwrap().to_string())
+            && let Some(ex) = ex.to_str()
+            && language.extensions.contains(&ex.to_string())
         {
             self.print_line_hl(
                 lines,
@@ -442,7 +441,7 @@ impl ViewBox {
         self.path = path;
     }
 
-    pub fn path(&self) -> Option<&PathBuf> {
+    pub const fn path(&self) -> Option<&PathBuf> {
         self.path.as_ref()
     }
 }

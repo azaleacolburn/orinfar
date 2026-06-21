@@ -255,7 +255,7 @@ pub fn unindent(
     let start_of_line = buffer.get_start_of_line();
     let maybe_tab = buffer.rope.slice(start_of_line..start_of_line + 4).as_str();
 
-    if let Some("    ") = maybe_tab {
+    if maybe_tab == Some("    ") {
         buffer.rope.remove(start_of_line..start_of_line + 4);
         // Needed because we're using a raw rope method
         buffer.update_list_use_current_line();

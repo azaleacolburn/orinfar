@@ -13,7 +13,7 @@ use std::path::PathBuf;
 
 /// # Returns
 /// A boolean indicating whether to break from the main program loop
-pub fn match_meta_command<'a>(global_state: &mut GlobalState, view: &'a mut View) -> Result<bool> {
+pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Result<bool> {
     let (command, arg): (&[char], &[char]) = global_state.status_bar[1..]
         .split_once_a(|c| *c == ' ' || *c == '/')
         .unwrap_or_else(|| (&global_state.status_bar[1..], &[]));
@@ -162,5 +162,5 @@ pub fn attach_buffer(arg: &str, view_box: &mut ViewBox) {
         view_box.buffer.has_changed = true;
     }
 
-    view_box.set_path(Some(path_buf.clone()));
+    view_box.set_path(Some(path_buf));
 }

@@ -1,7 +1,4 @@
-use crate::{
-    utility::{print_tree, traverse_tree},
-    view_box::ViewBox,
-};
+use crate::{utility::traverse_tree, view_box::ViewBox};
 use crossterm::style::Color;
 use tree_sitter::{Node, Point, Tree, TreeCursor};
 
@@ -83,17 +80,10 @@ impl<'a> HLBlock {
         }
     }
 
-    pub fn get_end(&self) -> Option<usize> {
+    pub const fn get_end(&self) -> Option<usize> {
         match self.end {
             HLEnd::EndOfLine => None,
             HLEnd::Bounded(end) => Some(end),
-        }
-    }
-
-    pub fn get_end_unchecked(&self) -> usize {
-        match self.end {
-            HLEnd::EndOfLine => panic!("Called unchecked function on wrong variant"),
-            HLEnd::Bounded(end) => end,
         }
     }
 
@@ -111,10 +101,7 @@ fn hl_group_from_node(
     node_type_to_color: fn(&str, &str, &str) -> Option<Color>,
 ) {
     let Some(parent) = node.parent() else { return };
-    let last_sibiling_type = match node.prev_sibling() {
-        Some(node) => node.kind(),
-        None => "",
-    };
+    let last_sibiling_type = node.prev_sibling().map_or("", |node| node.kind());
 
     // Not every node needs a HLBlock, some are non-lexical nodes
     // Will return if on a non-lexical node
@@ -125,9 +112,7 @@ fn hl_group_from_node(
     let start: Point = node.start_position();
     let end: Point = node.end_position();
 
-    if start.row != end.row {
-        handle_new_line(start, end, color, hl_blocks);
-    } else {
+    if start.row == end.row {
         add_block_to_row(
             start.row,
             start.column,
@@ -135,6 +120,8 @@ fn hl_group_from_node(
             color,
             hl_blocks,
         );
+    } else {
+        handle_new_line(start, end, color, hl_blocks);
     }
 }
 
@@ -158,7 +145,7 @@ fn handle_new_line(start: Point, end: Point, color: Color, hl_blocks: &mut Vec<V
 fn add_block_to_row(
     row: usize,
     mut start_column: usize,
-    mut end_column: HLEnd,
+    end_column: HLEnd,
     color: Color,
     hl_blocks: &mut Vec<Vec<HLBlock>>,
 ) {
@@ -168,7 +155,7 @@ fn add_block_to_row(
         }
     }
 
-    try_expand_hl_block_back(row, &mut start_column, &mut end_column, hl_blocks);
+    try_expand_hl_block_back(row, &mut start_column, &end_column, hl_blocks);
 
     let block = HLBlock {
         start: start_column,
@@ -183,7 +170,7 @@ fn add_block_to_row(
 fn try_expand_hl_block_back(
     row: usize,
     start_column: &mut usize,
-    end_column: &mut HLEnd,
+    _end_column: &HLEnd,
     hl_blocks: &[Vec<HLBlock>],
 ) {
     if row >= hl_blocks.len() {
@@ -197,7 +184,9 @@ fn try_expand_hl_block_back(
             if let Some(end) = last_hl.get_end() {
                 *start_column = end;
             } else {
-                // panic!("heeses");
+                panic!(
+                    "Attempting to append to a line where the last highlight block already goes to the end of the line\nThis likely means that the `node_type_to_color` function being used returns `Some(color)` for nodes with overlapping range (e.g. both a parent and one of its descendants)."
+                );
             }
         }
         // If it is the first block, `start_column` should always be 0
