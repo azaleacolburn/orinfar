@@ -1,3 +1,4 @@
+use crate::{DEBUG, log};
 use ropey::Rope;
 use std::fmt::Display;
 
@@ -37,7 +38,13 @@ impl Buffer {
     }
 
     pub fn is_last_row(&self) -> bool {
-        self.rope.char_to_line(self.cursor) + 1 == self.rope.len_lines()
+        let row = self.rope.char_to_line(self.cursor) + 2;
+        let len = self.rope.len_lines();
+
+        log!("\trow: {}", row);
+        log!("\tlen: {}", len);
+
+        row == len
     }
 
     pub fn is_first_row(&self) -> bool {

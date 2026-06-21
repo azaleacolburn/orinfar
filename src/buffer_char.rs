@@ -1,5 +1,7 @@
 use crate::{
+    DEBUG,
     buffer::Buffer,
+    log,
     undo::{Action, UndoTree},
 };
 use std::iter::once;
@@ -142,12 +144,20 @@ impl Buffer {
         if curr_row == row || self.rope.len_lines() <= row {
             return;
         }
+        log!("setting row: {}", row);
 
         let col = self.get_col();
         let end_next_row = self.get_end_of_n_line(row);
         let start_of_next_row = self.rope.line_to_char(row);
 
+        log!("\tcursor: {}", self.cursor);
+        log!("\tstart_next_row: {}", start_of_next_row);
+        log!("\tend_next_row:   {}", end_next_row);
+
+        // TODO Figure out why we can't go on to the last newline character
         let new_position = usize::min(start_of_next_row + col, end_next_row);
+        log!("\tnew_position: {}", new_position);
+        log!("\tlast_idx: {}", self.rope.len_chars() - 1);
         self.set_cursor(new_position);
     }
 

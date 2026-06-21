@@ -209,7 +209,7 @@ pub fn last_row(
     _mode: &mut Mode,
     _undo_tree: &mut UndoTree,
 ) {
-    let last_row = usize::max(buffer.len(), 1) - 1;
+    let last_row = usize::max(buffer.rope.len_lines(), 1) - 1;
     buffer.set_row(last_row);
 }
 

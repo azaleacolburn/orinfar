@@ -96,8 +96,8 @@ pub fn start_program() -> Result<()> {
         Motion::inclusive('c', Buffer::find_until),
         // Paragraph operators
         Motion::inclusive('%', Buffer::next_corresponding_bracket),
-        Motion::inclusive('}', Buffer::next_newline),
-        Motion::inclusive('{', Buffer::prev_newline),
+        Motion::inclusive('}', Buffer::next_empty_line),
+        Motion::inclusive('{', Buffer::prev_empty_line),
     ];
 
     let text_objects: &[TextObject] = &[

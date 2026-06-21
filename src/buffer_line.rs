@@ -1,5 +1,7 @@
 use crate::{
+    DEBUG,
     buffer::Buffer,
+    log,
     undo::{Action, UndoTree},
 };
 
@@ -9,15 +11,6 @@ use std::iter::once;
 impl Buffer {
     pub fn is_empty_line(&self) -> bool {
         self.get_end_of_line() == self.get_start_of_line()
-    }
-
-    /// Removes the line represented by the given `line_idx`
-    pub fn _remove_n_line(&mut self, line_idx: usize) {
-        self.update_list_remove(line_idx);
-
-        let start_index = self.get_start_of_n_line(line_idx);
-        let end_index = self.get_end_of_n_line(line_idx);
-        self.rope.remove(start_index..=end_index);
     }
 
     /// Returns the number of lines in the buffer
@@ -68,18 +61,23 @@ impl Buffer {
 
     /// Returns the absolute index of the end of the given `line`
     /// NOT the last column in the line
-    pub fn get_end_of_n_line(&self, line: usize) -> usize {
-        let mut idx = self.rope.line_to_char(line);
+    pub fn get_end_of_char_line(&self, mut char: usize) -> usize {
         let len = self.rope.len_chars();
 
-        while idx + 1 < len {
-            let c = self.rope.char(idx);
+        while char + 1 < len {
+            let c = self.rope.char(char);
             if c == '\n' {
                 break;
             }
-            idx += 1;
+            char += 1;
         }
-        idx
+        char
+    }
+
+    pub fn get_end_of_n_line(&self, line: usize) -> usize {
+        let idx = self.rope.line_to_char(line);
+
+        self.get_end_of_char_line(idx)
     }
 
     /// Returns the absolute index of the end of the current line
@@ -87,8 +85,7 @@ impl Buffer {
     pub fn get_end_of_line(&self) -> usize {
         assert!(self.cursor <= self.rope.len_chars());
 
-        let line = self.rope.char_to_line(self.cursor);
-        self.get_end_of_n_line(line)
+        self.get_end_of_char_line(self.cursor)
     }
 
     /// Called by the '$' motion
@@ -126,8 +123,7 @@ impl Buffer {
             return;
         }
 
-        let line = self.get_row();
-        self.set_row(line + 1);
+        self.set_row(self.get_row() + 1);
     }
 
     pub fn replace_contents(&mut self, contents: &str, undo_tree: &mut UndoTree) {

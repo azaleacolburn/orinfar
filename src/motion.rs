@@ -1,4 +1,5 @@
 use crate::{
+    DEBUG,
     buffer::Buffer,
     utility::{is_symbol, on_next_input},
 };
@@ -314,13 +315,18 @@ impl Buffer {
     }
 }
 
-// Newline
+// Move to an empty line
 impl Buffer {
-    fn generic_newline(&mut self, is_at_end: impl Fn(&Self) -> bool, traverse: impl Fn(&mut Self)) {
+    fn generic_empty_line(
+        &mut self,
+        is_at_end: impl Fn(&Self) -> bool,
+        traverse: impl Fn(&mut Self),
+    ) {
         while self.is_empty_line() {
             if is_at_end(self) {
                 return;
             }
+            log!("searching for non-empty-line");
             traverse(self);
         }
 
@@ -329,17 +335,21 @@ impl Buffer {
                 return;
             }
             traverse(self);
+            log!("searching for empty-line");
+            log!("self.row: {}", self.get_row())
         }
     }
 
     /// Moves the cursor to the next empty line after a non-empty line
-    pub fn next_newline(&mut self) {
-        self.generic_newline(Self::is_last_row, Self::next_row);
+    pub fn next_empty_line(&mut self) {
+        self.generic_empty_line(Self::is_last_row, Self::next_row);
+        log!("found");
     }
 
     /// Moves the cursor to the next empty line after a non-empty line
-    pub fn prev_newline(&mut self) {
-        self.generic_newline(Self::is_first_row, Self::prev_row);
+    pub fn prev_empty_line(&mut self) {
+        self.generic_empty_line(Self::is_first_row, Self::prev_row);
+        log!("found");
     }
 }
 
