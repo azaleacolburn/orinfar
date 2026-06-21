@@ -1,6 +1,9 @@
-use crate::view_box::ViewBox;
+use crate::{
+    utility::{print_tree, traverse_tree},
+    view_box::ViewBox,
+};
 use crossterm::style::Color;
-use tree_sitter::{Node, Point, Tree};
+use tree_sitter::{Node, Point, Tree, TreeCursor};
 
 impl ViewBox {
     pub fn parse(&mut self) -> Option<&Tree> {
@@ -210,35 +213,14 @@ fn highlight_tree(
     tree: &Tree,
     node_type_to_color: fn(&str, &str, &str) -> Option<Color>,
 ) -> Vec<Vec<HLBlock>> {
-    let mut hl_blocks: Vec<Vec<HLBlock>> = Vec::new();
-    let mut cursor = tree.walk();
+    let node_action = |cursor: &TreeCursor, hl_blocks: &mut Vec<Vec<HLBlock>>| {
+        hl_group_from_node(cursor.node(), hl_blocks, node_type_to_color);
+    };
 
-    // Depth-first search with a cursor
-    'TREE_WALK: loop {
-        hl_group_from_node(cursor.node(), &mut hl_blocks, node_type_to_color);
+    let move_up_hook = |_hl_blocks: &mut Vec<Vec<HLBlock>>| {};
+    let move_down_hook = |_hl_blocks: &mut Vec<Vec<HLBlock>>| {};
 
-        if cursor.goto_first_child() {
-            continue;
-        }
-
-        if cursor.goto_next_sibling() {
-            continue;
-        }
-
-        'BACKTRACKING: loop {
-            // If we don't have a parent to go to, we're at the top of the tree and done traversing
-            if !cursor.goto_parent() {
-                break 'TREE_WALK;
-            }
-
-            // If we have a sibiling, we're done backtracking for now
-            if cursor.goto_next_sibling() {
-                break 'BACKTRACKING;
-            }
-        }
-    }
-
-    hl_blocks
+    traverse_tree(tree, node_action, move_up_hook, move_down_hook)
 }
 
 // NOTE

@@ -1,7 +1,9 @@
-use crate::{DEBUG, buffer::Buffer, log, logn};
+use std::any::Any;
+
+use crate::{DEBUG, buffer::Buffer, log, logn, view_command::move_up_one_view_box};
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, read};
-use tree_sitter::Tree;
+use tree_sitter::{Tree, TreeCursor};
 
 macro_rules! unwrap_or_return {
     ( $e:expr ) => {
@@ -112,13 +114,47 @@ pub const fn count_longest_line(str: &str) -> u16 {
     longest_line
 }
 
-pub fn print_tree(tree: &Tree) {
+pub fn traverse_tree<T: Default>(
+    tree: &Tree,
+    mut node_action: impl FnMut(&TreeCursor, &mut T),
+    mut move_up_hook: impl FnMut(&mut T),
+    mut move_down_hook: impl FnMut(&mut T),
+) -> T {
     let mut cursor = tree.walk();
-    let mut depth = 0;
+    let mut state = T::default();
 
     'TREE_WALK: loop {
+        node_action(&cursor, &mut state);
+
+        if cursor.goto_first_child() {
+            move_down_hook(&mut state);
+            continue;
+        }
+
+        if cursor.goto_next_sibling() {
+            continue;
+        }
+
+        'BACKTRACKING: loop {
+            if !cursor.goto_parent() {
+                break 'TREE_WALK;
+            } else {
+                move_up_hook(&mut state);
+            }
+
+            if cursor.goto_next_sibling() {
+                break 'BACKTRACKING;
+            }
+        }
+    }
+
+    state
+}
+
+pub fn print_tree(tree: &Tree) {
+    let node_action = |cursor: &TreeCursor<'_>, depth: &mut usize| {
         let node = cursor.node();
-        for _ in 0..depth {
+        for _ in 0..*depth {
             logn!("\t");
         }
         let kind = node.kind();
@@ -132,26 +168,14 @@ pub fn print_tree(tree: &Tree) {
             end.row,
             end.column
         );
+    };
 
-        if cursor.goto_first_child() {
-            depth += 1;
-            continue;
-        }
+    let move_up_hook = |depth: &mut usize| {
+        *depth -= 1;
+    };
+    let move_down_hook = |depth: &mut usize| {
+        *depth += 1;
+    };
 
-        if cursor.goto_next_sibling() {
-            continue;
-        }
-
-        'BACKTRACKING: loop {
-            if !cursor.goto_parent() {
-                break 'TREE_WALK;
-            } else {
-                depth -= 1;
-            }
-
-            if cursor.goto_next_sibling() {
-                break 'BACKTRACKING;
-            }
-        }
-    }
+    traverse_tree(tree, node_action, move_up_hook, move_down_hook);
 }

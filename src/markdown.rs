@@ -10,6 +10,11 @@ pub fn md_node_to_color(
         "inline" => match last_sibiling_type {
             "atx_h1_marker" => Color::Red,
             "atx_h2_marker" => ORANGE,
+            "atx_h3_marker" => Color::Yellow,
+            "atx_h4_marker" => Color::Green,
+            "atx_h5_marker" => Color::Blue,
+            "atx_h6_marker" => Color::Magenta,
+
             _ => return None,
         },
         "link_text" => Color::Green,
@@ -26,6 +31,8 @@ pub fn md_node_to_color(
 
         "list_marker_minus" => Color::Blue,
 
+        // "block_quote_marker" => Color::Blue,
+        // "block_continuation" => Color::Blue,
         _ => return None,
     };
 
