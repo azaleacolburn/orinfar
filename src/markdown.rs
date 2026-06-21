@@ -7,7 +7,6 @@ pub fn md_node_to_color(
     last_sibiling_type: &str,
 ) -> Option<Color> {
     let color = match node_type {
-        // "text" => Color::Grey,
         "inline" => match last_sibiling_type {
             "atx_h1_marker" => Color::Red,
             "atx_h2_marker" => ORANGE,

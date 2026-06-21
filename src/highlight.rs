@@ -1,4 +1,4 @@
-use crate::{DEBUG, log, view_box::ViewBox};
+use crate::view_box::ViewBox;
 use crossterm::style::Color;
 use tree_sitter::{Node, Point, Tree};
 
@@ -10,10 +10,6 @@ impl ViewBox {
             // Edit the `Tree` and pass it to the `parse` function
             let (parser, _language) = self.parser.as_mut()?;
             self.parse_tree = parser.parse(source, None);
-
-            if let Some(tree) = &self.parse_tree {
-                crate::utility::print_tree(tree);
-            }
         }
 
         self.parse_tree.as_ref()
@@ -123,16 +119,10 @@ fn hl_group_from_node(
         return;
     };
 
-    log!("node_type_hl: {:?}", node.kind());
-
     let start: Point = node.start_position();
     let end: Point = node.end_position();
 
-    log!("\tstart: {:?}", start);
-    log!("\tend: {:?}", end);
-
     if start.row != end.row {
-        log!("\tTO_EOL");
         handle_new_line(start, end, color, hl_blocks);
     } else {
         add_block_to_row(
@@ -220,7 +210,6 @@ fn highlight_tree(
     tree: &Tree,
     node_type_to_color: fn(&str, &str, &str) -> Option<Color>,
 ) -> Vec<Vec<HLBlock>> {
-    log!("NEW HIGHLIGHT SESSION");
     let mut hl_blocks: Vec<Vec<HLBlock>> = Vec::new();
     let mut cursor = tree.walk();
 
@@ -249,7 +238,6 @@ fn highlight_tree(
         }
     }
 
-    log!("hlg: {:?}", hl_blocks);
     hl_blocks
 }
 

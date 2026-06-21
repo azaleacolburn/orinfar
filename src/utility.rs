@@ -74,7 +74,6 @@ pub fn on_next_input(buffer: &mut Buffer, closure: fn(KeyCode, &mut Buffer)) -> 
 pub fn last_char(str: &str) -> char {
     str.chars().last().unwrap_or('\0')
 }
-// log!("{:?}", tree);
 
 pub const fn count_lines(str: &str) -> u16 {
     let bytes = str.as_bytes();
