@@ -1,4 +1,4 @@
-use crate::view_box::ViewBox;
+use crate::{DEBUG, log, view_box::ViewBox};
 use crossterm::style::Color;
 use tree_sitter::{Node, Point, Tree};
 
@@ -10,6 +10,10 @@ impl ViewBox {
             // Edit the `Tree` and pass it to the `parse` function
             let (parser, _language) = self.parser.as_mut()?;
             self.parse_tree = parser.parse(source, None);
+
+            if let Some(tree) = &self.parse_tree {
+                crate::utility::print_tree(tree);
+            }
         }
 
         self.parse_tree.as_ref()
@@ -105,123 +109,122 @@ impl<'a> HLBlock {
 fn hl_group_from_node(
     node: Node,
     hl_blocks: &mut Vec<Vec<HLBlock>>,
-    node_type_to_color: fn(&str, &str) -> Option<Color>,
+    node_type_to_color: fn(&str, &str, &str) -> Option<Color>,
 ) {
     let Some(parent) = node.parent() else { return };
-
-    // Will return if on a non-lexical node
-    let Some(color) = node_type_to_color(node.kind(), parent.kind()) else {
-        return;
+    let last_sibiling_type = match node.prev_sibling() {
+        Some(node) => node.kind(),
+        None => "",
     };
 
     // Not every node needs a HLBlock, some are non-lexical nodes
+    // Will return if on a non-lexical node
+    let Some(color) = node_type_to_color(node.kind(), parent.kind(), last_sibiling_type) else {
+        return;
+    };
+
+    log!("node_type_hl: {:?}", node.kind());
+
     let start: Point = node.start_position();
     let end: Point = node.end_position();
 
-    if start.row != end.row {
-        handle_new_line(hl_blocks, start, end, color);
-    }
+    log!("\tstart: {:?}", start);
+    log!("\tend: {:?}", end);
 
-    add_block_to_row(start, end, color, hl_blocks, false);
+    if start.row != end.row {
+        log!("\tTO_EOL");
+        handle_new_line(start, end, color, hl_blocks);
+    } else {
+        add_block_to_row(
+            start.row,
+            start.column,
+            HLEnd::Bounded(end.column),
+            color,
+            hl_blocks,
+        );
+    }
 }
 
-// WARNING:
-// This assumes highlight groups are one line or less for now
-// assert_eq!(start.row, end.row);
-fn handle_new_line(hl_blocks: &mut Vec<Vec<HLBlock>>, start: Point, end: Point, color: Color) {
+fn handle_new_line(start: Point, end: Point, color: Color, hl_blocks: &mut Vec<Vec<HLBlock>>) {
     assert!(start.row < end.row);
 
-    let first_end = Point {
-        row: start.row,
-        column: 0, // NOTE Will actually go to the end of the line
-    };
+    // Goes to the end of the old line
+    add_block_to_row(start.row, start.column, HLEnd::EndOfLine, color, hl_blocks);
 
-    add_block_to_row(start, first_end, color, hl_blocks, true);
-
+    // Goes to the end of the in-between lines
     for line_idx in start.row + 1..end.row {
-        let middle_start = Point {
-            row: line_idx,
-            column: 0,
-        };
-
-        let middle_end = Point {
-            row: line_idx,
-            column: 0, // NOTE Will actually go to the end of the line
-        };
-
-        add_block_to_row(middle_start, middle_end, color, hl_blocks, true);
+        add_block_to_row(line_idx, 0, HLEnd::EndOfLine, color, hl_blocks);
     }
 
-    let last_start = Point {
-        row: end.row,
-        column: 0,
-    };
-
-    add_block_to_row(last_start, end, color, hl_blocks, false);
-
-    return;
+    // Gets placed at the beginning of the last new line
+    add_block_to_row(end.row, 0, HLEnd::Bounded(end.column), color, hl_blocks);
 }
 
 /// Assumes that `start.row == end.row`
 /// The length of the row not including the new  
 fn add_block_to_row(
-    mut start: Point,
-    end: Point,
+    row: usize,
+    mut start_column: usize,
+    mut end_column: HLEnd,
     color: Color,
     hl_blocks: &mut Vec<Vec<HLBlock>>,
-    to_end_of_line: bool,
 ) {
-    assert_eq!(start.row, end.row);
-
-    if start.row + 1 >= hl_blocks.len() {
-        for _ in hl_blocks.len()..=start.row {
+    if row + 1 >= hl_blocks.len() {
+        for _ in hl_blocks.len()..=row {
             hl_blocks.push(Vec::new());
         }
     }
 
-    try_expand_hl_block_back(hl_blocks, &mut start, end);
-
-    let end = if to_end_of_line {
-        HLEnd::EndOfLine
-    } else {
-        HLEnd::Bounded(end.column)
-    };
+    try_expand_hl_block_back(row, &mut start_column, &mut end_column, hl_blocks);
 
     let block = HLBlock {
-        start: start.column,
-        end,
+        start: start_column,
+        end: end_column,
         fg_color: color,
         bg_color: Color::Reset,
     };
 
-    hl_blocks[start.row].push(block);
+    hl_blocks[row].push(block);
 }
 
-fn try_expand_hl_block_back(hl_blocks: &mut Vec<Vec<HLBlock>>, start: &mut Point, end: Point) {
-    // Expand blocks backwards to consume un-highlighted sections
-    if let Some(last_hl) = hl_blocks[start.row].last() {
-        // NOTE
-        // You cannot add a hl block to a row where the last hl block goes to the end
-        // start.column = match last_hl.end {
-        //     HLEnd::Bounded(n) => n,
-        //     HLEnd::EndOfLine => {last_hl.end = HLEnd::Bounded(line_len);},
-        // }
-        start.column = last_hl.get_end_unchecked();
-    } else if end.column != 0 && hl_blocks[start.row].is_empty() {
-        // Expand block backwards if there's whitespace or other non-parsable content at the
-        // beginning of the line
-        start.column = 0;
+fn try_expand_hl_block_back(
+    row: usize,
+    start_column: &mut usize,
+    end_column: &mut HLEnd,
+    hl_blocks: &[Vec<HLBlock>],
+) {
+    if row >= hl_blocks.len() {
+        return;
+    }
+    let row = &hl_blocks[row];
+
+    match row.last() {
+        // If this isn't the first block in the row, make sure there's no gap between the blocks
+        Some(last_hl) => {
+            if let Some(end) = last_hl.get_end() {
+                *start_column = end;
+            } else {
+                // panic!("heeses");
+            }
+        }
+        // If it is the first block, `start_column` should always be 0
+        None => {
+            *start_column = 0;
+
+            // *end_column = 0;
+        }
     }
 }
 
 fn highlight_tree(
     tree: &Tree,
-    node_type_to_color: fn(&str, &str) -> Option<Color>,
+    node_type_to_color: fn(&str, &str, &str) -> Option<Color>,
 ) -> Vec<Vec<HLBlock>> {
+    log!("NEW HIGHLIGHT SESSION");
     let mut hl_blocks: Vec<Vec<HLBlock>> = Vec::new();
     let mut cursor = tree.walk();
 
-    // Depth-first search with a cursor instead of recursion
+    // Depth-first search with a cursor
     'TREE_WALK: loop {
         hl_group_from_node(cursor.node(), &mut hl_blocks, node_type_to_color);
 
@@ -246,6 +249,7 @@ fn highlight_tree(
         }
     }
 
+    log!("hlg: {:?}", hl_blocks);
     hl_blocks
 }
 

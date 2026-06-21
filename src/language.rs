@@ -3,7 +3,7 @@ use crossterm::style::Color;
 
 pub struct OrinLanguage {
     pub extensions: Vec<String>,
-    pub highlight: fn(&str, &str) -> Option<Color>,
+    pub highlight: fn(&str, &str, &str) -> Option<Color>,
     pub lang: tree_sitter::Language,
 }
 
@@ -11,7 +11,7 @@ impl OrinLanguage {
     pub fn new<'a>(
         extensions: &'a [&'a str],
         lang: tree_sitter::Language,
-        highlight: fn(&str, &str) -> Option<Color>,
+        highlight: fn(&str, &str, &str) -> Option<Color>,
     ) -> Self {
         OrinLanguage {
             extensions: extensions.iter().map(|s| s.to_string()).collect(),

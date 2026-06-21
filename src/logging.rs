@@ -59,6 +59,17 @@ pub fn log(contents: &impl ToString) {
         .expect("unable to append data");
 }
 
+pub fn log_no_newline(contents: &impl ToString) {
+    let mut file = OpenOptions::new()
+        .append(true)
+        .open(log_file())
+        .expect("unable to open file");
+
+    // append data to the file
+    file.write_all(format!("{}", contents.to_string()).as_bytes())
+        .expect("unable to append data");
+}
+
 pub fn write_data(key: &impl ToString, value: &impl ToString) {
     let mut file = OpenOptions::new()
         .append(true)
@@ -75,6 +86,15 @@ macro_rules! log {
     ($($arg:tt)*) => {
         if *DEBUG.get().unwrap() {
             $crate::logging::log(&format!($($arg)*))
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! logn {
+    ($($arg:tt)*) => {
+        if *DEBUG.get().unwrap() {
+            $crate::logging::log_no_newline(&format!($($arg)*))
         }
     };
 }

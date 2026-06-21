@@ -21,6 +21,7 @@ impl Cli {
         match cli.file_name {
             Some(ref path) => {
                 let path = PathBuf::from(path);
+                let s = &path;
 
                 if path.is_dir() {
                     // TODO netrw

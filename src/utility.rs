@@ -1,6 +1,7 @@
-use crate::buffer::Buffer;
+use crate::{DEBUG, buffer::Buffer, log, logn};
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, read};
+use tree_sitter::Tree;
 
 macro_rules! unwrap_or_return {
     ( $e:expr ) => {
@@ -73,6 +74,7 @@ pub fn on_next_input(buffer: &mut Buffer, closure: fn(KeyCode, &mut Buffer)) -> 
 pub fn last_char(str: &str) -> char {
     str.chars().last().unwrap_or('\0')
 }
+// log!("{:?}", tree);
 
 pub const fn count_lines(str: &str) -> u16 {
     let bytes = str.as_bytes();
@@ -109,4 +111,48 @@ pub const fn count_longest_line(str: &str) -> u16 {
     }
 
     longest_line
+}
+
+pub fn print_tree(tree: &Tree) {
+    let mut cursor = tree.walk();
+    let mut depth = 0;
+
+    'TREE_WALK: loop {
+        let node = cursor.node();
+        for _ in 0..depth {
+            logn!("\t");
+        }
+        let kind = node.kind();
+        let start = node.start_position();
+        let end = node.end_position();
+        log!(
+            "{} [{}, {}] - [{}, {}]",
+            kind,
+            start.row,
+            start.column,
+            end.row,
+            end.column
+        );
+
+        if cursor.goto_first_child() {
+            depth += 1;
+            continue;
+        }
+
+        if cursor.goto_next_sibling() {
+            continue;
+        }
+
+        'BACKTRACKING: loop {
+            if !cursor.goto_parent() {
+                break 'TREE_WALK;
+            } else {
+                depth -= 1;
+            }
+
+            if cursor.goto_next_sibling() {
+                break 'BACKTRACKING;
+            }
+        }
+    }
 }

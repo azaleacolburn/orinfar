@@ -75,7 +75,11 @@ fn is_operator(str: &str) -> bool {
     OPERATORS.contains(&str)
 }
 
-pub fn c_node_to_color(node_type: &str, parent_type: &str) -> Option<Color> {
+pub fn c_node_to_color(
+    node_type: &str,
+    parent_type: &str,
+    _last_sibiling_type: &str,
+) -> Option<Color> {
     let color = match node_type {
         "#include" | "#define" | "#ifdef" | "#ifndef" | "#endif" => Color::DarkRed,
 
