@@ -38,7 +38,7 @@ impl Buffer {
     }
 
     pub fn is_last_row(&self) -> bool {
-        let row = self.rope.char_to_line(self.cursor) + 2;
+        let row = self.rope.char_to_line(self.cursor) + 1;
         let len = self.rope.len_lines();
 
         log!("\trow: {}", row);
