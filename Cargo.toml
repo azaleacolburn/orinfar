@@ -9,7 +9,7 @@ readme = "README.md"
 repository = "https://github.com/azaleacolburn/orinfar"
 authors = ["Azalea Colburn azaleacolburn@gmail.com"]
 keywords = ["vi", "vim", "minimal"]
-categories = ["text-editor"]
+categories = ["text-editors"]
 
 [dependencies]
 anyhow = "1.0.98"
