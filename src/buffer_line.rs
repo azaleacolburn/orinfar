@@ -1,7 +1,5 @@
 use crate::{
-    DEBUG,
     buffer::Buffer,
-    log,
     undo::{Action, UndoTree},
 };
 
