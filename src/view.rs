@@ -151,12 +151,12 @@ impl View {
         Ok(status_message)
     }
 
-    pub fn flush(&self, global_state: &GlobalState, adjusted: bool) -> Result<()> {
+    pub fn render(&self, global_state: &GlobalState, adjusted: bool) -> Result<()> {
         let register = global_state.register_handler.get_curr_reg();
 
         let mut errors = self.boxes.iter().enumerate().filter_map(|(i, view_box)| {
             let adjusted = adjusted && i == self.cursor;
-            view_box.flush(adjusted).err()
+            view_box.render(adjusted).err()
         });
         if let Some(err) = errors.next() {
             return Err(err);

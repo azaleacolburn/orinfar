@@ -160,7 +160,7 @@ pub fn program_loop<'a>(
         let _ = view.get_view_box().parse();
 
         let adjusted = view.adjust();
-        view.flush(&global_state, adjusted)?;
+        view.render(&global_state, adjusted)?;
     }
 
     Ok(())

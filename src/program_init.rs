@@ -123,7 +123,7 @@ pub fn start_program() -> Result<()> {
     let all_normal_chars =
         enumerate_normal_chars(commands, operators, motions, text_objects, view_commands);
 
-    let mut view: View = View::new(cols, rows);
+    let mut view = View::new(cols, rows);
     let mut global_state = GlobalState::new();
 
     if !data.has_opened && path.is_none() {
@@ -137,7 +137,7 @@ pub fn start_program() -> Result<()> {
 
     let _ = view.get_view_box().parse();
 
-    view.flush(&global_state, false)?;
+    view.render(&global_state, false)?;
 
     program_loop(
         commands,

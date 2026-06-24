@@ -371,7 +371,7 @@ impl ViewBox {
         }
     }
 
-    pub fn flush(&self, adjusted: bool) -> Result<()> {
+    pub fn render(&self, adjusted: bool) -> Result<()> {
         let mut stdout = stdout().lock();
         let left_padding = self.left_padding();
 

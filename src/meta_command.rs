@@ -32,7 +32,7 @@ pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Re
         "load" | "l" => {
             view.load_file()?;
             let view_box = view.get_view_box();
-            view_box.flush(false)?;
+            view_box.render(false)?;
         }
 
         "open" | "o" => {
@@ -40,7 +40,7 @@ pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Re
             view.load_file()?;
 
             let view_box = view.get_view_box();
-            view_box.flush(false)?;
+            view_box.render(false)?;
         }
 
         "sub" | "s" => {
