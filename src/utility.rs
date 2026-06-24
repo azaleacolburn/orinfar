@@ -84,6 +84,7 @@ pub const fn count_lines(str: &str) -> u16 {
         if bytes[i] == b'\n' {
             len_lines += 1;
         }
+
         i += 1;
     }
 

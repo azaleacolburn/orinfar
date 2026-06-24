@@ -35,6 +35,7 @@ impl ViewBox {
         for _ in 0..vertical_padding / 2 - 1 {
             output.push('\n');
         }
+
         for line in WELCOME_TEXT.lines() {
             output.push('\n');
             self.write_line_centered(&mut output, line, self.width);

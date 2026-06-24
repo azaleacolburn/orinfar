@@ -1,28 +1,23 @@
-use crate::{
-    buffer::Buffer, global_state::GlobalState, mode::Mode, status_bar::StatusBar, view_box::ViewBox,
-};
+use crate::{buffer::Buffer, view_box::ViewBox};
 use anyhow::Result;
 use crossterm::{
-    cursor::{MoveTo, MoveToColumn, MoveToRow, SetCursorStyle, Show},
-    execute, queue,
+    cursor::{MoveTo, MoveToRow, SetCursorStyle},
+    execute,
     style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{
         Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
         enable_raw_mode,
     },
 };
-use std::{
-    io::{Write, stdout},
-    path::PathBuf,
-};
+use std::io::stdout;
 
 pub struct View {
     boxes: Vec<ViewBox>,
     should_render: Vec<bool>,
     // Represents which index of the view box the cursor is in
     pub cursor: usize,
-    width: u16,
-    height: u16,
+    pub width: u16,
+    pub height: u16,
 }
 
 impl View {
@@ -56,156 +51,11 @@ impl View {
         self.boxes.len()
     }
 
-    pub fn normal_unattached_status(chained: &[char], count: u32, register: char) -> String {
-        let info_str = "-- Unattached Buffer -- ".to_string();
-
-        let count_str = if count == 1 {
-            String::new()
-        } else {
-            count.to_string()
-        };
-        let reg_str = if register == '\"' {
-            String::new()
-        } else {
-            format!("\"{register}")
-        };
-        let chained_str = chained.iter().collect::<String>();
-
-        format!("{info_str}{count_str}{reg_str}{chained_str}")
-    }
-
-    pub fn normal_attached_status(
-        &self,
-        path: &PathBuf,
-        chained: &[char],
-        count: u32,
-        register: char,
-    ) -> Result<String> {
-        let info_str = "Editing File: ".to_string();
-        let file_size = std::fs::read(path)?.len().to_string();
-        let path = path.to_string_lossy();
-
-        let count_str = if count == 1 {
-            String::new()
-        } else {
-            count.to_string()
-        };
-
-        let reg_str = if register == '\"' {
-            String::new()
-        } else {
-            format!("\"{register}")
-        };
-        let chained_str = chained.iter().collect::<String>();
-
-        let git_hash = self.get_git_hash().unwrap_or("");
-
-        let status_bar_width: usize = info_str.len()
-            + path.len()
-            + 2
-            + 3
-            + 1
-            + file_size.len()
-            + reg_str.len()
-            + count_str.len()
-            + chained_str.len()
-            + git_hash.len();
-
-        if status_bar_width > self.width as usize {
-            // TODO Maybe add more breakpoints???
-            let abridged_size = info_str.len() + path.len() + 2 + 3 + 1 + file_size.len();
-            if abridged_size > self.width as usize {
-                return Ok(String::new());
-            }
-
-            return Ok(format!("{info_str}\"{path}\" {file_size}b"));
-        }
-
-        let middle_buffer = (0..(self.width as usize)
-                    - info_str.len()
-                    - path.len()
-                    - 2 // For the 2 quotations
-                    - 3 // For the 3 spaces
-                    - 1 // For 'b'
-                    - file_size.len()
-                    - reg_str.len()
-                    - count_str.len()
-                    - chained_str.len()
-                    - git_hash.len())
-            .map(|_| ' ')
-            .collect::<String>();
-
-        Ok(format!(
-            "{info_str}\"{path}\" {file_size}b {reg_str}{count_str} {chained_str}{middle_buffer}{git_hash}",
-        ))
-    }
-
-    pub fn status_message(
-        &self,
-        status_bar: &StatusBar,
-        mode: &Mode,
-        chained: &[char],
-        count: u32,
-        register: char,
-    ) -> Result<String> {
-        let status_message = match (mode, self.get_path()) {
-            (Mode::Meta | Mode::Search, _) => status_bar.buffer(),
-            (Mode::Normal, Some(path)) => {
-                self.normal_attached_status(path, chained, count, register)?
-            }
-            (Mode::Normal, None) => Self::normal_unattached_status(chained, count, register),
-            (Mode::Insert, _) => "-- INSERT --".into(),
-            (Mode::Visual, _) => "-- VISUAL --".into(),
-        };
-
-        Ok(status_message)
-    }
-
-    pub fn render(&self, global_state: &GlobalState, adjusted: bool) -> Result<()> {
-        let register = global_state.register_handler.get_curr_reg();
-
-        let mut errors = self
-            .boxes
+    pub fn renderable_boxes(&self) -> impl Iterator<Item = (usize, &ViewBox)> {
+        self.boxes
             .iter()
             .enumerate()
             .filter(|(i, _)| self.should_render[*i])
-            .filter_map(|(i, view_box)| {
-                let adjusted = adjusted && i == self.cursor;
-                view_box.render(adjusted).err()
-            });
-        if let Some(err) = errors.next() {
-            return Err(err);
-        }
-
-        let mut stdout = stdout().lock();
-
-        let status_message = self.status_message(
-            &global_state.status_bar,
-            &global_state.mode,
-            &global_state.chained,
-            global_state.count,
-            register,
-        )?;
-
-        queue!(
-            stdout,
-            SetForegroundColor(Color::White),
-            MoveTo(0, self.height + 1),
-            Clear(ClearType::CurrentLine),
-            Print(status_message)
-        )?;
-
-        // TODO Figure out what was going on here
-        let (new_col, new_row) = if matches!(global_state.mode, Mode::Meta | Mode::Search) {
-            (global_state.status_bar.idx(), self.height + 1)
-        } else {
-            let view_box = &self.boxes[self.cursor];
-            view_box.cursor_position()
-        };
-        queue!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
-
-        stdout.flush()?;
-        Ok(())
     }
 }
 

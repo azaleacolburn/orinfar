@@ -28,6 +28,7 @@ mod program_init;
 mod program_loop;
 mod quickfix;
 mod register;
+mod render;
 mod status_bar;
 mod text_object;
 mod tutorial;
