@@ -4,7 +4,7 @@ use crate::{
 use anyhow::Result;
 use crossterm::{
     cursor::{MoveTo, MoveToColumn, MoveToRow, SetCursorStyle, Show},
-    execute,
+    execute, queue,
     style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{
         Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
@@ -171,7 +171,8 @@ impl View {
             global_state.count,
             register,
         )?;
-        execute!(
+
+        queue!(
             stdout,
             SetForegroundColor(Color::White),
             MoveTo(0, self.height + 1),
@@ -186,7 +187,7 @@ impl View {
             let view_box = &self.boxes[self.cursor];
             view_box.cursor_position()
         };
-        execute!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
+        queue!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
 
         stdout.flush()?;
         Ok(())

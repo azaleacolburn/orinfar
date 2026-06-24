@@ -7,7 +7,7 @@ use crate::{
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn},
-    execute,
+    queue,
     style::{Color, Print, SetBackgroundColor, SetForegroundColor},
 };
 use ropey::RopeSlice;
@@ -107,7 +107,7 @@ impl ViewBox {
             .skip(self.top)
             .take(self.height.into());
 
-        execute!(stdout, Hide, MoveTo(self.x, self.y))?;
+        queue!(stdout, Hide, MoveTo(self.x, self.y))?;
         let mut padding_buffer = String::with_capacity(left_padding);
 
         let clear_str: String = (0..=self.width).map(|_| ' ').collect();
@@ -148,10 +148,10 @@ impl ViewBox {
         if let Some(len_lines) = maybe_len_lines
             && len_lines < self.height
         {
-            execute!(stdout, MoveTo(self.x, self.y + len_lines))?;
+            queue!(stdout, MoveTo(self.x, self.y + len_lines))?;
 
             (len_lines..self.height).for_each(|_| {
-                execute!(stdout, Print(&clear_str), MoveDown(1), MoveToColumn(self.x))
+                queue!(stdout, Print(&clear_str), MoveDown(1), MoveToColumn(self.x))
                     .expect("Crossterm clearing trailing lines failed");
             });
         }
@@ -179,7 +179,7 @@ impl ViewBox {
 
         lines.for_each(|(line_num, line, hl_blocks, should_update)| {
             if !should_update {
-                execute!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
+                queue!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
                 return;
             }
 
@@ -188,7 +188,7 @@ impl ViewBox {
 
             let line_len = Self::calculate_total_line_len(line);
             if line_len == 0 {
-                execute!(stdout, MoveToColumn(self.x), MoveDown(1))
+                queue!(stdout, MoveToColumn(self.x), MoveDown(1))
                     .expect("Crossterm padding buffer print failed");
                 return;
             }
@@ -256,7 +256,7 @@ impl ViewBox {
     fn print_hl_blocks(&self, hl_blocks: &[HLBlock], line: &str, stdout: &mut StdoutLock) {
         for hl in hl_blocks {
             let text = hl.slice_text(line);
-            execute!(
+            queue!(
                 stdout,
                 SetForegroundColor(hl.fg_color),
                 SetBackgroundColor(hl.bg_color),
@@ -265,8 +265,7 @@ impl ViewBox {
             .expect("Crossterm print hl block command failed");
         }
 
-        execute!(stdout, MoveToColumn(self.x), MoveDown(1))
-            .expect("Crossterm reset command failed");
+        queue!(stdout, MoveToColumn(self.x), MoveDown(1)).expect("Crossterm reset command failed");
     }
 
     fn print_lines_colorless<'b>(
@@ -280,7 +279,7 @@ impl ViewBox {
     ) {
         lines.for_each(|(line_num, (line, should_update))| {
             if !should_update {
-                execute!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
+                queue!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
                 return;
             }
 
@@ -289,14 +288,14 @@ impl ViewBox {
 
             let line_len = Self::calculate_total_line_len(line);
             if line_len == 0 {
-                execute!(stdout, MoveToColumn(self.x), MoveDown(1))
+                queue!(stdout, MoveToColumn(self.x), MoveDown(1))
                     .expect("Crossterm padding buffer print failed");
                 return;
             }
 
             let line = self.slice_line(line, line_len);
 
-            execute!(
+            queue!(
                 stdout,
                 SetForegroundColor(Color::Grey),
                 Print(&line),
@@ -308,7 +307,7 @@ impl ViewBox {
     }
 
     fn clear_line(clear_str: &str, stdout: &mut StdoutLock) {
-        execute!(stdout, Print(&clear_str)).unwrap();
+        queue!(stdout, Print(&clear_str)).unwrap();
     }
 
     fn print_padding(
@@ -326,7 +325,7 @@ impl ViewBox {
         padding_buffer.push_str(&line_num);
         padding_buffer.push(' ');
 
-        execute!(
+        queue!(
             stdout,
             SetForegroundColor(Color::Grey),
             MoveToColumn(self.x),

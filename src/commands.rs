@@ -179,6 +179,8 @@ pub fn replace(
     if buffer.cursor == buffer.rope.len_chars() {
         return;
     }
+    // NOTE
+    // We want to execute, because stdout won't get flushed before the effect gets reverted
     execute!(stdout(), SetCursorStyle::SteadyUnderScore)
         .expect("Crossterm steady underscore command failed");
     if let Event::Key(event) = read().expect("Failed to read replacement character")
