@@ -16,7 +16,7 @@ impl<'a> ViewCommand<'a> {
 }
 
 pub fn center_viewbox_on_cursor(view: &mut View) {
-    let view_box = view.get_view_box();
+    let view_box = view.get_view_box_mut();
 
     let half_height = view_box.height as usize / 2;
     let row = view_box.buffer.get_row();

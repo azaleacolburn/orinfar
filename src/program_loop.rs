@@ -157,7 +157,7 @@ pub fn program_loop<'a>(
             _ => continue,
         }
 
-        let _ = view.get_view_box().parse();
+        let _ = view.get_view_box_mut().parse();
 
         let adjusted = view.adjust();
         view.render(&global_state, adjusted)?;

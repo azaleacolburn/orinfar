@@ -36,7 +36,7 @@ pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Re
         }
 
         "open" | "o" => {
-            attach_buffer(&arg, view.get_view_box());
+            attach_buffer(&arg, view.get_view_box_mut());
             view.load_file()?;
 
             let view_box = view.get_view_box();
@@ -57,7 +57,7 @@ pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Re
             split_curr_view_box_horizontal(view);
 
             let anchor = view.cursor;
-            view.cursor = view.boxes.len() - 1;
+            view.cursor = view.box_count() - 1;
 
             print_directories(view, &mut global_state.undo_tree)?;
             view.cursor = anchor;
@@ -74,7 +74,7 @@ pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Re
             split_curr_view_box_horizontal(view);
 
             let anchor = view.cursor;
-            view.cursor = view.boxes.len() - 1;
+            view.cursor = view.box_count() - 1;
 
             view.get_buffer_mut()
                 .replace_contents(registers, &mut global_state.undo_tree);

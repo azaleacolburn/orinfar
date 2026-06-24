@@ -127,7 +127,7 @@ pub fn start_program() -> Result<()> {
     let mut global_state = GlobalState::new();
 
     if !data.has_opened && path.is_none() {
-        view.get_view_box()
+        view.get_view_box_mut()
             .write_welcome_screen(&mut global_state.undo_tree);
         write_data(&"has_opened", &"true");
     }
@@ -135,7 +135,7 @@ pub fn start_program() -> Result<()> {
     view.set_path(path);
     view.load_file()?;
 
-    let _ = view.get_view_box().parse();
+    let _ = view.get_view_box_mut().parse();
 
     view.render(&global_state, false)?;
 

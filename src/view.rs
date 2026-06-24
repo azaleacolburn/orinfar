@@ -17,8 +17,8 @@ use std::{
 };
 
 pub struct View {
-    pub boxes: Vec<ViewBox>,
-    pub should_render: Vec<bool>,
+    boxes: Vec<ViewBox>,
+    should_render: Vec<bool>,
     // Represents which index of the view box the cursor is in
     pub cursor: usize,
     width: u16,
@@ -44,8 +44,16 @@ impl View {
         &self.boxes[self.cursor].buffer
     }
 
-    pub fn get_view_box(&mut self) -> &mut ViewBox {
+    pub fn get_view_box(&self) -> &ViewBox {
+        &self.boxes[self.cursor]
+    }
+
+    pub fn get_view_box_mut(&mut self) -> &mut ViewBox {
         &mut self.boxes[self.cursor]
+    }
+
+    pub fn box_count(&self) -> usize {
+        self.boxes.len()
     }
 
     pub fn normal_unattached_status(chained: &[char], count: u32, register: char) -> String {
@@ -284,7 +292,7 @@ impl View {
             (None, None) => {}
         }
 
-        let view_box = self.get_view_box();
+        let view_box = self.get_view_box_mut();
         view_box.buffer.has_changed = true;
     }
 

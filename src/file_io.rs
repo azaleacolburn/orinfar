@@ -43,24 +43,24 @@ impl View {
     }
 
     pub fn adjust(&mut self) -> bool {
-        let view_box = self.get_view_box();
+        let view_box = self.get_view_box_mut();
         view_box.adjust()
     }
 
     pub fn set_path(&mut self, path: Option<PathBuf>) {
-        let view_box = &mut self.boxes[self.cursor];
+        let view_box = self.get_view_box_mut();
 
         view_box.set_path(path);
     }
 
     pub fn get_path(&self) -> Option<&PathBuf> {
-        let view_box = &self.boxes[self.cursor];
+        let view_box = self.get_view_box();
 
         view_box.path()
     }
 
     pub fn get_git_hash(&self) -> Option<&str> {
-        let view_box = &self.boxes[self.cursor];
+        let view_box = self.get_view_box();
 
         view_box.git_hash.as_deref()
     }
