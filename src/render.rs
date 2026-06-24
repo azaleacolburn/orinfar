@@ -1,3 +1,11 @@
+use crate::{
+    global_state::GlobalState,
+    highlight::{HLBlock, HLEnd},
+    mode::Mode,
+    status_bar::StatusBar,
+    view::View,
+    view_box::ViewBox,
+};
 use anyhow::Result;
 use crossterm::{
     cursor::{Hide, MoveDown, MoveTo, MoveToColumn, MoveToRow, Show},
@@ -9,15 +17,6 @@ use ropey::RopeSlice;
 use std::{
     io::{StdoutLock, Write, stdout},
     path::PathBuf,
-};
-
-use crate::{
-    global_state::GlobalState,
-    highlight::{HLBlock, HLEnd},
-    mode::Mode,
-    status_bar::StatusBar,
-    view::View,
-    view_box::ViewBox,
 };
 
 impl View {
