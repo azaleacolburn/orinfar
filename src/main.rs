@@ -26,6 +26,7 @@ mod operator;
 mod panic_hook;
 mod program_init;
 mod program_loop;
+mod quickfix;
 mod register;
 mod status_bar;
 mod text_object;

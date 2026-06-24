@@ -18,6 +18,7 @@ use std::{
 
 pub struct View {
     pub boxes: Vec<ViewBox>,
+    pub should_render: Vec<bool>,
     // Represents which index of the view box the cursor is in
     pub cursor: usize,
     width: u16,
@@ -28,6 +29,7 @@ impl View {
     pub fn new(cols: u16, rows: u16) -> Self {
         Self {
             boxes: vec![ViewBox::new(cols, rows - 1, 0, 0)],
+            should_render: vec![true],
             cursor: 0,
             width: cols, // Don't subtract one because each viewbox handles line nums separately
             height: rows - 1,
@@ -154,10 +156,15 @@ impl View {
     pub fn render(&self, global_state: &GlobalState, adjusted: bool) -> Result<()> {
         let register = global_state.register_handler.get_curr_reg();
 
-        let mut errors = self.boxes.iter().enumerate().filter_map(|(i, view_box)| {
-            let adjusted = adjusted && i == self.cursor;
-            view_box.render(adjusted).err()
-        });
+        let mut errors = self
+            .boxes
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| self.should_render[*i])
+            .filter_map(|(i, view_box)| {
+                let adjusted = adjusted && i == self.cursor;
+                view_box.render(adjusted).err()
+            });
         if let Some(err) = errors.next() {
             return Err(err);
         }
@@ -247,6 +254,7 @@ impl View {
         let mut down = self.position_view_box_down();
         let mut up = self.position_view_box_up();
 
+        let _ = self.should_render.remove(self.cursor);
         let view_box = self.boxes.remove(self.cursor);
         if let Some(ref mut down) = down
             && *down > self.cursor
@@ -300,6 +308,7 @@ impl View {
         }
 
         self.boxes.push(new_view_box);
+        self.should_render.push(true);
     }
 
     pub fn split_view_box_horizontal(&mut self, idx: usize) {
@@ -323,6 +332,7 @@ impl View {
         }
 
         self.boxes.push(new_view_box);
+        self.should_render.push(true);
     }
 }
 
