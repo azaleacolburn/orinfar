@@ -62,6 +62,15 @@ pub enum HLEnd {
     EndOfLine,
 }
 
+impl HLEnd {
+    pub fn bounded_or(&self, end_of_line: usize) -> usize {
+        match self {
+            HLEnd::Bounded(end) => *end,
+            HLEnd::EndOfLine => end_of_line,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct HLBlock {
     pub start: usize,

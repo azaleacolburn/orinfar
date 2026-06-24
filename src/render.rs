@@ -29,11 +29,13 @@ impl View {
         } else {
             count.to_string()
         };
+
         let reg_str = if register == '\"' {
             String::new()
         } else {
             format!("\"{register}")
         };
+
         let chained_str = chained.iter().collect::<String>();
 
         format!("{info_str}{count_str}{reg_str}{chained_str}")
@@ -294,13 +296,7 @@ impl ViewBox {
     ) -> Vec<HLBlock> {
         let mut hl_blocks: Vec<HLBlock> = hl_blocks
             .iter()
-            .filter(|hl| {
-                hl.start <= last_col
-                    && match hl.end {
-                        HLEnd::Bounded(end) => end >= self.left,
-                        HLEnd::EndOfLine => line_len >= self.left,
-                    }
-            })
+            .filter(|hl| hl.start <= last_col && hl.end.bounded_or(line_len) >= self.left)
             .map(std::clone::Clone::clone)
             .collect();
 
@@ -314,9 +310,9 @@ impl ViewBox {
 
         // Crop last block
         if let Some(block) = hl_blocks.last_mut() {
-            match block.end {
-                HLEnd::Bounded(end) => block.end = HLEnd::Bounded(usize::min(last_col, end)),
-                HLEnd::EndOfLine => block.end = HLEnd::Bounded(last_col),
+            block.end = match block.end {
+                HLEnd::Bounded(end) => HLEnd::Bounded(usize::min(last_col, end)),
+                HLEnd::EndOfLine => HLEnd::Bounded(last_col),
             }
         }
 
