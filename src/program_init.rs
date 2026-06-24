@@ -124,10 +124,11 @@ pub fn start_program() -> Result<()> {
         enumerate_normal_chars(commands, operators, motions, text_objects, view_commands);
 
     let mut view: View = View::new(cols, rows);
-    let global_state = GlobalState::new();
+    let mut global_state = GlobalState::new();
 
     if !data.has_opened && path.is_none() {
-        view.get_view_box().write_welcome_screen();
+        view.get_view_box()
+            .write_welcome_screen(&mut global_state.undo_tree);
         write_data(&"has_opened", &"true");
     }
 
