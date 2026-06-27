@@ -58,9 +58,9 @@ pub fn delete_curr_view_box(view: &mut View) {
 }
 
 pub fn split_curr_view_box_vertical(view: &mut View) {
-    view.split_view_box_vertical(view.cursor);
+    view.split_box_vertical(view.cursor);
 }
 
 pub fn split_curr_view_box_horizontal(view: &mut View) {
-    view.split_view_box_horizontal(view.cursor);
+    view.split_box_horizontal(view.cursor);
 }

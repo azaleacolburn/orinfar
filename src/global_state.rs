@@ -1,6 +1,6 @@
 use crate::{
-    mode::Mode, operator::Operator, register::RegisterHandler, status_bar::StatusBar,
-    text_object::TextObjectType, undo::UndoTree,
+    mode::Mode, operator::Operator, quickfix::QuickFixList, register::RegisterHandler,
+    status_bar::StatusBar, text_object::TextObjectType, undo::UndoTree,
 };
 
 pub struct GlobalState<'a> {
@@ -15,6 +15,8 @@ pub struct GlobalState<'a> {
     pub undo_tree: UndoTree,
     pub register_handler: RegisterHandler,
     pub status_bar: StatusBar,
+
+    pub quick_fix_list: QuickFixList,
 }
 
 impl GlobalState<'_> {
@@ -31,6 +33,8 @@ impl GlobalState<'_> {
             undo_tree: UndoTree::new(),
             register_handler: RegisterHandler::new(),
             status_bar: StatusBar::new(),
+
+            quick_fix_list: QuickFixList::new(),
         }
     }
 }

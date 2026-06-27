@@ -146,21 +146,26 @@ impl View {
         view_box.buffer.has_changed = true;
     }
 
-    pub fn split_view_box_vertical(&mut self, idx: usize) {
-        let view_box = &mut self.boxes[idx];
+    /// Splits the given view box off into two view boxes, the new one being `fraction` the size of
+    /// the original vertically
+    fn split_box_vertical_fraction(&mut self, box_idx: usize, fraction: f32) {
+        assert!(fraction > 0.05 && fraction < 0.95);
 
-        let half_height = view_box.height / 2;
-        let half_y = half_height + view_box.y;
+        let view_box = &mut self.boxes[box_idx];
 
-        if half_height == 1 {
+        let fraction_height = (view_box.height as f32 * fraction) as u16;
+        let original_height = view_box.height;
+
+        let fraction_y = fraction_height + view_box.y;
+
+        if fraction_height == 1 {
             return;
         }
 
-        let mut new_view_box = ViewBox::new(view_box.width, half_height, view_box.x, half_y);
+        let mut new_view_box =
+            ViewBox::new(view_box.width, fraction_height, view_box.x, fraction_y);
 
-        let original_height = view_box.height;
-
-        view_box.height = half_height;
+        view_box.height = original_height - fraction_height;
         if !original_height.is_multiple_of(2) {
             new_view_box.height += 1;
         }
@@ -169,28 +174,43 @@ impl View {
         self.should_render.push(true);
     }
 
-    pub fn split_view_box_horizontal(&mut self, idx: usize) {
-        let view_box = &mut self.boxes[idx];
+    /// Splits the given view box off into two view boxes, the new one being `fraction` the size of
+    /// the original horizontally
+    fn split_box_horizontal_fraction(&mut self, box_idx: usize, fraction: f32) {
+        assert!(fraction > 0.05 && fraction < 0.95);
 
-        let half_width = view_box.width / 2;
-        let half_x = half_width + view_box.x;
+        let view_box = &mut self.boxes[box_idx];
 
-        let left_padding = view_box.left_padding();
-        if (half_width as usize) < left_padding {
+        let fraction_width = (view_box.width as f32 * fraction) as u16;
+        let original_width = view_box.width;
+
+        let fraction_x = fraction_width + view_box.x;
+
+        if fraction_width == 1 {
             return;
         }
 
-        let mut new_view_box = ViewBox::new(half_width, view_box.height, half_x, view_box.y);
+        let mut new_view_box =
+            ViewBox::new(fraction_width, view_box.height, fraction_x, view_box.y);
 
-        let original_width = view_box.width;
-
-        view_box.width = half_width;
+        view_box.width = original_width - fraction_width;
         if !original_width.is_multiple_of(2) {
             new_view_box.width += 1;
         }
 
         self.boxes.push(new_view_box);
         self.should_render.push(true);
+    }
+
+    pub fn create_menu_box(&mut self) {
+        self.split_box_vertical_fraction(self.cursor, 0.2);
+    }
+
+    pub fn split_box_vertical(&mut self, idx: usize) {
+        self.split_box_vertical_fraction(idx, 0.5);
+    }
+    pub fn split_box_horizontal(&mut self, idx: usize) {
+        self.split_box_horizontal_fraction(idx, 0.5);
     }
 }
 
