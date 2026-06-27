@@ -1,11 +1,18 @@
 use crate::{
-    DEBUG, buffer::Buffer, global_state::GlobalState, mode::Mode, undo::UndoTree,
-    utility::SplitOnce, view::View, view_box::ViewBox,
+    DEBUG,
+    buffer::Buffer,
+    global_state::GlobalState,
+    mode::Mode,
+    quickfix::{QuickFix, QuickFixList},
+    undo::UndoTree,
+    utility::SplitOnce,
+    view::View,
+    view_box::ViewBox,
     view_command::split_curr_view_box_horizontal,
 };
-use anyhow::Result;
+use anyhow::{Result, bail};
 use ropey::Rope;
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 // TODO
 // Eventually match from a list of `MatchCommand`s to make them easier to manage
@@ -80,6 +87,12 @@ pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Re
                 .replace_contents(registers, &mut global_state.undo_tree);
 
             view.cursor = anchor;
+        }
+
+        "find" => {
+            if let Err(err) = find_cmd(&arg, &view, &mut global_state.quick_fix_list) {
+                log!("Find Cmd Error: {}", err);
+            }
         }
 
         n => {
@@ -163,4 +176,88 @@ pub fn attach_buffer(arg: &str, view_box: &mut ViewBox) {
     }
 
     view_box.set_path(Some(path_buf));
+}
+
+pub fn find_cmd(arg: &str, view: &View, quick_fix_list: &mut QuickFixList) -> Result<()> {
+    if arg.len() < 3 {
+        bail!("Invalid Command")
+    }
+
+    let arguments: Vec<&str> = arg.split(' ').collect();
+
+    if arguments.len() != 2 {
+        bail!(
+            "Malformed find meta-command: {:?}. Should be in the form: [string] [file glob]",
+            arguments
+        );
+    }
+
+    let needle: Vec<char> = arguments[0].trim().chars().collect();
+    let files = glob::glob(arguments[1].trim())?.filter_map(|a| a.ok());
+
+    for file in files {
+        let buffer_idx = view
+            .all_boxes()
+            .filter_map(|view_box| view_box.path())
+            .position(|path| **path == file);
+
+        let contents = fs::read_to_string(&file)?;
+        let occurences = find_occurences_in_string(contents, &needle);
+
+        for idx in occurences {
+            let fix = QuickFix {
+                start_position: idx,
+                end_position: idx + needle.len(),
+                file_path: Some(file.clone()),
+                buffer_idx,
+            };
+
+            quick_fix_list.push(fix);
+        }
+    }
+
+    let buffers = view
+        .all_boxes()
+        .enumerate()
+        .filter(|(_, view_box)| view_box.path().is_none())
+        .map(|(idx, view_box)| (idx, &view_box.buffer));
+
+    for (buffer_idx, buffer) in buffers {
+        let occurences = buffer.find_occurences(&needle);
+
+        for idx in occurences {
+            let fix = QuickFix {
+                start_position: idx,
+                end_position: idx + needle.len(),
+                file_path: None,
+                buffer_idx: Some(buffer_idx),
+            };
+
+            quick_fix_list.push(fix);
+        }
+    }
+
+    log!("QFL: {:?}", quick_fix_list.fixes);
+
+    Ok(())
+}
+
+fn find_occurences_in_string(haystack: String, needle: &[char]) -> Vec<usize> {
+    let mut count = 0;
+    let mut idxs_of_substitution: Vec<usize> = Vec::with_capacity(4);
+
+    for (i, char) in haystack.chars().enumerate() {
+        if char == needle[count] {
+            count += 1;
+        } else {
+            count = 0;
+        }
+
+        if count == needle.len() {
+            idxs_of_substitution.push(i + 1);
+            count = 0;
+        }
+    }
+
+    idxs_of_substitution
 }

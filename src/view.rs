@@ -57,6 +57,10 @@ impl View {
             .enumerate()
             .filter(|(i, _)| self.should_render[*i])
     }
+
+    pub fn all_boxes(&self) -> impl Iterator<Item = &ViewBox> {
+        self.boxes.iter()
+    }
 }
 
 /// `ViewBox` Manipulation Methods
