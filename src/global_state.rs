@@ -20,7 +20,7 @@ pub struct GlobalState<'a> {
 }
 
 impl GlobalState<'_> {
-    pub fn new() -> Self {
+    pub fn new(quick_fix_list_display_idx: usize) -> Self {
         Self {
             next_operation: None,
             text_object_type: None,
@@ -34,7 +34,7 @@ impl GlobalState<'_> {
             register_handler: RegisterHandler::new(),
             status_bar: StatusBar::new(),
 
-            quick_fix_list: QuickFixList::new(),
+            quick_fix_list: QuickFixList::new(quick_fix_list_display_idx),
         }
     }
 }

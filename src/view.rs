@@ -152,7 +152,7 @@ impl View {
 
     /// Splits the given view box off into two view boxes, the new one being `fraction` the size of
     /// the original vertically
-    fn split_box_vertical_fraction(&mut self, box_idx: usize, fraction: f32) {
+    fn split_box_vertical_fraction(&mut self, box_idx: usize, fraction: f32) -> Option<usize> {
         assert!(fraction > 0.05 && fraction < 0.95);
 
         let view_box = &mut self.boxes[box_idx];
@@ -163,7 +163,7 @@ impl View {
         let fraction_y = fraction_height + view_box.y;
 
         if fraction_height == 1 {
-            return;
+            return None;
         }
 
         let mut new_view_box =
@@ -176,11 +176,13 @@ impl View {
 
         self.boxes.push(new_view_box);
         self.should_render.push(true);
+
+        Some(self.boxes.len() - 1)
     }
 
     /// Splits the given view box off into two view boxes, the new one being `fraction` the size of
     /// the original horizontally
-    fn split_box_horizontal_fraction(&mut self, box_idx: usize, fraction: f32) {
+    fn split_box_horizontal_fraction(&mut self, box_idx: usize, fraction: f32) -> Option<usize> {
         assert!(fraction > 0.05 && fraction < 0.95);
 
         let view_box = &mut self.boxes[box_idx];
@@ -191,7 +193,7 @@ impl View {
         let fraction_x = fraction_width + view_box.x;
 
         if fraction_width == 1 {
-            return;
+            return None;
         }
 
         let mut new_view_box =
@@ -204,10 +206,12 @@ impl View {
 
         self.boxes.push(new_view_box);
         self.should_render.push(true);
+
+        Some(self.boxes.len() - 1)
     }
 
-    pub fn create_menu_box(&mut self) {
-        self.split_box_vertical_fraction(self.cursor, 0.2);
+    pub fn create_menu_box(&mut self) -> Option<usize> {
+        self.split_box_vertical_fraction(self.cursor, 0.2)
     }
 
     pub fn split_box_vertical(&mut self, idx: usize) {

@@ -32,14 +32,14 @@ impl QuickFix {
 #[derive(Debug, Clone)]
 pub struct QuickFixList {
     pub fixes: Vec<QuickFix>,
-    display_buffer_idx: Option<usize>,
+    display_buffer_idx: usize,
 }
 
 impl QuickFixList {
-    pub fn new() -> Self {
+    pub fn new(display_buffer_idx: usize) -> Self {
         QuickFixList {
             fixes: vec![],
-            display_buffer_idx: None,
+            display_buffer_idx,
         }
     }
 

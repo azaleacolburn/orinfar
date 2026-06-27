@@ -124,6 +124,7 @@ pub fn start_program() -> Result<()> {
         enumerate_normal_chars(commands, operators, motions, text_objects, view_commands);
 
     let mut view = View::new(cols, rows);
+    view.
     let mut global_state = GlobalState::new();
 
     if !data.has_opened && path.is_none() {

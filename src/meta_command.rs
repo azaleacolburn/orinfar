@@ -95,6 +95,20 @@ pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Re
             }
         }
 
+        "copen" => {
+            let Some(idx) = view.create_menu_box() else {
+                log!("Could not create menu box for quick fix list");
+                return Ok(false);
+            };
+
+            let view_box = view.all_boxes().nth(idx).unwrap();
+
+            view_box.buffer.replace_contents(
+                global_state.quick_fix_list.to_string(),
+                &mut global_state.undo_tree,
+            );
+        }
+
         n => {
             if let Ok(num) = n.parse::<usize>() {
                 let buffer = view.get_buffer_mut();
@@ -206,8 +220,8 @@ pub fn find_cmd(arg: &str, view: &View, quick_fix_list: &mut QuickFixList) -> Re
 
         for idx in occurences {
             let fix = QuickFix {
-                start_position: idx,
-                end_position: idx + needle.len(),
+                start_position: idx - needle.len(),
+                end_position: idx,
                 file_path: Some(file.clone()),
                 buffer_idx,
             };
@@ -227,8 +241,8 @@ pub fn find_cmd(arg: &str, view: &View, quick_fix_list: &mut QuickFixList) -> Re
 
         for idx in occurences {
             let fix = QuickFix {
-                start_position: idx,
-                end_position: idx + needle.len(),
+                start_position: idx - needle.len(),
+                end_position: idx,
                 file_path: None,
                 buffer_idx: Some(buffer_idx),
             };
