@@ -192,8 +192,6 @@ fn try_expand_hl_block_back(
         // If it is the first block, `start_column` should always be 0
         None => {
             *start_column = 0;
-
-            // *end_column = 0;
         }
     }
 }
@@ -206,6 +204,8 @@ fn highlight_tree(
         hl_group_from_node(cursor.node(), hl_blocks, node_type_to_color);
     };
 
+    // NOTE
+    // These hooks should be no-ops
     let move_up_hook = |_hl_blocks: &mut Vec<Vec<HLBlock>>| {};
     let move_down_hook = |_hl_blocks: &mut Vec<Vec<HLBlock>>| {};
 

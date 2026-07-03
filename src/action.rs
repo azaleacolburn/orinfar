@@ -1,4 +1,5 @@
 use crate::{
+    buffer::Buffer,
     commands::Command,
     global_state::GlobalState,
     motion::Motion,
@@ -28,58 +29,21 @@ pub fn match_action<'a>(
         Some(c) => c,
         None => return,
     };
-    let buffer = view.get_buffer_mut();
-
     let cmd: String = global_state.chained.iter().collect();
 
+    let buffer = view.get_buffer_mut();
+
     if let Some(operation) = global_state.next_operation {
-        if last == 'i' {
-            global_state.text_object_type = Some(TextObjectType::Inside);
-        } else if last == 'a' {
-            global_state.text_object_type = Some(TextObjectType::Around);
-        } else if operation.name == last {
-            (0..global_state.count).for_each(|_| {
-                operation.entire_line(
-                    buffer,
-                    &mut global_state.register_handler,
-                    &mut global_state.mode,
-                    &mut global_state.undo_tree,
-                );
-            });
-
-            reset(global_state, last_chained, last_count);
-        } else if let Some(to_type) = &global_state.text_object_type {
-            // NOTE
-            // This is fine because for the text object, we only care about the last key pressed
-            if let Some(text_object) = text_objects.iter().find(|to| last_char(to.name) == last) {
-                (0..global_state.count).for_each(|_| {
-                    operation.execute_text_object(
-                        text_object,
-                        to_type,
-                        buffer,
-                        &mut global_state.register_handler,
-                        &mut global_state.mode,
-                        &mut global_state.undo_tree,
-                    );
-                });
-
-                global_state.text_object_type = None;
-
-                reset(global_state, last_chained, last_count);
-            }
-        } else if let Some(motion) = motions.iter().find(|motion| motion.name == last) {
-            (0..global_state.count).for_each(|_| {
-                operation.execute_motion(
-                    motion,
-                    buffer,
-                    &mut global_state.register_handler,
-                    &mut global_state.mode,
-                    &mut global_state.undo_tree,
-                );
-            });
-
-            reset(global_state, last_chained, last_count);
-        }
+        handle_pending_operation(
+            operation,
+            buffer,
+            global_state,
+            last_chained,
+            last_count,
+            text_objects,
+            motions,
+            last,
+        );
     } else if let Some(command) = commands.iter().find(|motion| motion.name == cmd) {
         (0..global_state.count).for_each(|_| {
             command.execute(
@@ -107,6 +71,69 @@ pub fn match_action<'a>(
         reset(global_state, last_chained, last_count);
     } else if let Some(operator) = operators.iter().find(|operator| operator.name == last) {
         global_state.next_operation = Some(operator);
+    }
+}
+
+fn handle_pending_operation(
+    operation: &Operator,
+    buffer: &mut Buffer,
+    global_state: &mut GlobalState,
+    last_chained: &mut Vec<char>,
+    last_count: &mut u32,
+    text_objects: &[TextObject],
+    motions: &[Motion],
+    last: char,
+) {
+    if last == 'i' {
+        global_state.text_object_type = Some(TextObjectType::Inside);
+    } else if last == 'a' {
+        global_state.text_object_type = Some(TextObjectType::Around);
+    } else if operation.name == last {
+        (0..global_state.count).for_each(|_| {
+            operation.entire_line(
+                buffer,
+                &mut global_state.register_handler,
+                &mut global_state.mode,
+                &mut global_state.undo_tree,
+            );
+        });
+
+        reset(global_state, last_chained, last_count);
+    } else if let Some(to_type) = &global_state.text_object_type {
+        // NOTE
+        // This is fine because for the text object, we only care about the last key pressed
+        let Some(text_object) = text_objects.iter().find(|to| last_char(to.name) == last) else {
+            // TODO Decide whether we should log things triggered easily by users?
+            // log!("Could not find text object {}", last);
+            return;
+        };
+
+        (0..global_state.count).for_each(|_| {
+            operation.execute_text_object(
+                text_object,
+                to_type,
+                buffer,
+                &mut global_state.register_handler,
+                &mut global_state.mode,
+                &mut global_state.undo_tree,
+            );
+        });
+
+        global_state.text_object_type = None;
+
+        reset(global_state, last_chained, last_count);
+    } else if let Some(motion) = motions.iter().find(|motion| motion.name == last) {
+        (0..global_state.count).for_each(|_| {
+            operation.execute_motion(
+                motion,
+                buffer,
+                &mut global_state.register_handler,
+                &mut global_state.mode,
+                &mut global_state.undo_tree,
+            );
+        });
+
+        reset(global_state, last_chained, last_count);
     }
 }
 
