@@ -8,17 +8,13 @@ use std::fmt::Display;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Buffer {
     pub has_changed: bool,
+    // TODO
+    // Turn this into a list of line indices that need updating
     pub lines_for_updating: Vec<bool>,
     pub rope: Rope,
     pub cursor: usize,
     /// The largest column since moving sideways
     pub intended_column: usize,
-}
-
-impl Default for Buffer {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl Buffer {
@@ -42,6 +38,12 @@ impl Buffer {
 
     pub fn is_first_row(&self) -> bool {
         self.rope.char_to_line(self.cursor) == 0
+    }
+}
+
+impl Default for Buffer {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
