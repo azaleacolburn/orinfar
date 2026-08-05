@@ -1,4 +1,5 @@
 use crate::{
+    DEBUG,
     buffer::Buffer,
     file_io::try_get_git_hash,
     highlight::{HLBlock, HLEnd},
@@ -277,7 +278,9 @@ impl ViewBox {
         left_padding: usize,
         clear_str: &str,
     ) {
+        log!("\n");
         lines.for_each(|(line_num, (line, should_update))| {
+            log!("{:?}", line);
             if !should_update {
                 queue!(stdout, MoveDown(1)).expect("Crossterm MoveDown command failed");
                 return;
@@ -293,7 +296,8 @@ impl ViewBox {
                 return;
             }
 
-            let line = self.slice_line(line, line_len);
+            let characters_to_print = self.last_col(left_padding, line_len);
+            let line = self.slice_line(line, characters_to_print);
 
             queue!(
                 stdout,
@@ -335,6 +339,7 @@ impl ViewBox {
         padding_buffer.clear();
     }
 
+    /// Calculates the number of characters in the line after removing the newline character
     fn calculate_total_line_len(line: RopeSlice) -> usize {
         let mut total_line_len = line.len_chars();
         if total_line_len > 0
@@ -349,10 +354,12 @@ impl ViewBox {
 
     /// Returns the last column in the line that's being rendered to the screen
     fn last_col(&self, left_padding: usize, line_len: usize) -> usize {
-        // Number of characters that we're able to display in the current line
-        let display_line_len = self.width as usize - left_padding;
-
-        usize::min(self.left + display_line_len, line_len)
+        let max_len_of_line = self.width as usize - left_padding;
+        if max_len_of_line > line_len {
+            line_len
+        } else {
+            self.left + max_len_of_line
+        }
     }
 
     fn slice_line(&self, line: RopeSlice, last_col: usize) -> String {
