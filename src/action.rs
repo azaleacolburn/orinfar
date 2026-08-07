@@ -74,6 +74,7 @@ pub fn match_action<'a>(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_pending_operation(
     operation: &Operator,
     buffer: &mut Buffer,

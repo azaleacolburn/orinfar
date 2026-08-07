@@ -309,7 +309,7 @@ impl ViewBox {
     }
 
     fn clear_line(clear_str: &str, stdout: &mut StdoutLock) {
-        queue!(stdout, Print(&clear_str)).unwrap();
+        queue!(stdout, Print(&clear_str)).expect("Could not print clear string");
     }
 
     fn print_padding(
@@ -351,7 +351,7 @@ impl ViewBox {
     }
 
     /// Returns the last column in the line that's being rendered to the screen
-    fn last_col(&self, left_padding: usize, line_len: usize) -> usize {
+    const fn last_col(&self, left_padding: usize, line_len: usize) -> usize {
         let max_len_of_line = self.width as usize - left_padding;
         if max_len_of_line > line_len {
             line_len
