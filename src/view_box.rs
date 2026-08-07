@@ -113,13 +113,12 @@ impl ViewBox {
 
         let clear_str: String = (0..=self.width).map(|_| ' ').collect();
 
-        // NOTE
         // Taking the length to avoid having to clone all of lines
         // Since its used in the statement below
         let maybe_len_lines = u16::try_from(lines.len()).ok();
 
         if let Some(_tree) = self.parse_tree.as_ref()
-            && let Some((_parser, language)) = self.parser.as_ref()
+            && let Some((_, language)) = self.parser.as_ref()
             && let Some(path) = self.path.as_ref()
             && let Some(ex) = path.extension()
             && let Some(ex) = ex.to_str()
@@ -127,7 +126,6 @@ impl ViewBox {
         {
             self.print_line_hl(
                 lines,
-                // NOTE
                 // Expensive
                 self.highlight(),
                 stdout,
@@ -363,7 +361,6 @@ impl ViewBox {
     }
 
     fn slice_line(&self, line: RopeSlice, last_col: usize) -> String {
-        // NOTE
         // What was happening here was when we cropped the line
         // we also cropped the newline character at the
         // end, meaning that we never moved down to the next row!
