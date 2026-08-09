@@ -1,7 +1,8 @@
 use crate::{
-    action::match_action, commands::Command as Cmd, count::update_count, global_state::GlobalState,
-    meta_command::match_meta_command, mode::Mode, motion::Motion, operator::Operator,
-    text_object::TextObject, undo::Action, view::View, view_command::ViewCommand,
+    DEBUG, action::match_action, commands::Command as Cmd, count::update_count,
+    global_state::GlobalState, meta_command::match_meta_command, mode::Mode, motion::Motion,
+    operator::Operator, text_object::TextObject, undo::Action, view::View,
+    view_command::ViewCommand,
 };
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, read};
@@ -32,9 +33,24 @@ pub fn program_loop<'a>(
         let buffer = view.get_buffer_mut();
         buffer.update_list_reset();
 
-        let Event::Key(event) = read()? else { continue };
+        let event = read()?;
 
-        match (event.code, global_state.mode.clone()) {
+        let key_event = match event {
+            Event::Key(event) => event,
+            Event::Resize(col, row) => {
+                log!("Resizing");
+                view.resize_terminal(row, col);
+                view.clear_screen();
+
+                let adjusted = view.adjust();
+                view.render(&global_state, adjusted)?;
+
+                continue;
+            }
+            _ => continue,
+        };
+
+        match (key_event.code, global_state.mode.clone()) {
             (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
                 update_count(c, &mut global_state.count);
             }

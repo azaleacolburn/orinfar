@@ -3,7 +3,7 @@ use crate::{
 };
 use anyhow::Result;
 use crossterm::{
-    cursor::{MoveTo, MoveToColumn, MoveToRow, SetCursorStyle, Show},
+    cursor::{MoveDown, MoveTo, MoveToColumn, MoveToNextLine, MoveToRow, SetCursorStyle, Show},
     execute, queue,
     style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{
@@ -323,6 +323,20 @@ impl View {
         }
 
         self.boxes.push(new_view_box);
+    }
+
+    pub fn resize_terminal(&mut self, rows: u16, cols: u16) {
+        self.width = cols;
+        self.height = rows;
+    }
+
+    pub fn clear_screen(&self) {
+        let mut stdout = stdout();
+        let clear_str: String = (0..self.width).map(|_| ' ').collect();
+        for _ in 0..self.height {
+            queue!(stdout, Print(&clear_str), MoveToNextLine(1))
+                .expect("Could not print clear string");
+        }
     }
 }
 
