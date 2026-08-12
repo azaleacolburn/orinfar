@@ -1,7 +1,6 @@
 use crate::{
-    DEBUG, buffer::Buffer, global_state::GlobalState, mode::Mode, undo::UndoTree,
-    utility::SplitOnce, view::View, view_box::ViewBox,
-    view_command::split_curr_view_box_horizontal,
+    buffer::Buffer, global_state::GlobalState, mode::Mode, undo::UndoTree, utility::SplitOnce,
+    view::View, view_box::ViewBox, view_command::split_curr_view_box_horizontal,
 };
 use anyhow::Result;
 use ropey::Rope;

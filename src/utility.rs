@@ -1,4 +1,4 @@
-use crate::{DEBUG, buffer::Buffer, log, logn};
+use crate::{buffer::Buffer, log, logn};
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, read};
 use tree_sitter::{Tree, TreeCursor};

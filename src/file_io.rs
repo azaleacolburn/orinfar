@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{DEBUG, log, view::View};
+use crate::{log, view::View};
 use anyhow::Result;
 use ropey::Rope;
 
@@ -30,13 +30,11 @@ impl View {
     }
 
     pub fn write(&self) -> Result<()> {
-        match self.get_path() {
-            Some(path) => {
-                let buffer = self.get_buffer().to_string();
-                fs::write(path, buffer)?;
-            }
-
-            None => log!("WARNING: Cannot Write Unattached Buffer"),
+        if let Some(path) = self.get_path() {
+            let buffer = self.get_buffer().to_string();
+            fs::write(path, buffer)?;
+        } else {
+            log!("WARNING: Cannot Write Unattached Buffer");
         }
 
         Ok(())

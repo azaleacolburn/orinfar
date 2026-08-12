@@ -1,5 +1,4 @@
 use crate::{
-    DEBUG,
     buffer::Buffer,
     file_io::try_get_git_hash,
     highlight::{HLBlock, HLEnd},

@@ -1,5 +1,7 @@
 use anyhow::Result;
-use std::{fs::OpenOptions, io::Write, path::PathBuf};
+use std::{fs::OpenOptions, io::Write, path::PathBuf, sync::LazyLock};
+
+static LOG_DIR: LazyLock<PathBuf> = LazyLock::new(log_file);
 
 pub struct OrinfarData {
     /// Whether they have opened Orinfar before on this machine
@@ -51,7 +53,7 @@ pub fn data_file() -> PathBuf {
 pub fn log(contents: &impl ToString) {
     let mut file = OpenOptions::new()
         .append(true)
-        .open(log_file())
+        .open(LazyLock::force(&LOG_DIR))
         .expect("unable to open file");
 
     // append data to the file
@@ -83,18 +85,20 @@ pub fn write_data(key: &impl ToString, value: &impl ToString) {
 
 #[macro_export]
 macro_rules! log {
-    ($($arg:tt)*) => {
+    ($($arg:tt)*) => {{
+        use $crate::DEBUG;
         if *DEBUG.get().unwrap() {
             $crate::logging::log(&format!($($arg)*))
         }
-    };
+    }};
 }
 
 #[macro_export]
 macro_rules! logn {
-    ($($arg:tt)*) => {
+    ($($arg:tt)*) => {{
+        use $crate::DEBUG;
         if *DEBUG.get().unwrap() {
             $crate::logging::log_no_newline(&format!($($arg)*))
         }
-    };
+    }};
 }
