@@ -52,6 +52,7 @@ I'll specify and revise this list when I get around to specific things and I hav
 - [ ] Important Chores
     - [ ] Test Suite 
     - [ ] Benchmarking Suite
+    - [ ] Better view box handling (resizing is a really hard / impossible problem right now)
 
 # Feature/Bug Requests
 

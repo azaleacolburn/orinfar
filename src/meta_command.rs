@@ -4,7 +4,7 @@ use crate::{
 };
 use anyhow::Result;
 use ropey::Rope;
-use std::path::PathBuf;
+use std::{ops::ControlFlow, path::PathBuf};
 
 // TODO
 // Eventually match from a list of `MatchCommand`s to make them easier to manage
@@ -12,18 +12,25 @@ use std::path::PathBuf;
 
 /// # Returns
 /// A boolean indicating whether to break from the main program loop
-pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Result<bool> {
+pub fn match_meta_command(
+    global_state: &mut GlobalState,
+    view: &mut View,
+) -> Result<ControlFlow<()>> {
     let (command, arg): (&[char], &[char]) = global_state.status_bar[1..]
         .split_once_a(|c| *c == ' ' || *c == '/')
         .unwrap_or_else(|| (&global_state.status_bar[1..], &[]));
     let (command, arg): (String, String) = (command.iter().collect(), arg.iter().collect());
 
+    let mut control = ControlFlow::Continue(());
+
     match command.as_str() {
         "write" | "w" => view.write()?,
-        "quit" | "q" => return Ok(true),
+        "quit" | "q" => {
+            control = ControlFlow::Break(());
+        }
         "wq" => {
             view.write()?;
-            return Ok(true);
+            control = ControlFlow::Break(());
         }
 
         "unattach" | "u" => view.set_path(None),
@@ -47,10 +54,10 @@ pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Re
             substitute_cmd(buffer, &arg, &mut global_state.undo_tree);
         }
 
-        "dir" | "d" => {
+        "dir" | "d" => 'block: {
             if view.get_buffer().rope.len_chars() == 0 {
                 print_directories(view, &mut global_state.undo_tree)?;
-                return Ok(false);
+                break 'block;
             }
 
             split_curr_view_box_horizontal(view);
@@ -94,7 +101,7 @@ pub fn match_meta_command(global_state: &mut GlobalState, view: &mut View) -> Re
     global_state.mode = Mode::Normal;
     global_state.status_bar.clear();
 
-    Ok(false)
+    Ok(control)
 }
 
 pub fn substitute_cmd(buffer: &mut Buffer, arg: &str, undo_tree: &mut UndoTree) {

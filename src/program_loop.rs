@@ -1,3 +1,5 @@
+use std::ops::ControlFlow;
+
 use crate::{
     action::match_action, commands::Command as Cmd, count::update_count, global_state::GlobalState,
     meta_command::match_meta_command, mode::Mode, motion::Motion, operator::Operator,
@@ -119,7 +121,7 @@ pub fn program_loop<'a>(
             }
 
             (KeyCode::Enter, Mode::Meta) => {
-                if match_meta_command(&mut global_state, &mut view)? {
+                if let ControlFlow::Break(_) = match_meta_command(&mut global_state, &mut view)? {
                     break 'main;
                 }
             }
