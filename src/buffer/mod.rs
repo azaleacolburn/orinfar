@@ -1,3 +1,7 @@
+mod char_commands;
+mod line_commands;
+mod update_list;
+
 use ropey::Rope;
 use std::fmt::Display;
 

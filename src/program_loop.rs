@@ -121,7 +121,7 @@ pub fn program_loop<'a>(
             }
 
             (KeyCode::Enter, Mode::Meta) => {
-                if let ControlFlow::Break(_) = match_meta_command(&mut global_state, &mut view)? {
+                if match_meta_command(&mut global_state, &mut view)? == ControlFlow::Break(()) {
                     break 'main;
                 }
             }
