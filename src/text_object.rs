@@ -29,7 +29,7 @@ pub struct TextObject<'a> {
 // TODO
 // Currently, there isn't a counting mechanism to match the corresponding bracket, which is sad
 impl<'a> TextObject<'a> {
-    pub fn new(name: &'a str, command: fn(buffer: &Buffer) -> TOBounds) -> Self {
+    pub const fn new(name: &'a str, command: fn(buffer: &Buffer) -> TOBounds) -> Self {
         TextObject { name, command }
     }
 

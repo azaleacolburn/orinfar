@@ -11,7 +11,7 @@ pub struct Motion {
 }
 
 impl Motion {
-    pub fn exclusive(name: char, command: fn(buffer: &mut Buffer)) -> Self {
+    pub const fn exclusive(name: char, command: fn(buffer: &mut Buffer)) -> Self {
         Self {
             name,
             command,
@@ -19,7 +19,7 @@ impl Motion {
         }
     }
 
-    pub fn inclusive(name: char, command: fn(buffer: &mut Buffer)) -> Self {
+    pub const fn inclusive(name: char, command: fn(buffer: &mut Buffer)) -> Self {
         Self {
             name,
             command,

@@ -19,7 +19,7 @@ pub struct Operator {
 }
 
 impl Operator {
-    pub fn new(
+    pub const fn new(
         name: char,
         command: fn(
             end: usize,

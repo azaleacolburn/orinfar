@@ -6,7 +6,7 @@ pub struct ViewCommand<'a> {
 }
 
 impl<'a> ViewCommand<'a> {
-    pub fn new(name: &'a str, command: fn(view: &mut View)) -> Self {
+    pub const fn new(name: &'a str, command: fn(view: &mut View)) -> Self {
         ViewCommand { name, command }
     }
 
@@ -51,10 +51,6 @@ pub fn move_right_one_view_box(view: &mut View) {
     if let Some(i) = view.position_view_box_right() {
         view.cursor = i;
     }
-}
-
-pub fn delete_curr_view_box(view: &mut View) {
-    view.delete_curr_view_box();
 }
 
 pub fn split_curr_view_box_vertical(view: &mut View) {

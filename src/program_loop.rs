@@ -1,9 +1,9 @@
 use std::ops::ControlFlow;
 
 use crate::{
-    action::match_action, commands::Command as Cmd, count::update_count, global_state::GlobalState,
-    meta_command::match_meta_command, mode::Mode, motion::Motion, operator::Operator,
-    text_object::TextObject, undo::Action, view::View, view_command::ViewCommand,
+    action::match_action, count::update_count, global_state::GlobalState,
+    meta_command::match_meta_command, mode::Mode, program_init::ALL_NORMAL_CHARS, undo::Action,
+    view::View,
 };
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, read};
@@ -14,19 +14,8 @@ use crossterm::event::{Event, KeyCode, read};
 ///
 /// # Arguments
 /// This function essentially consumes every relevant piece of data in the program
-#[allow(clippy::too_many_arguments)]
 #[allow(clippy::too_many_lines)]
-pub fn program_loop<'a>(
-    commands: &[Cmd],
-    operators: &'a [Operator],
-    motions: &[Motion],
-    text_objects: &[TextObject],
-    view_commands: &[ViewCommand],
-    all_normal_chars: &[char],
-
-    mut global_state: GlobalState<'a>,
-    mut view: View,
-) -> Result<()> {
+pub fn program_loop(mut global_state: GlobalState, mut view: View) -> Result<()> {
     let mut last_count = 1;
     let mut last_chained: Vec<char> = vec![];
 
@@ -60,14 +49,9 @@ pub fn program_loop<'a>(
                 &mut last_chained,
                 &mut last_count,
                 &mut view,
-                commands,
-                operators,
-                motions,
-                text_objects,
-                view_commands,
             ),
             (KeyCode::Char(c), Mode::Normal) => {
-                if !all_normal_chars.contains(&c) {
+                if !ALL_NORMAL_CHARS.contains(&c) {
                     continue;
                 }
                 global_state.chained.push(c);
@@ -77,11 +61,6 @@ pub fn program_loop<'a>(
                     &mut last_chained,
                     &mut last_count,
                     &mut view,
-                    commands,
-                    operators,
-                    motions,
-                    text_objects,
-                    view_commands,
                 );
             }
 

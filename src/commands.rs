@@ -22,7 +22,7 @@ pub struct Command<'a> {
 }
 
 impl<'a> Command<'a> {
-    pub fn new(
+    pub const fn new(
         name: &'a str,
         command: fn(
             buffer: &mut Buffer,
