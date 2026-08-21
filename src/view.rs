@@ -143,6 +143,7 @@ impl View {
             (Mode::Normal, Some(path)) => {
                 self.normal_attached_status(path, chained, count, register)?
             }
+
             (Mode::Normal, None) => Self::normal_unattached_status(chained, count, register),
             (Mode::Insert, _) => "-- INSERT --".into(),
             (Mode::Visual, _) => "-- VISUAL --".into(),

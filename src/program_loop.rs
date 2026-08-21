@@ -30,7 +30,7 @@ pub fn program_loop<'a>(
     let mut last_count = 1;
     let mut last_chained: Vec<char> = vec![];
 
-    'main: loop {
+    loop {
         let buffer = view.get_buffer_mut();
         buffer.update_list_reset();
 
@@ -122,7 +122,7 @@ pub fn program_loop<'a>(
 
             (KeyCode::Enter, Mode::Meta) => {
                 if match_meta_command(&mut global_state, &mut view)? == ControlFlow::Break(()) {
-                    break 'main;
+                    break;
                 }
             }
 
