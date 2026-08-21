@@ -14,10 +14,10 @@ pub fn match_action(
     last_count: &mut u32,
     view: &mut View,
 ) {
-    let last = *match global_state.chained.last() {
-        Some(c) => c,
-        None => return,
+    let Some(last) = global_state.chained.last() else {
+        return;
     };
+
     let cmd: String = global_state.chained.iter().collect();
 
     let buffer = view.get_buffer_mut();
@@ -29,7 +29,7 @@ pub fn match_action(
             global_state,
             last_chained,
             last_count,
-            last,
+            *last,
         );
     } else if let Some(command) = COMMANDS.iter().find(|motion| motion.name == cmd) {
         (0..global_state.count).for_each(|_| {
@@ -43,17 +43,13 @@ pub fn match_action(
 
         reset(global_state, last_chained, last_count);
     } else if let Some(view_command) = VIEW_COMMANDS.iter().find(|command| command.name == cmd) {
-        (0..global_state.count).for_each(|_| {
-            view_command.execute(view);
-        });
+        (0..global_state.count).for_each(|_| view_command.execute(view));
 
         reset(global_state, last_chained, last_count);
     } else if global_state.chained.len() == 1
         && let Some(motion) = MOTIONS.iter().find(|motion| motion.name == last)
     {
-        (0..global_state.count).for_each(|_| {
-            motion.apply(buffer);
-        });
+        (0..global_state.count).for_each(|_| motion.apply(buffer));
 
         reset(global_state, last_chained, last_count);
     } else if let Some(operator) = OPERATORS.iter().find(|operator| operator.name == last) {
