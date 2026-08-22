@@ -54,6 +54,7 @@ mod undo;
 mod view;
 mod view_box;
 mod view_command;
+mod view_node;
 
 pub static DEBUG: OnceLock<bool> = OnceLock::new();
 

@@ -1,5 +1,6 @@
 use crate::{
-    buffer::Buffer, global_state::GlobalState, mode::Mode, status_bar::StatusBar, view_box::ViewBox,
+    buffer::Buffer, global_state::GlobalState, mode::Mode, status_bar::StatusBar,
+    view_box::ViewBox, view_node::ViewNode,
 };
 use anyhow::Result;
 use crossterm::{
@@ -18,9 +19,8 @@ use std::{
 
 /// Represents the entire view of the editor in the terminal
 pub struct View {
-    pub boxes: Vec<ViewBox>,
-    // Represents which index of the view box the cursor is in
-    pub cursor: usize,
+    view_box_structure: ViewNode,
+    current_view_box: usize,
     width: u16,
     height: u16,
 }
@@ -28,7 +28,7 @@ pub struct View {
 impl View {
     pub fn new(cols: u16, rows: u16) -> Self {
         Self {
-            boxes: vec![ViewBox::new(cols, rows - 1, 0, 0)],
+            view_box_structure: ViewNode::Leaf(ViewBox::new(cols, rows - 1, 0, 0)),
             cursor: 0,
             width: cols, // Don't subtract one because each viewbox handles line nums separately
             height: rows - 1,
@@ -36,15 +36,15 @@ impl View {
     }
 
     pub fn get_buffer_mut(&mut self) -> &mut Buffer {
-        &mut self.boxes[self.cursor].buffer
+        &mut self.view_box_structure[self.cursor].buffer
     }
 
     pub fn get_buffer(&self) -> &Buffer {
-        &self.boxes[self.cursor].buffer
+        &self.view_box_structure[self.cursor].buffer
     }
 
     pub fn get_view_box(&mut self) -> &mut ViewBox {
-        &mut self.boxes[self.cursor]
+        &mut self.view_box_structure[self.cursor]
     }
 
     pub fn normal_unattached_status(chained: &[char], count: u32, register: char) -> String {
@@ -156,10 +156,14 @@ impl View {
     pub fn render(&self, global_state: &GlobalState, adjusted: bool) -> Result<()> {
         let register = global_state.register_handler.get_curr_reg();
 
-        let mut errors = self.boxes.iter().enumerate().filter_map(|(i, view_box)| {
-            let adjusted = adjusted && i == self.cursor;
-            view_box.render(adjusted).err()
-        });
+        let mut errors = self
+            .view_box_structure
+            .iter()
+            .enumerate()
+            .filter_map(|(i, view_box)| {
+                let adjusted = adjusted && i == self.cursor;
+                view_box.render(adjusted).err()
+            });
         if let Some(err) = errors.next() {
             return Err(err);
         }
@@ -186,7 +190,7 @@ impl View {
         let (new_col, new_row) = if matches!(global_state.mode, Mode::Meta | Mode::Search) {
             (global_state.status_bar.idx(), self.height + 1)
         } else {
-            let view_box = &self.boxes[self.cursor];
+            let view_box = &self.view_box_structure[self.cursor];
             view_box.cursor_position()
         };
         queue!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
@@ -202,7 +206,7 @@ impl View {
     where
         P: FnMut(&ViewBox) -> bool,
     {
-        self.boxes.iter().position(predicate)
+        self.view_box_structure.iter().position(predicate)
     }
 
     /// # Returns
@@ -249,7 +253,7 @@ impl View {
         let mut down = self.position_view_box_down();
         let mut up = self.position_view_box_up();
 
-        let view_box = self.boxes.remove(self.cursor);
+        let view_box = self.view_box_structure.remove(self.cursor);
         if let Some(ref mut down) = down
             && *down > self.cursor
         {
@@ -265,12 +269,12 @@ impl View {
 
         match (down, up) {
             (_, Some(up_i)) => {
-                let up_box = &mut self.boxes[up_i];
+                let up_box = &mut self.view_box_structure[up_i];
                 up_box.height += view_box.height;
                 self.cursor = up_i;
             }
             (Some(down_i), None) => {
-                let down_box = &mut self.boxes[down_i];
+                let down_box = &mut self.view_box_structure[down_i];
                 down_box.y = view_box.y;
                 down_box.height += view_box.height;
                 self.cursor = down_i;
@@ -283,7 +287,7 @@ impl View {
     }
 
     pub fn split_view_box_vertical(&mut self, idx: usize) {
-        let view_box = &mut self.boxes[idx];
+        let view_box = &mut self.view_box_structure[idx];
 
         let half_height = view_box.height / 2;
         let half_y = half_height + view_box.y;
@@ -301,11 +305,11 @@ impl View {
             new_view_box.height += 1;
         }
 
-        self.boxes.push(new_view_box);
+        self.view_box_structure.push(new_view_box);
     }
 
     pub fn split_view_box_horizontal(&mut self, idx: usize) {
-        let view_box = &mut self.boxes[idx];
+        let view_box = &mut self.view_box_structure[idx];
 
         let half_width = view_box.width / 2;
         let half_x = half_width + view_box.x;
@@ -324,7 +328,7 @@ impl View {
             new_view_box.width += 1;
         }
 
-        self.boxes.push(new_view_box);
+        self.view_box_structure.push(new_view_box);
     }
 }
 
