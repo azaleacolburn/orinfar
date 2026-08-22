@@ -1,9 +1,8 @@
 use std::ops::ControlFlow;
 
 use crate::{
-    action::match_action, count::update_count, global_state::GlobalState,
-    meta_command::match_meta_command, mode::Mode, program_init::ALL_NORMAL_CHARS, undo::Action,
-    view::View,
+    ALL_NORMAL_CHARS, action::match_action, count::update_count, global_state::GlobalState,
+    meta_command::match_meta_command, mode::Mode, undo::Action, view::View,
 };
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, read};
@@ -34,22 +33,22 @@ pub fn program_loop(mut global_state: GlobalState, mut view: View) -> Result<()>
                 global_state.mode = Mode::Meta;
                 global_state.status_bar.push(':');
             }
+
             (KeyCode::Char('/'), Mode::Normal) => {
                 global_state.mode.search();
                 global_state.status_bar.push('/');
             }
-            (KeyCode::Char('n'), Mode::Normal) => {
-                buffer.goto_next_string(&global_state.search_str);
-            }
-            (KeyCode::Char('N'), Mode::Normal) => {
-                buffer.goto_prev_string(&global_state.search_str);
-            }
+
+            (KeyCode::Char('n'), Mode::Normal) => buffer.goto_next_string(&global_state.search_str),
+            (KeyCode::Char('N'), Mode::Normal) => buffer.goto_prev_string(&global_state.search_str),
+
             (KeyCode::Char('.'), Mode::Normal) => match_action(
                 &mut global_state,
                 &mut last_chained,
                 &mut last_count,
                 &mut view,
             ),
+
             (KeyCode::Char(c), Mode::Normal) => {
                 if !ALL_NORMAL_CHARS.contains(&c) {
                     continue;
@@ -69,15 +68,16 @@ pub fn program_loop(mut global_state: GlobalState, mut view: View) -> Result<()>
                 global_state.count = 1;
                 global_state.next_operation = None;
             }
+
             (KeyCode::Esc, Mode::Insert) => {
                 if buffer.cursor != buffer.get_start_of_line() {
                     buffer.cursor -= 1;
                 }
                 global_state.mode.normal();
             }
-            (KeyCode::Backspace, Mode::Insert) => {
-                buffer.backspace(&mut global_state.undo_tree);
-            }
+
+            (KeyCode::Backspace, Mode::Insert) => buffer.backspace(&mut global_state.undo_tree),
+
             (KeyCode::Char(c), Mode::Insert) => {
                 buffer.insert_char(c);
                 buffer.cursor += 1;
@@ -86,12 +86,14 @@ pub fn program_loop(mut global_state: GlobalState, mut view: View) -> Result<()>
                 let action = Action::insert(buffer.cursor - 1, &c);
                 global_state.undo_tree.new_action_merge(action);
             }
+
             (KeyCode::Tab, Mode::Insert) => {
                 buffer.insert_n_times(' ', 4);
                 buffer.cursor += 4;
 
                 buffer.update_list_use_current_line();
             }
+
             (KeyCode::Enter, Mode::Insert) => {
                 let newline = buffer.insert_newline();
 
@@ -105,16 +107,14 @@ pub fn program_loop(mut global_state: GlobalState, mut view: View) -> Result<()>
                 }
             }
 
-            (KeyCode::Char(c), Mode::Meta | Mode::Search) => {
-                global_state.status_bar.push(c);
-            }
+            (KeyCode::Char(c), Mode::Meta | Mode::Search) => global_state.status_bar.push(c),
+
             (KeyCode::Esc, Mode::Meta | Mode::Search) => {
                 global_state.mode.normal();
                 global_state.status_bar.clear();
             }
-            (KeyCode::Backspace, Mode::Meta | Mode::Search) => {
-                global_state.status_bar.delete();
-            }
+            (KeyCode::Backspace, Mode::Meta | Mode::Search) => global_state.status_bar.delete(),
+
             (_, Mode::Meta) => {}
 
             (KeyCode::Enter, Mode::Search) => {

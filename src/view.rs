@@ -16,6 +16,7 @@ use std::{
     path::PathBuf,
 };
 
+/// Represents the entire view of the editor in the terminal
 pub struct View {
     pub boxes: Vec<ViewBox>,
     // Represents which index of the view box the cursor is in

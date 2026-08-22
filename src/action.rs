@@ -1,10 +1,6 @@
 use crate::{
-    buffer::Buffer,
-    global_state::GlobalState,
-    operator::Operator,
-    program_init::{COMMANDS, MOTIONS, OPERATORS, TEXT_OBJECTS, VIEW_COMMANDS},
-    text_object::TextObjectType,
-    utility::last_char,
+    COMMANDS, MOTIONS, OPERATORS, TEXT_OBJECTS, VIEW_COMMANDS, buffer::Buffer,
+    global_state::GlobalState, operator::Operator, text_object::TextObjectType, utility::last_char,
     view::View,
 };
 
@@ -47,12 +43,12 @@ pub fn match_action(
 
         reset(global_state, last_chained, last_count);
     } else if global_state.chained.len() == 1
-        && let Some(motion) = MOTIONS.iter().find(|motion| motion.name == last)
+        && let Some(motion) = MOTIONS.iter().find(|motion| motion.name == *last)
     {
         (0..global_state.count).for_each(|_| motion.apply(buffer));
 
         reset(global_state, last_chained, last_count);
-    } else if let Some(operator) = OPERATORS.iter().find(|operator| operator.name == last) {
+    } else if let Some(operator) = OPERATORS.iter().find(|operator| operator.name == *last) {
         global_state.next_operation = Some(operator);
     }
 }

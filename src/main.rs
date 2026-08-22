@@ -45,7 +45,6 @@ mod mode;
 mod motion;
 mod operator;
 mod panic_hook;
-mod program_init;
 mod program_loop;
 mod register;
 mod status_bar;
