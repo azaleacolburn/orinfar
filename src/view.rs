@@ -1,6 +1,10 @@
 use crate::{
-    buffer::Buffer, global_state::GlobalState, mode::Mode, status_bar::StatusBar,
-    view_box::ViewBox, view_node::ViewNode,
+    buffer::Buffer,
+    global_state::GlobalState,
+    mode::Mode,
+    status_bar::StatusBar,
+    view_box::ViewBox,
+    view_node::{ViewNode, ViewNodeDirection, ViewNodePath},
 };
 use anyhow::Result;
 use crossterm::{
@@ -15,12 +19,13 @@ use crossterm::{
 use std::{
     io::{Write, stdout},
     path::PathBuf,
+    ptr,
 };
 
 /// Represents the entire view of the editor in the terminal
 pub struct View {
     view_box_structure: ViewNode,
-    current_view_box: usize,
+    current_view_box: ViewNodePath,
     width: u16,
     height: u16,
 }
@@ -29,22 +34,59 @@ impl View {
     pub fn new(cols: u16, rows: u16) -> Self {
         Self {
             view_box_structure: ViewNode::Leaf(ViewBox::new(cols, rows - 1, 0, 0)),
-            cursor: 0,
+            current_view_box: vec![],
             width: cols, // Don't subtract one because each viewbox handles line nums separately
             height: rows - 1,
         }
     }
 
     pub fn get_buffer_mut(&mut self) -> &mut Buffer {
-        &mut self.view_box_structure[self.cursor].buffer
+        // We originally had a mutable reference
+        // But `Self::get_view_box` returns an immutable reference
+        // So we just cast back to get our original reference
+        // This should be perfectly safe
+        let view_box = ptr::from_ref(self.get_view_box());
+        let view_box_mut = unsafe { view_box.cast_mut().as_mut() }.unwrap();
+
+        &mut view_box_mut.buffer
     }
 
     pub fn get_buffer(&self) -> &Buffer {
-        &self.view_box_structure[self.cursor].buffer
+        &self.get_view_box().buffer
     }
 
-    pub fn get_view_box(&mut self) -> &mut ViewBox {
-        &mut self.view_box_structure[self.cursor]
+    /// Guaranteed to not mutatble `self`
+    pub fn get_view_box(&self) -> &ViewBox {
+        let mut node = &self.view_box_structure;
+        for direction in &self.current_view_box {
+            match (direction, node) {
+                (_, ViewNode::Leaf(view_box)) => return view_box,
+
+                (
+                    ViewNodeDirection::Left,
+                    ViewNode::SplitVertical {
+                        left: top,
+                        right: _,
+                    }
+                    | ViewNode::SplitHorizontal { top, bottom: _ },
+                ) => node = top,
+
+                (
+                    ViewNodeDirection::Right,
+                    ViewNode::SplitVertical {
+                        left: _,
+                        right: bottom,
+                    }
+                    | ViewNode::SplitHorizontal { top: _, bottom },
+                ) => node = bottom,
+            };
+        }
+
+        if let ViewNode::Leaf(view_box) = node {
+            return view_box;
+        }
+
+        panic!("Bug in View Box Structure: Invalid Path to Current Box");
     }
 
     pub fn normal_unattached_status(chained: &[char], count: u32, register: char) -> String {
@@ -164,6 +206,7 @@ impl View {
                 let adjusted = adjusted && i == self.cursor;
                 view_box.render(adjusted).err()
             });
+
         if let Some(err) = errors.next() {
             return Err(err);
         }
@@ -202,16 +245,10 @@ impl View {
 
 /// `ViewBox` Manipulation Methods
 impl View {
-    pub fn position_of_box<P>(&self, predicate: P) -> Option<usize>
-    where
-        P: FnMut(&ViewBox) -> bool,
-    {
-        self.view_box_structure.iter().position(predicate)
-    }
-
     /// # Returns
+    ///
     /// The position (in `self.boxes`) of one `view_box` down, if it exists
-    pub fn position_view_box_down(&mut self) -> Option<usize> {
+    pub fn path_to_view_box_down(&mut self) -> Option<usize> {
         let view_box = self.get_view_box();
 
         let (x, y) = view_box.get_lower_left();

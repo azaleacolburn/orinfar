@@ -1,7 +1,14 @@
 use crate::view_box::ViewBox;
 
+pub enum ViewNodeDirection {
+    Left,
+    Right,
+}
+
+pub type ViewNodePath = Vec<ViewNodeDirection>;
+
 pub enum ViewNode {
-    Leaf(ViewBox),
+    Leaf(Box<ViewBox>),
     SplitVertical {
         left: Box<ViewNode>,
         right: Box<ViewNode>,
