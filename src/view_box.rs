@@ -17,6 +17,13 @@ use std::{
 };
 use tree_sitter::{Parser, Tree};
 
+pub struct RenderInfo {
+    pub x: u16,
+    pub y: u16,
+    pub height: u16,
+    pub width: u16,
+}
+
 pub struct ViewBox {
     // Components inherant to the view box
     pub buffer: Buffer,
@@ -26,18 +33,10 @@ pub struct ViewBox {
     pub parser: Option<(Parser, OrinLanguage)>,
     pub parse_tree: Option<Tree>,
 
-    // The x and y corrdinates of the upper right hand corner of where the buffer will be displayed
-    pub x: u16,
-    pub y: u16,
-
     // The topmost row of the buffer being displayed (zero-indexed)
     pub top: usize,
-    // The height in rows of the entire view box (minus the status bar)
-    pub height: u16,
     // The leftmost row of the buffer being displayed (zero-indexed)
     pub left: usize,
-    // The width in rows of the entire view box
-    pub width: u16,
 }
 
 impl ViewBox {
@@ -46,7 +45,7 @@ impl ViewBox {
     /// - rows: the number of rows this view box has
     /// - x: the x position of the upper right hand corner of this view box
     /// - y: the y position of the upper right hand corner of this view box
-    pub fn new(cols: u16, rows: u16, x: u16, y: u16) -> Self {
+    pub fn new() -> Self {
         Self {
             buffer: Buffer::new(),
             path: None,
@@ -54,19 +53,12 @@ impl ViewBox {
             parser: None,
             parse_tree: None,
 
-            x,
-            y,
             top: 0,
-            height: rows,
             left: 0,
-            // Reserve one for line numbers
-            // TODO
-            // Have option to not have line nums
-            width: cols - 1,
         }
     }
 
-    pub fn adjust(&mut self) -> bool {
+    pub fn adjust(&mut self, height: u16, width: u16) -> bool {
         let col = self.buffer.get_col();
         let row = self.buffer.get_row();
         let mut adjusted = false;
@@ -74,19 +66,19 @@ impl ViewBox {
         if self.top > row {
             self.top = row;
             adjusted = true;
-        } else if self.top + self.height as usize <= row {
-            self.top = row - self.height as usize + 1;
+        } else if self.top + height as usize <= row {
+            self.top = row - height as usize + 1;
             adjusted = true;
         }
 
         // This doesn't take into account the gutter
-        let left_padding = self.left_padding();
+        let left_padding = self.left_padding(height);
 
         if self.left > col {
             self.left = col;
             adjusted = true;
-        } else if self.left + (self.width as usize) < col + left_padding {
-            self.left = col + left_padding - self.width as usize;
+        } else if self.left + (width as usize) < col + left_padding {
+            self.left = col + left_padding - width as usize;
             adjusted = true;
         }
 
@@ -97,7 +89,19 @@ impl ViewBox {
         adjusted
     }
 
-    fn write_buffer(&self, stdout: &mut StdoutLock, left_padding: usize) -> Result<()> {
+    fn write_buffer(
+        &self,
+        stdout: &mut StdoutLock,
+        left_padding: usize,
+        render_info: RenderInfo,
+    ) -> Result<()> {
+        let RenderInfo {
+            x,
+            y,
+            height,
+            width,
+        } = render_info;
+
         let lines = self
             .buffer
             .rope
@@ -105,12 +109,12 @@ impl ViewBox {
             .zip(self.buffer.lines_for_updating.iter())
             .enumerate()
             .skip(self.top)
-            .take(self.height.into());
+            .take(height.into());
 
-        queue!(stdout, Hide, MoveTo(self.x, self.y))?;
+        queue!(stdout, Hide, MoveTo(x, y))?;
         let mut padding_buffer = String::with_capacity(left_padding);
 
-        let clear_str: String = (0..=self.width).map(|_| ' ').collect();
+        let clear_str: String = (0..=width).map(|_| ' ').collect();
 
         // Taking the length to avoid having to clone all of lines
         // Since its used in the statement below
@@ -131,6 +135,7 @@ impl ViewBox {
                 &mut padding_buffer,
                 left_padding,
                 &clear_str,
+                render_info,
             );
         } else {
             self.print_lines_colorless(
@@ -139,17 +144,18 @@ impl ViewBox {
                 &mut padding_buffer,
                 left_padding,
                 &clear_str,
+                render_info.x,
             );
         }
 
         // This is for clearing trailing lines that we missed
         if let Some(len_lines) = maybe_len_lines
-            && len_lines < self.height
+            && len_lines < height
         {
-            queue!(stdout, MoveTo(self.x, self.y + len_lines))?;
+            queue!(stdout, MoveTo(x, y + len_lines))?;
 
-            (len_lines..self.height).for_each(|_| {
-                queue!(stdout, Print(&clear_str), MoveDown(1), MoveToColumn(self.x))
+            (len_lines..height).for_each(|_| {
+                queue!(stdout, Print(&clear_str), MoveDown(1), MoveToColumn(x))
                     .expect("Crossterm clearing trailing lines failed");
             });
         }
@@ -167,8 +173,17 @@ impl ViewBox {
         padding_buffer: &mut String,
         left_padding: usize,
         clear_str: &str,
+
+        render_info: RenderInfo,
     ) {
-        let hl_lines = hl_lines.into_iter().skip(self.top).take(self.height.into());
+        let RenderInfo {
+            x,
+            y: _,
+            height,
+            width,
+        } = render_info;
+
+        let hl_lines = hl_lines.into_iter().skip(self.top).take(height.into());
         let lines = lines
             .zip(hl_lines)
             .map(|((line_num, (line, should_update)), hl_blocks)| {
@@ -182,11 +197,11 @@ impl ViewBox {
             }
 
             Self::clear_line(clear_str, stdout);
-            self.print_padding(padding_buffer, left_padding, line_num, stdout);
+            self.print_padding(padding_buffer, left_padding, line_num, stdout, x);
 
             let line_len = Self::calculate_total_line_len(line);
             if line_len == 0 {
-                queue!(stdout, MoveToColumn(self.x), MoveDown(1))
+                queue!(stdout, MoveToColumn(x), MoveDown(1))
                     .expect("Crossterm padding buffer print failed");
                 return;
             }
@@ -195,14 +210,14 @@ impl ViewBox {
             // We don't need to slice the string, we can just choose the hl blocks we  want to print
             let line = line.to_string();
 
-            let last_col = self.last_col(left_padding, line_len);
+            let last_col = self.last_col(left_padding, line_len, width);
             let hl_blocks = self.crop_hl_blocks(&hl_blocks, last_col, line_len);
 
             if hl_blocks.is_empty() {
                 return;
             }
 
-            self.print_hl_blocks(&hl_blocks, &line, stdout);
+            self.print_hl_blocks(&hl_blocks, &line, stdout, x);
         });
     }
 
@@ -251,7 +266,7 @@ impl ViewBox {
     /// Prints a line highlighted based on `hl_blocks`.
     /// The line has already been sliced to the correct size
     /// The hl blocks have already been cropped
-    fn print_hl_blocks(&self, hl_blocks: &[HLBlock], line: &str, stdout: &mut StdoutLock) {
+    fn print_hl_blocks(&self, hl_blocks: &[HLBlock], line: &str, stdout: &mut StdoutLock, x: u16) {
         for hl in hl_blocks {
             let text = hl.slice_text(line);
             queue!(
@@ -263,7 +278,7 @@ impl ViewBox {
             .expect("Crossterm print hl block command failed");
         }
 
-        queue!(stdout, MoveToColumn(self.x), MoveDown(1)).expect("Crossterm reset command failed");
+        queue!(stdout, MoveToColumn(x), MoveDown(1)).expect("Crossterm reset command failed");
     }
 
     fn print_lines_colorless<'b>(
@@ -274,6 +289,9 @@ impl ViewBox {
         padding_buffer: &mut String,
         left_padding: usize,
         clear_str: &str,
+
+        x: u16,
+        width: u16,
     ) {
         log!("\n");
         lines.for_each(|(line_num, (line, should_update))| {
@@ -284,23 +302,23 @@ impl ViewBox {
             }
 
             Self::clear_line(clear_str, stdout);
-            self.print_padding(padding_buffer, left_padding, line_num, stdout);
+            self.print_padding(padding_buffer, left_padding, line_num, stdout, x);
 
             let line_len = Self::calculate_total_line_len(line);
             if line_len == 0 {
-                queue!(stdout, MoveToColumn(self.x), MoveDown(1))
+                queue!(stdout, MoveToColumn(x), MoveDown(1))
                     .expect("Crossterm padding buffer print failed");
                 return;
             }
 
-            let characters_to_print = self.last_col(left_padding, line_len);
+            let characters_to_print = self.last_col(left_padding, line_len, width);
             let line = self.slice_line(line, characters_to_print);
 
             queue!(
                 stdout,
                 SetForegroundColor(Color::Grey),
                 Print(&line),
-                MoveToColumn(self.x),
+                MoveToColumn(x),
                 MoveDown(1)
             )
             .expect("Crossterm print line command failed");
@@ -317,6 +335,7 @@ impl ViewBox {
         left_padding: usize,
         line_num: usize,
         stdout: &mut StdoutLock,
+        x: u16,
     ) {
         let line_num = line_num.to_string();
         // `-1` for the last space character that gets pushed
@@ -329,7 +348,7 @@ impl ViewBox {
         queue!(
             stdout,
             SetForegroundColor(Color::Grey),
-            MoveToColumn(self.x),
+            MoveToColumn(x),
             Print(padding_buffer.clone()),
         )
         .expect("Crossterm padding buffer print failed");
@@ -350,8 +369,8 @@ impl ViewBox {
     }
 
     /// Returns the last column in the line that's being rendered to the screen
-    const fn last_col(&self, left_padding: usize, line_len: usize) -> usize {
-        let max_len_of_line = self.width as usize - left_padding;
+    const fn last_col(&self, left_padding: usize, line_len: usize, width: u16) -> usize {
+        let max_len_of_line = width as usize - left_padding;
         if max_len_of_line > line_len {
             line_len
         } else {
@@ -373,38 +392,59 @@ impl ViewBox {
         }
     }
 
-    pub fn render(&self, adjusted: bool) -> Result<()> {
+    pub fn render(&self, render_info: RenderInfo, adjusted: bool) -> Result<()> {
         let mut stdout = stdout().lock();
-        let left_padding = self.left_padding();
+        let left_padding = self.left_padding(render_info.height);
 
         if self.buffer.has_changed || adjusted {
-            self.write_buffer(&mut stdout, left_padding)?;
+            self.write_buffer(&mut stdout, left_padding, render_info)?;
         }
 
         Ok(())
     }
 
-    pub fn left_padding(&self) -> usize {
-        (self.top + self.height as usize).to_string().len() + 1
+    pub fn left_padding(&self, height: u16) -> usize {
+        (self.top + height as usize).to_string().len() + 1
     }
 
-    pub const fn _get_lower_right(&self) -> (u16, u16) {
-        (self.x + self.width, self.y + self.height)
+    pub const fn _get_lower_right(&self, render_info: RenderInfo) -> (u16, u16) {
+        let RenderInfo {
+            x,
+            y,
+            height,
+            width,
+        } = render_info;
+
+        (x + width, y + height)
     }
 
-    pub const fn get_lower_left(&self) -> (u16, u16) {
-        (self.x, self.y + self.height)
+    pub const fn get_lower_left(&self, render_info: RenderInfo) -> (u16, u16) {
+        let RenderInfo {
+            x,
+            y,
+            height,
+            width,
+        } = render_info;
+
+        (x, y + height)
     }
 
-    pub const fn get_upper_right(&self) -> (u16, u16) {
-        (self.x + self.width, self.y)
+    pub const fn get_upper_right(&self, render_info: RenderInfo) -> (u16, u16) {
+        let RenderInfo {
+            x,
+            y,
+            height,
+            width,
+        } = render_info;
+
+        (x + width, y)
     }
 
     /// # Returns
     /// The current cursor position on the absolute screen
     /// Given that the cursor is in the given view box
-    pub fn cursor_position(&self) -> (u16, u16) {
-        let left_padding = self.left_padding();
+    pub fn cursor_position(&self, render_info: RenderInfo) -> (u16, u16) {
+        let left_padding = self.left_padding(render_info.height);
         let buffer_col = self.buffer.get_col();
         let buffer_row = self.buffer.get_row();
 
@@ -416,11 +456,11 @@ impl ViewBox {
         // Of course, the difference between the buffer row and the top row
         // can't be greater than the size of the screen, which for all screens
         // I know about, should be fewer rows tall than `u16::MAX`
-        let absolute_row = self.y + u16::try_from(buffer_row - self.top).unwrap_or(0);
-        let absolute_col = self.x
+        let absolute_row = render_info.y + u16::try_from(buffer_row - self.top).unwrap_or(0);
+        let absolute_col = render_info.x
             + u16::min(
                 u16::try_from(buffer_col - self.left + left_padding).unwrap_or(0),
-                self.width,
+                render_info.width,
             );
         (absolute_col, absolute_row)
     }
