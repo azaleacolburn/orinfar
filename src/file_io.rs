@@ -41,26 +41,24 @@ impl View {
     }
 
     pub fn adjust(&mut self) -> bool {
-        let view_box = self.get_view_box();
-        view_box.adjust()
+        let view_box = self.get_view_box_mut();
+
+        match view_box.cached_render_info.clone() {
+            Some(render_info) => view_box.adjust(render_info.height, render_info.width),
+            None => false,
+        }
     }
 
     pub fn set_path(&mut self, path: Option<PathBuf>) {
-        let view_box = &mut self.boxes[self.cursor];
-
-        view_box.set_path(path);
+        self.get_view_box_mut().set_path(path);
     }
 
     pub fn get_path(&self) -> Option<&PathBuf> {
-        let view_box = &self.boxes[self.cursor];
-
-        view_box.path()
+        self.get_view_box().path()
     }
 
     pub fn get_git_hash(&self) -> Option<&str> {
-        let view_box = &self.boxes[self.cursor];
-
-        view_box.git_hash.as_deref()
+        self.get_view_box().git_hash.as_deref()
     }
 }
 

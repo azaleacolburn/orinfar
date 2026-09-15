@@ -38,15 +38,15 @@ pub fn match_meta_command(
         "load" | "l" => {
             view.load_file()?;
             let view_box = view.get_view_box();
-            view_box.render(false)?;
+            view_box.render(view_box.cached_render_info.unwrap(), false, false)?;
         }
 
         "open" | "o" => {
-            attach_buffer(&arg, view.get_view_box());
+            attach_buffer(&arg, view.get_view_box_mut());
             view.load_file()?;
 
             let view_box = view.get_view_box();
-            view_box.render(false)?;
+            view_box.render(view_box.cached_render_info.unwrap(), false, false)?;
         }
 
         "sub" | "s" => {

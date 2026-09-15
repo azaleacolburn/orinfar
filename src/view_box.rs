@@ -17,6 +17,7 @@ use std::{
 };
 use tree_sitter::{Parser, Tree};
 
+#[derive(Debug, Clone)]
 pub struct RenderInfo {
     pub x: u16,
     pub y: u16,
@@ -37,6 +38,8 @@ pub struct ViewBox {
     pub top: usize,
     // The leftmost row of the buffer being displayed (zero-indexed)
     pub left: usize,
+
+    pub cached_render_info: Option<RenderInfo>,
 }
 
 impl ViewBox {
@@ -55,6 +58,8 @@ impl ViewBox {
 
             top: 0,
             left: 0,
+
+            cached_render_info: None,
         }
     }
 
@@ -145,6 +150,7 @@ impl ViewBox {
                 left_padding,
                 &clear_str,
                 render_info.x,
+                render_info.width,
             );
         }
 
@@ -392,11 +398,19 @@ impl ViewBox {
         }
     }
 
-    pub fn render(&self, render_info: RenderInfo, adjusted: bool) -> Result<()> {
+    // TODO decide whether to have the caller pass in render info or to have them just modify
+    // `self.render_info`
+    //
+    // I'm inclined toward the latter
+    pub fn render(&mut self, render_info: RenderInfo, adjusted: bool, resized: bool) -> Result<()> {
+        self.cached_render_info = Some(render_info.clone());
+
         let mut stdout = stdout().lock();
         let left_padding = self.left_padding(render_info.height);
 
-        if self.buffer.has_changed || adjusted {
+        // TODO Figure out how to propogate that we've resizewe've resizewe've resized (eiwe've
+        // resizewe've resized
+        if self.buffer.has_changed || adjusted || resized {
             self.write_buffer(&mut stdout, left_padding, render_info)?;
         }
 
@@ -423,7 +437,7 @@ impl ViewBox {
             x,
             y,
             height,
-            width,
+            width: _,
         } = render_info;
 
         (x, y + height)
@@ -433,7 +447,7 @@ impl ViewBox {
         let RenderInfo {
             x,
             y,
-            height,
+            height: _,
             width,
         } = render_info;
 
@@ -443,7 +457,7 @@ impl ViewBox {
     /// # Returns
     /// The current cursor position on the absolute screen
     /// Given that the cursor is in the given view box
-    pub fn cursor_position(&self, render_info: RenderInfo) -> (u16, u16) {
+    pub fn cursor_position(&self, render_info: &RenderInfo) -> (u16, u16) {
         let left_padding = self.left_padding(render_info.height);
         let buffer_col = self.buffer.get_col();
         let buffer_row = self.buffer.get_row();

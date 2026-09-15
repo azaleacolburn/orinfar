@@ -4,7 +4,7 @@ use crate::{
     mode::Mode,
     status_bar::StatusBar,
     view_box::ViewBox,
-    view_node::{ViewNode, ViewNodeDirection, ViewNodePath},
+    view_node::ViewNode::{self},
 };
 use anyhow::Result;
 use crossterm::{
@@ -24,17 +24,20 @@ use std::{
 
 /// Represents the entire view of the editor in the terminal
 pub struct View {
-    view_tree: ViewNode,
-    current_view_box: ViewNodePath,
+    view_tree: Box<ViewNode>,
+    current_view_box: *mut ViewNode,
     width: u16,
     height: u16,
 }
 
 impl View {
     pub fn new(cols: u16, rows: u16) -> Self {
+        let mut boxed = Box::new(ViewNode::Leaf(ViewBox::new()));
+        let ptr = ptr::from_mut(boxed.as_mut());
+
         Self {
-            view_tree: ViewNode::Leaf(ViewBox::new()),
-            current_view_box: vec![],
+            view_tree: boxed,
+            current_view_box: ptr,
             width: cols, // Don't subtract one because each viewbox handles line nums separately
             height: rows - 1,
         }
@@ -55,38 +58,24 @@ impl View {
         &self.get_view_box().buffer
     }
 
+    pub fn get_view_box_mut(&mut self) -> &mut ViewBox {
+        let view_box = ptr::from_ref(self.get_view_box()) as *mut ViewBox;
+
+        unsafe { view_box.as_mut().unwrap() }
+    }
+
     /// Guaranteed to not mutatble `self`
     pub fn get_view_box(&self) -> &ViewBox {
-        let mut node = &self.view_tree;
-        for direction in &self.current_view_box {
-            match (direction, node) {
-                (_, ViewNode::Leaf(view_box)) => return view_box,
+        let view_node = unsafe {
+            self.current_view_box
+                .as_ref()
+                .expect("Invalid Pointer to Current View Box: Bug In Orinfar")
+        };
 
-                (
-                    ViewNodeDirection::Left,
-                    ViewNode::SplitHorizontal {
-                        left: top,
-                        right: _,
-                    }
-                    | ViewNode::SplitVertical { top, bottom: _ },
-                ) => node = top,
-
-                (
-                    ViewNodeDirection::Right,
-                    ViewNode::SplitHorizontal {
-                        left: _,
-                        right: bottom,
-                    }
-                    | ViewNode::SplitVertical { top: _, bottom },
-                ) => node = bottom,
-            };
+        match view_node {
+            ViewNode::Leaf(b) => b,
+            _ => panic!("Current View Box Not Leaf: Bug In Orinfar"),
         }
-
-        if let ViewNode::Leaf(view_box) = node {
-            return view_box;
-        }
-
-        panic!("Bug in View Box Structure: Invalid Path to Current Box");
     }
 
     pub fn normal_unattached_status(chained: &[char], count: u32, register: char) -> String {
@@ -195,12 +184,16 @@ impl View {
         Ok(status_message)
     }
 
-    pub fn render(&self, global_state: &GlobalState, adjusted: bool) -> Result<()> {
+    pub fn render(
+        &mut self,
+        global_state: &GlobalState,
+        adjusted: bool,
+        resized: bool,
+    ) -> Result<()> {
         let register = global_state.register_handler.get_curr_reg();
 
-        let current_view_box_render_info =
-            self.view_tree
-                .render_view_node(0, 0, self.height, self.width, adjusted);
+        self.view_tree
+            .render_view_node(0, 0, self.height, self.width, adjusted, resized);
 
         let mut stdout = stdout().lock();
 
@@ -225,12 +218,17 @@ impl View {
             (global_state.status_bar.idx(), self.height + 1)
         } else {
             let view_box = &self.get_view_box();
-            view_box.cursor_position(render_info)
+            view_box.cursor_position(view_box.cached_render_info.as_ref().unwrap())
         };
         queue!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
 
         stdout.flush()?;
         Ok(())
+    }
+
+    pub fn resize(&mut self, cols: u16, rows: u16) {
+        self.width = cols;
+        self.height = rows;
     }
 }
 
@@ -277,88 +275,10 @@ impl View {
 //         self.position_of_box(predicate)
 //     }
 //
-//     pub fn delete_curr_view_box(&mut self) {
-//         let mut down = self.position_view_box_down();
-//         let mut up = self.position_view_box_up();
-//
-//         let view_box = self.view_tree.remove(self.cursor);
-//         if let Some(ref mut down) = down
-//             && *down > self.cursor
-//         {
-//             *down -= 1;
-//         }
-//         if let Some(ref mut up) = up
-//             && *up > self.cursor
-//         {
-//             *up -= 1;
-//         }
-//
-//         self.cursor = usize::max(self.cursor, 1) - 1;
-//
-//         match (down, up) {
-//             (_, Some(up_i)) => {
-//                 let up_box = &mut self.view_tree[up_i];
-//                 up_box.height += view_box.height;
-//                 self.cursor = up_i;
-//             }
-//             (Some(down_i), None) => {
-//                 let down_box = &mut self.view_tree[down_i];
-//                 down_box.y = view_box.y;
-//                 down_box.height += view_box.height;
-//                 self.cursor = down_i;
-//             }
-//             (None, None) => {}
-//         }
-//
-//         let view_box = self.get_view_box();
-//         view_box.buffer.has_changed = true;
-//     }
-//
-//     pub fn split_view_box_vertical(&mut self, idx: usize) {
-//         let view_box = &mut self.view_tree[idx];
-//
-//         let half_height = view_box.height / 2;
-//         let half_y = half_height + view_box.y;
-//
-//         if half_height == 1 {
-//             return;
-//         }
-//
-//         let mut new_view_box = ViewBox::new(view_box.width, half_height, view_box.x, half_y);
-//
-//         let original_height = view_box.height;
-//
-//         view_box.height = half_height;
-//         if !original_height.is_multiple_of(2) {
-//             new_view_box.height += 1;
-//         }
-//
-//         self.view_tree.push(new_view_box);
-//     }
-//
-//     pub fn split_view_box_horizontal(&mut self, idx: usize) {
-//         let view_box = &mut self.view_tree[idx];
-//
-//         let half_width = view_box.width / 2;
-//         let half_x = half_width + view_box.x;
-//
-//         let left_padding = view_box.left_padding();
-//         if (half_width as usize) < left_padding {
-//             return;
-//         }
-//
-//         let mut new_view_box = ViewBox::new(half_width, view_box.height, half_x, view_box.y);
-//
-//         let original_width = view_box.width;
-//
-//         view_box.width = half_width;
-//         if !original_width.is_multiple_of(2) {
-//             new_view_box.width += 1;
-//         }
-//
-//         self.view_tree.push(new_view_box);
-//     }
-// }
+
+impl View {
+    pub fn delete_curr_view_box(&mut self) {}
+}
 
 pub fn cleanup() -> Result<()> {
     disable_raw_mode()?;

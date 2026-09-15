@@ -21,7 +21,15 @@ pub enum ViewNode {
 
 impl ViewNode {
     /// Renders a view node by recursively rendering all of its children
-    pub fn render_view_node(&self, x: u16, y: u16, height: u16, width: u16, adjusted: bool) {
+    pub fn render_view_node(
+        &mut self,
+        x: u16,
+        y: u16,
+        height: u16,
+        width: u16,
+        adjusted: bool,
+        resized: bool,
+    ) {
         match self {
             ViewNode::Leaf(view_box) => {
                 view_box.render(
@@ -32,6 +40,7 @@ impl ViewNode {
                         width,
                     },
                     adjusted,
+                    resized,
                 );
             }
 

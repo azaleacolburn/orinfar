@@ -22,9 +22,18 @@ pub fn program_loop(mut global_state: GlobalState, mut view: View) -> Result<()>
         let buffer = view.get_buffer_mut();
         buffer.update_list_reset();
 
-        let Event::Key(event) = read()? else { continue };
+        let event = read()?;
 
-        match (event.code, global_state.mode.clone()) {
+        if let Event::Resize(cols, rows) = event {
+            view.resize(cols, rows);
+            view.render(&global_state, false, true);
+
+            continue;
+        }
+
+        let Event::Key(key) = event else { continue };
+
+        match (key.code, global_state.mode.clone()) {
             (KeyCode::Char(c), Mode::Normal) if c.is_numeric() => {
                 update_count(c, &mut global_state.count);
             }
@@ -138,7 +147,7 @@ pub fn program_loop(mut global_state: GlobalState, mut view: View) -> Result<()>
             _ => continue,
         }
 
-        let _ = view.get_view_box().parse();
+        let _ = view.get_view_box_mut().parse();
 
         let adjusted = view.adjust();
         view.render(&global_state, adjusted)?;
