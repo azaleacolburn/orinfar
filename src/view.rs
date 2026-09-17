@@ -278,6 +278,43 @@ impl View {
 
 impl View {
     pub fn delete_curr_view_box(&mut self) {}
+
+    fn split_view_box_generic(
+        &mut self,
+        generator: impl FnOnce(Box<ViewNode>, Box<ViewNode>) -> ViewNode,
+    ) {
+        // We don't have access to the parent node, so we do some tricky in-place writing
+        let old_node_ptr = self.current_view_box;
+
+        // Copy the leaf onto the stack, then back to the heap
+        let new_leaf = Box::new(unsafe { old_node_ptr.read() });
+
+        let blank_leaf = Box::new(ViewNode::Leaf(ViewBox::new()));
+
+        let split_node = generator(new_leaf, blank_leaf);
+
+        unsafe {
+            old_node_ptr.write(split_node);
+        }
+    }
+
+    pub fn split_view_box_vertical(&mut self) {
+        let generator = |new_leaf, blank_leaf| ViewNode::SplitVertical {
+            top: new_leaf,
+            bottom: blank_leaf,
+        };
+
+        self.split_view_box_generic(generator);
+    }
+
+    pub fn split_view_box_horizontal(&mut self) {
+        let generator = |new_leaf, blank_leaf| ViewNode::SplitHorizontal {
+            left: new_leaf,
+            right: blank_leaf,
+        };
+
+        self.split_view_box_generic(generator);
+    }
 }
 
 pub fn cleanup() -> Result<()> {
