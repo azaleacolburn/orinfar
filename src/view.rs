@@ -317,15 +317,47 @@ impl View {
     }
 
     pub fn get_siblings(&mut self) {
-        let view_box = self.current_view_box;
+        let view_node_ptr = self.current_view_box as *const ViewNode;
+        let predicate = |view_node| view_node_ptr == ptr::from_ref(view_node);
+
+        self.search_view_boxes_where(predicate);
     }
 
-    fn search_view_boxes_where(&self, view_node_ptr: *const ViewNode) -> Option<ViewBox> {
-        match self.view_tree {
+    fn search_view_boxes_where(&self, predicate: impl Fn(&ViewNode) -> bool) -> Option<&ViewBox> {
+        match self.view_tree.as_ref() {
             ViewNode::Leaf(b) => {
-                if view_node_ptr == self.view_tree.as_ref() as *const ViewNode {
-                    return Some(self.view_tree);
+                if predicate(self.view_tree.as_ref()) {
+                    return Some(&b);
                 }
+
+                None
+            }
+
+            ViewNode::SplitVertical { top, bottom } => {
+                let result = self.search_view_boxes_where(top.as_ref() as *const ViewNode);
+                if result.is_some() {
+                    return result;
+                }
+
+                let result = self.search_view_boxes_where(bottom.as_ref() as *const ViewNode);
+                if result.is_some() {
+                    return result;
+                }
+
+                return None;
+            }
+            ViewNode::SplitHorizontal { left, right } => {
+                let result = self.search_view_boxes_where(left.as_ref() as *const ViewNode);
+                if result.is_some() {
+                    return result;
+                }
+
+                let result = self.search_view_boxes_where(right.as_ref() as *const ViewNode);
+                if result.is_some() {
+                    return result;
+                }
+
+                return None;
             }
         }
     }
