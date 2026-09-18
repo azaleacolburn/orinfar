@@ -52,11 +52,3 @@ pub fn move_right_one_view_box(view: &mut View) {
         view.cursor = i;
     }
 }
-
-pub fn split_curr_view_box_vertical(view: &mut View) {
-    view.split_view_box_vertical(view.cursor);
-}
-
-pub fn split_curr_view_box_horizontal(view: &mut View) {
-    view.split_view_box_horizontal(view.cursor);
-}

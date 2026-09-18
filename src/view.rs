@@ -4,7 +4,7 @@ use crate::{
     mode::Mode,
     status_bar::StatusBar,
     view_box::ViewBox,
-    view_node::ViewNode::{self},
+    view_node::ViewNode::{self, Leaf},
 };
 use anyhow::Result;
 use crossterm::{
@@ -314,6 +314,20 @@ impl View {
         };
 
         self.split_view_box_generic(generator);
+    }
+
+    pub fn get_siblings(&mut self) {
+        let view_box = self.current_view_box;
+    }
+
+    fn search_view_boxes_where(&self, view_node_ptr: *const ViewNode) -> Option<ViewBox> {
+        match self.view_tree {
+            ViewNode::Leaf(b) => {
+                if view_node_ptr == self.view_tree.as_ref() as *const ViewNode {
+                    return Some(self.view_tree);
+                }
+            }
+        }
     }
 }
 

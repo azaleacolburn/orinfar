@@ -60,7 +60,7 @@ pub fn match_meta_command(
                 break 'block;
             }
 
-            split_curr_view_box_horizontal(view);
+            view.split_view_box_horizontal();
 
             let anchor = view.cursor;
             view.cursor = view.boxes.len() - 1;
