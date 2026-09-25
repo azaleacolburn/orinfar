@@ -1,6 +1,6 @@
 use crate::{
     buffer::Buffer, global_state::GlobalState, mode::Mode, undo::UndoTree, utility::SplitOnce,
-    view::View, view_box::ViewBox, view_command::split_curr_view_box_horizontal,
+    view::View, view_box::ViewBox,
 };
 use anyhow::Result;
 use ropey::Rope;
@@ -37,21 +37,32 @@ pub fn match_meta_command(
 
         "load" | "l" => {
             view.load_file()?;
-            let view_box = view.get_view_box();
-            view_box.render(view_box.cached_render_info.unwrap(), false, false)?;
+            view.render(global_state, false, false);
         }
 
         "open" | "o" => {
             attach_buffer(&arg, view.get_view_box_mut());
             view.load_file()?;
 
-            let view_box = view.get_view_box();
-            view_box.render(view_box.cached_render_info.unwrap(), false, false)?;
+            view.render(global_state, false, false);
         }
 
         "sub" | "s" => {
             let buffer = view.get_buffer_mut();
             substitute_cmd(buffer, &arg, &mut global_state.undo_tree);
+        }
+
+        "move" | "m" => {
+            if arg.is_empty() {
+                log!("Invalid `move` argument");
+            }
+
+            let arg = PathBuf::from(arg);
+
+            let has_file_name = |b: &ViewBox| b.path() == Some(&arg);
+            if let Some(node) = view.find_node_of_box_where(has_file_name) {
+                view.set_current_view_node(node);
+            }
         }
 
         "dir" | "d" => 'block: {
@@ -61,12 +72,10 @@ pub fn match_meta_command(
             }
 
             view.split_view_box_horizontal();
-
-            let anchor = view.cursor;
-            view.cursor = view.boxes.len() - 1;
+            view.switch_to_sibling();
 
             print_directories(view, &mut global_state.undo_tree)?;
-            view.cursor = anchor;
+            view.switch_to_sibling();
         }
 
         "reg" => {
@@ -77,15 +86,14 @@ pub fn match_meta_command(
                     .replace_contents(registers, &mut global_state.undo_tree);
             }
 
-            split_curr_view_box_horizontal(view);
+            view.split_view_box_horizontal();
 
-            let anchor = view.cursor;
-            view.cursor = view.boxes.len() - 1;
+            view.switch_to_sibling();
 
             view.get_buffer_mut()
                 .replace_contents(registers, &mut global_state.undo_tree);
 
-            view.cursor = anchor;
+            view.switch_to_sibling();
         }
 
         n => {

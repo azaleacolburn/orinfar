@@ -150,7 +150,9 @@ pub fn program_loop(mut global_state: GlobalState, mut view: View) -> Result<()>
         let _ = view.get_view_box_mut().parse();
 
         let adjusted = view.adjust();
-        view.render(&global_state, adjusted)?;
+
+        // Always catch resizing and continue before this call
+        view.render(&global_state, adjusted, false)?;
     }
 
     Ok(())

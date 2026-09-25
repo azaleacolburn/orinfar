@@ -4,7 +4,7 @@ use crate::{
     mode::Mode,
     status_bar::StatusBar,
     view_box::ViewBox,
-    view_node::ViewNode::{self, Leaf},
+    view_node::ViewNode::{self},
 };
 use anyhow::Result;
 use crossterm::{
@@ -25,7 +25,7 @@ use std::{
 /// Represents the entire view of the editor in the terminal
 pub struct View {
     view_tree: Box<ViewNode>,
-    current_view_box: *mut ViewNode,
+    current_view_node: *mut ViewNode,
     width: u16,
     height: u16,
 }
@@ -37,7 +37,7 @@ impl View {
 
         Self {
             view_tree: boxed,
-            current_view_box: ptr,
+            current_view_node: ptr,
             width: cols, // Don't subtract one because each viewbox handles line nums separately
             height: rows - 1,
         }
@@ -67,7 +67,7 @@ impl View {
     /// Guaranteed to not mutatble `self`
     pub fn get_view_box(&self) -> &ViewBox {
         let view_node = unsafe {
-            self.current_view_box
+            self.current_view_node
                 .as_ref()
                 .expect("Invalid Pointer to Current View Box: Bug In Orinfar")
         };
@@ -230,51 +230,13 @@ impl View {
         self.width = cols;
         self.height = rows;
     }
-}
 
-/// `ViewBox` Manipulation Methods
-// impl View {
-//     /// # Returns
-//     ///
-//     /// The position (in `self.boxes`) of one `view_box` down, if it exists
-//     pub fn path_to_view_box_down(&mut self) -> Option<usize> {
-//         let view_box = self.get_view_box();
-//
-//         let (x, y) = view_box.get_lower_left();
-//         let predicate = |view_box: &ViewBox| -> bool { view_box.x == x && view_box.y == y };
-//
-//         self.position_of_box(predicate)
-//     }
-//
-//     pub fn position_view_box_up(&mut self) -> Option<usize> {
-//         let view_box = self.get_view_box();
-//
-//         let (x, y) = (view_box.x, view_box.y);
-//         let predicate =
-//             |view_box: &ViewBox| -> bool { view_box.x == x && view_box.y + view_box.height == y };
-//
-//         self.position_of_box(predicate)
-//     }
-//
-//     pub fn position_view_box_left(&mut self) -> Option<usize> {
-//         let view_box = self.get_view_box();
-//
-//         let (x, y) = (view_box.x, view_box.y);
-//         let predicate =
-//             |view_box: &ViewBox| -> bool { view_box.y == y && view_box.x + view_box.width == x };
-//
-//         self.position_of_box(predicate)
-//     }
-//
-//     pub fn position_view_box_right(&mut self) -> Option<usize> {
-//         let view_box = self.get_view_box();
-//
-//         let (x, y) = view_box.get_upper_right();
-//         let predicate = |view_box: &ViewBox| -> bool { view_box.y == y && view_box.x == x };
-//
-//         self.position_of_box(predicate)
-//     }
-//
+    pub fn set_current_view_node(&mut self, vb: &ViewNode) {
+        assert!(matches!(vb, ViewNode::Leaf(_)));
+
+        self.current_view_node = ptr::from_ref(vb).cast_mut();
+    }
+}
 
 impl View {
     pub fn delete_curr_view_box(&mut self) {}
@@ -284,7 +246,7 @@ impl View {
         generator: impl FnOnce(Box<ViewNode>, Box<ViewNode>) -> ViewNode,
     ) {
         // We don't have access to the parent node, so we do some tricky in-place writing
-        let old_node_ptr = self.current_view_box;
+        let old_node_ptr = self.current_view_node;
 
         // Copy the leaf onto the stack, then back to the heap
         let new_leaf = Box::new(unsafe { old_node_ptr.read() });
@@ -316,50 +278,67 @@ impl View {
         self.split_view_box_generic(generator);
     }
 
-    pub fn get_siblings(&mut self) {
-        let view_node_ptr = self.current_view_box as *const ViewNode;
-        let predicate = |view_node| view_node_ptr == ptr::from_ref(view_node);
+    /// Switch current view box to sibiling of current view box (if one exists)
+    pub fn switch_to_sibling(&mut self) {
+        let target = unsafe { self.current_view_node.as_ref() }
+            .expect("Current view box is invalid reference");
+        let is_target = |curr: &Box<ViewNode>| ptr::eq(curr.as_ref(), target);
 
-        self.search_view_boxes_where(predicate);
-    }
-
-    fn search_view_boxes_where(&self, predicate: impl Fn(&ViewNode) -> bool) -> Option<&ViewBox> {
-        match self.view_tree.as_ref() {
-            ViewNode::Leaf(b) => {
-                if predicate(self.view_tree.as_ref()) {
-                    return Some(&b);
+        let mut frontier: Vec<&ViewNode> = vec![self.view_tree.as_ref()];
+        while let Some(node) = frontier.pop() {
+            if let ViewNode::SplitHorizontal { left, right }
+            | ViewNode::SplitVertical {
+                top: left,
+                bottom: right,
+            } = node
+            {
+                if is_target(left) {
+                    self.current_view_node = right.into();
+                    break;
                 }
 
-                None
-            }
-
-            ViewNode::SplitVertical { top, bottom } => {
-                let result = self.search_view_boxes_where(top.as_ref() as *const ViewNode);
-                if result.is_some() {
-                    return result;
+                if is_target(right) {
+                    self.current_view_node = left.into();
+                    break;
                 }
 
-                let result = self.search_view_boxes_where(bottom.as_ref() as *const ViewNode);
-                if result.is_some() {
-                    return result;
-                }
-
-                return None;
-            }
-            ViewNode::SplitHorizontal { left, right } => {
-                let result = self.search_view_boxes_where(left.as_ref() as *const ViewNode);
-                if result.is_some() {
-                    return result;
-                }
-
-                let result = self.search_view_boxes_where(right.as_ref() as *const ViewNode);
-                if result.is_some() {
-                    return result;
-                }
-
-                return None;
+                frontier.push(left);
+                frontier.push(right);
             }
         }
+    }
+
+    /// Searches the tree for a leaf node whose box sadisfied `predicate`, and return that node
+    pub fn find_node_of_box_where(
+        &self,
+        mut predicate: impl FnMut(&ViewBox) -> bool,
+    ) -> Option<&ViewNode> {
+        let mut frontier: Vec<&ViewNode> = vec![self.view_tree.as_ref()];
+        while let Some(node) = frontier.pop() {
+            match node {
+                ViewNode::Leaf(b) => {
+                    if predicate(b) {
+                        return Some(node);
+                    }
+                }
+                ViewNode::SplitHorizontal { left, right }
+                | ViewNode::SplitVertical {
+                    top: left,
+                    bottom: right,
+                } => {
+                    frontier.push(left);
+                    frontier.push(right);
+                }
+            }
+        }
+
+        None
+    }
+}
+
+impl From<&Box<ViewNode>> for *mut ViewNode {
+    fn from(value: &Box<ViewNode>) -> Self {
+        (value.as_ref() as *const ViewNode).cast_mut()
     }
 }
 

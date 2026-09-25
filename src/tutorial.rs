@@ -24,8 +24,11 @@ const WELCOME_WIDTH: u16 = count_longest_line(WELCOME_TEXT);
 
 impl ViewBox {
     pub fn write_welcome_screen(&mut self, undo_tree: &mut UndoTree) {
-        let vertical_padding = i32::from(self.height) - i32::from(WELCOME_HEIGHT);
-        let max_horizontal_padding = i32::from(self.width) - i32::from(WELCOME_WIDTH);
+        let height = self.cached_render_info.as_ref().unwrap().height;
+        let width = self.cached_render_info.as_ref().unwrap().width;
+
+        let vertical_padding = i32::from(height) - i32::from(WELCOME_HEIGHT);
+        let max_horizontal_padding = i32::from(width) - i32::from(WELCOME_WIDTH);
 
         if vertical_padding < 0 || max_horizontal_padding < 0 {
             return;
@@ -37,14 +40,14 @@ impl ViewBox {
         }
         for line in WELCOME_TEXT.lines() {
             output.push('\n');
-            self.write_line_centered(&mut output, line, self.width);
+            self.write_line_centered(&mut output, line, width);
         }
 
         self.buffer.replace_contents(&output, undo_tree);
     }
 
     fn write_line_centered(&self, output: &mut String, line: &str, width: u16) {
-        let leftover = usize::from(width) - line.len() - self.left_padding();
+        let leftover = usize::from(width) - line.len() - self.left_padding(height);
         let padding = (0..leftover / 2).map(|_| ' ').collect::<String>();
 
         output.push_str(&padding);

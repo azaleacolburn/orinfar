@@ -15,11 +15,7 @@ use crate::{
         TextObject, curly_braces, grav, parentheses, quotations, single_quotations, square_braces,
     },
     view::{View, cleanup, terminal_setup},
-    view_command::{
-        ViewCommand, center_viewbox_on_cursor, move_down_one_view_box, move_left_one_view_box,
-        move_right_one_view_box, move_up_one_view_box, split_curr_view_box_horizontal,
-        split_curr_view_box_vertical,
-    },
+    view_command::{ViewCommand, center_viewbox_on_cursor},
 };
 use anyhow::{Result, bail};
 use crossterm::terminal::size;
@@ -58,16 +54,16 @@ mod view_node;
 
 pub static DEBUG: OnceLock<bool> = OnceLock::new();
 
-pub static VIEW_COMMANDS: [ViewCommand; 8] = [
+pub static VIEW_COMMANDS: [ViewCommand; 4] = [
     ViewCommand::new("zz", center_viewbox_on_cursor),
     // View Box related
-    ViewCommand::new("zd", move_down_one_view_box),
-    ViewCommand::new("zu", move_up_one_view_box),
-    ViewCommand::new("zl", move_left_one_view_box),
-    ViewCommand::new("zr", move_right_one_view_box),
+    // ViewCommand::new("zd", move_down_one_view_box),
+    // ViewCommand::new("zu", move_up_one_view_box),
+    // ViewCommand::new("zl", move_left_one_view_box),
+    // ViewCommand::new("zr", move_right_one_view_box),
     ViewCommand::new("zx", View::delete_curr_view_box),
-    ViewCommand::new("zv", split_curr_view_box_vertical),
-    ViewCommand::new("zh", split_curr_view_box_horizontal),
+    ViewCommand::new("zv", View::split_view_box_vertical),
+    ViewCommand::new("zh", View::split_view_box_horizontal),
 ];
 
 pub static COMMANDS: [Cmd; 13] = [
