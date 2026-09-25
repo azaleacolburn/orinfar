@@ -60,9 +60,7 @@ pub fn match_meta_command(
             let arg = PathBuf::from(arg);
 
             let has_file_name = |b: &ViewBox| b.path() == Some(&arg);
-            if let Some(node) = view.find_node_of_box_where(has_file_name) {
-                view.set_current_view_node(node);
-            }
+            // TODO set current view node to predicate result
         }
 
         "dir" | "d" => 'block: {

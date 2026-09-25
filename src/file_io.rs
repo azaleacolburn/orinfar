@@ -43,7 +43,7 @@ impl View {
     pub fn adjust(&mut self) -> bool {
         let view_box = self.get_view_box_mut();
 
-        match view_box.cached_render_info.clone() {
+        match view_box.render_info.clone() {
             Some(render_info) => view_box.adjust(render_info.height, render_info.width),
             None => false,
         }

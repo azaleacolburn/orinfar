@@ -39,7 +39,7 @@ pub struct ViewBox {
     // The leftmost row of the buffer being displayed (zero-indexed)
     pub left: usize,
 
-    pub cached_render_info: Option<RenderInfo>,
+    pub render_info: Option<RenderInfo>,
 }
 
 impl ViewBox {
@@ -59,8 +59,21 @@ impl ViewBox {
             top: 0,
             left: 0,
 
-            cached_render_info: None,
+            render_info: None,
         }
+    }
+
+    pub fn set_render_info_items(&mut self, x: u16, y: u16, height: u16, width: u16) {
+        self.set_render_info(RenderInfo {
+            x,
+            y,
+            height,
+            width,
+        });
+    }
+
+    pub fn set_render_info(&mut self, render_info: RenderInfo) {
+        self.render_info = Some(render_info);
     }
 
     pub fn adjust(&mut self, height: u16, width: u16) -> bool {
@@ -77,7 +90,7 @@ impl ViewBox {
         }
 
         // This doesn't take into account the gutter
-        let left_padding = self.left_padding(height);
+        let left_padding = self.left_padding();
 
         if self.left > col {
             self.left = col;
@@ -94,18 +107,13 @@ impl ViewBox {
         adjusted
     }
 
-    fn write_buffer(
-        &self,
-        stdout: &mut StdoutLock,
-        left_padding: usize,
-        render_info: RenderInfo,
-    ) -> Result<()> {
+    fn write_buffer(&self, stdout: &mut StdoutLock, left_padding: usize) -> Result<()> {
         let RenderInfo {
             x,
             y,
             height,
             width,
-        } = render_info;
+        } = self.render_info.clone().expect("No render info present");
 
         let lines = self
             .buffer
@@ -140,7 +148,6 @@ impl ViewBox {
                 &mut padding_buffer,
                 left_padding,
                 &clear_str,
-                render_info,
             );
         } else {
             self.print_lines_colorless(
@@ -149,8 +156,8 @@ impl ViewBox {
                 &mut padding_buffer,
                 left_padding,
                 &clear_str,
-                render_info.x,
-                render_info.width,
+                x,
+                width,
             );
         }
 
@@ -179,15 +186,13 @@ impl ViewBox {
         padding_buffer: &mut String,
         left_padding: usize,
         clear_str: &str,
-
-        render_info: RenderInfo,
     ) {
         let RenderInfo {
             x,
             y: _,
             height,
             width,
-        } = render_info;
+        } = self.render_info.clone().unwrap();
 
         let hl_lines = hl_lines.into_iter().skip(self.top).take(height.into());
         let lines = lines
@@ -398,26 +403,27 @@ impl ViewBox {
         }
     }
 
-    // TODO decide whether to have the caller pass in render info or to have them just modify
-    // `self.render_info`
-    //
-    // I'm inclined toward the latter
-    pub fn render(&mut self, render_info: RenderInfo, adjusted: bool, resized: bool) -> Result<()> {
-        self.cached_render_info = Some(render_info.clone());
-
+    /// Make sure to set `self.render_info` if necessary
+    pub fn render(&mut self, adjusted: bool, resized: bool) -> Result<()> {
         let mut stdout = stdout().lock();
-        let left_padding = self.left_padding(render_info.height);
+        let left_padding = self.left_padding();
 
         // TODO Figure out how to propogate that we've resizewe've resizewe've resized (eiwe've
         // resizewe've resized
         if self.buffer.has_changed || adjusted || resized {
-            self.write_buffer(&mut stdout, left_padding, render_info)?;
+            self.write_buffer(&mut stdout, left_padding)?;
         }
 
         Ok(())
     }
 
-    pub fn left_padding(&self, height: u16) -> usize {
+    pub fn left_padding(&self) -> usize {
+        let height = self
+            .render_info
+            .as_ref()
+            .expect("No render info -> no left padding")
+            .height;
+
         (self.top + height as usize).to_string().len() + 1
     }
 
@@ -458,7 +464,7 @@ impl ViewBox {
     /// The current cursor position on the absolute screen
     /// Given that the cursor is in the given view box
     pub fn cursor_position(&self, render_info: &RenderInfo) -> (u16, u16) {
-        let left_padding = self.left_padding(render_info.height);
+        let left_padding = self.left_padding();
         let buffer_col = self.buffer.get_col();
         let buffer_row = self.buffer.get_row();
 

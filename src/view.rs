@@ -218,7 +218,7 @@ impl View {
             (global_state.status_bar.idx(), self.height + 1)
         } else {
             let view_box = &self.get_view_box();
-            view_box.cursor_position(view_box.cached_render_info.as_ref().unwrap())
+            view_box.cursor_position(view_box.render_info.as_ref().unwrap())
         };
         queue!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
 
@@ -333,6 +333,12 @@ impl View {
         }
 
         None
+    }
+
+    pub fn send_like_view_box_where(&mut self, has_file_name: impl FnMut(&ViewBox) -> bool) {
+        if let Some(node) = self.find_node_of_box_where(has_file_name) {
+            self.set_current_view_node(node);
+        }
     }
 }
 

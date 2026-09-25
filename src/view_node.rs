@@ -32,34 +32,31 @@ impl ViewNode {
     ) {
         match self {
             ViewNode::Leaf(view_box) => {
-                view_box.render(
-                    RenderInfo {
-                        x,
-                        y,
-                        height,
-                        width,
-                    },
-                    adjusted,
-                    resized,
-                );
+                view_box.set_render_info(RenderInfo {
+                    x,
+                    y,
+                    height,
+                    width,
+                });
+                view_box.render(adjusted, resized);
             }
 
             ViewNode::SplitHorizontal { left, right } => {
-                left.render_view_node(x, y, height, width / 2, adjusted);
+                left.render_view_node(x, y, height, width / 2, adjusted, resized);
 
                 let right_width = height.div_ceil(2);
                 let right_x = x + (width - right_width);
 
-                right.render_view_node(right_x, y, height, right_width, adjusted);
+                right.render_view_node(right_x, y, height, right_width, adjusted, resized);
             }
 
             ViewNode::SplitVertical { top, bottom } => {
-                top.render_view_node(x, y, height / 2, width, adjusted);
+                top.render_view_node(x, y, height / 2, width, adjusted, resized);
 
                 let bottom_height = height.div_ceil(2);
                 let bottom_y = y + (height - bottom_height);
 
-                bottom.render_view_node(x, bottom_y, bottom_height, width, adjusted);
+                bottom.render_view_node(x, bottom_y, bottom_height, width, adjusted, resized);
             }
         }
     }
