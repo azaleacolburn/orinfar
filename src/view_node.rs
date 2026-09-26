@@ -1,11 +1,5 @@
 use crate::view_box::{RenderInfo, ViewBox};
-
-pub enum ViewNodeDirection {
-    Left,
-    Right,
-}
-
-pub type ViewNodePath = Vec<ViewNodeDirection>;
+use anyhow::Result;
 
 pub enum ViewNode {
     Leaf(ViewBox),
@@ -29,7 +23,7 @@ impl ViewNode {
         width: u16,
         adjusted: bool,
         resized: bool,
-    ) {
+    ) -> Result<()> {
         match self {
             ViewNode::Leaf(view_box) => {
                 view_box.set_render_info(RenderInfo {
@@ -38,26 +32,28 @@ impl ViewNode {
                     height,
                     width,
                 });
-                view_box.render(adjusted, resized);
+                view_box.render(adjusted, resized)?;
             }
 
             ViewNode::SplitHorizontal { left, right } => {
-                left.render_view_node(x, y, height, width / 2, adjusted, resized);
+                left.render_view_node(x, y, height, width / 2, adjusted, resized)?;
 
                 let right_width = height.div_ceil(2);
                 let right_x = x + (width - right_width);
 
-                right.render_view_node(right_x, y, height, right_width, adjusted, resized);
+                right.render_view_node(right_x, y, height, right_width, adjusted, resized)?;
             }
 
             ViewNode::SplitVertical { top, bottom } => {
-                top.render_view_node(x, y, height / 2, width, adjusted, resized);
+                top.render_view_node(x, y, height / 2, width, adjusted, resized)?;
 
                 let bottom_height = height.div_ceil(2);
                 let bottom_y = y + (height - bottom_height);
 
-                bottom.render_view_node(x, bottom_y, bottom_height, width, adjusted, resized);
+                bottom.render_view_node(x, bottom_y, bottom_height, width, adjusted, resized)?;
             }
         }
+
+        Ok(())
     }
 }

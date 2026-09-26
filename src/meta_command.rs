@@ -37,14 +37,14 @@ pub fn match_meta_command(
 
         "load" | "l" => {
             view.load_file()?;
-            view.render(global_state, false, false);
+            view.render(global_state, false, false)?;
         }
 
         "open" | "o" => {
             attach_buffer(&arg, view.get_view_box_mut());
             view.load_file()?;
 
-            view.render(global_state, false, false);
+            view.render(global_state, false, false)?;
         }
 
         "sub" | "s" => {
@@ -60,6 +60,7 @@ pub fn match_meta_command(
             let arg = PathBuf::from(arg);
 
             let has_file_name = |b: &ViewBox| b.path() == Some(&arg);
+            view.set_view_box_where(has_file_name);
             // TODO set current view node to predicate result
         }
 

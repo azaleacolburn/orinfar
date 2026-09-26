@@ -47,8 +47,6 @@ impl ViewBox {
     }
 
     fn write_line_centered(&self, output: &mut String, line: &str, width: u16) {
-        let height = self.render_info.as_ref().unwrap().height;
-
         let leftover = usize::from(width) - line.len() - self.left_padding();
         let padding = (0..leftover / 2).map(|_| ' ').collect::<String>();
 

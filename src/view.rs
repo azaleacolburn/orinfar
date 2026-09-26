@@ -193,7 +193,7 @@ impl View {
         let register = global_state.register_handler.get_curr_reg();
 
         self.view_tree
-            .render_view_node(0, 0, self.height, self.width, adjusted, resized);
+            .render_view_node(0, 0, self.height, self.width, adjusted, resized)?;
 
         let mut stdout = stdout().lock();
 
@@ -231,10 +231,10 @@ impl View {
         self.height = rows;
     }
 
-    pub fn set_current_view_node(&mut self, vb: &ViewNode) {
-        assert!(matches!(vb, ViewNode::Leaf(_)));
+    pub fn set_current_view_node(&mut self, vb: *const ViewNode) {
+        assert!(matches!(unsafe { vb.as_ref().unwrap() }, ViewNode::Leaf(_)));
 
-        self.current_view_node = ptr::from_ref(vb).cast_mut();
+        self.current_view_node = vb.cast_mut();
     }
 }
 
@@ -335,7 +335,7 @@ impl View {
         None
     }
 
-    pub fn send_like_view_box_where(&mut self, has_file_name: impl FnMut(&ViewBox) -> bool) {
+    pub fn set_view_box_where(&mut self, has_file_name: impl FnMut(&ViewBox) -> bool) {
         if let Some(node) = self.find_node_of_box_where(has_file_name) {
             self.set_current_view_node(node);
         }
