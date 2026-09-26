@@ -115,6 +115,8 @@ impl ViewBox {
             width,
         } = self.render_info.clone().expect("No render info present");
 
+        log!("x: {x}, y: {y}, height: {height}, width: {width}");
+
         let lines = self
             .buffer
             .rope
@@ -408,8 +410,6 @@ impl ViewBox {
         let mut stdout = stdout().lock();
         let left_padding = self.left_padding();
 
-        // TODO Figure out how to propogate that we've resizewe've resizewe've resized (eiwe've
-        // resizewe've resized
         if self.buffer.has_changed || adjusted || resized {
             self.write_buffer(&mut stdout, left_padding)?;
         }

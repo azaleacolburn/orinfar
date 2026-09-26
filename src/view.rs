@@ -190,13 +190,12 @@ impl View {
         adjusted: bool,
         resized: bool,
     ) -> Result<()> {
-        let register = global_state.register_handler.get_curr_reg();
-
         self.view_tree
             .render_view_node(0, 0, self.height, self.width, adjusted, resized)?;
 
         let mut stdout = stdout().lock();
 
+        let register = global_state.register_handler.get_curr_reg();
         let status_message = self.status_message(
             &global_state.status_bar,
             &global_state.mode,

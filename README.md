@@ -53,6 +53,9 @@ I'll specify and revise this list when I get around to specific things and I hav
     - [ ] Test Suite 
     - [ ] Benchmarking Suite
     - [ ] Better view box handling (resizing is a really hard / impossible problem right now)
+        - __This is currently in progress on `main` by storing view boxes in a binary tree structure__
+    - [ ] Implement automatic diffing between the old and new buffers for each flush
+        - Currently, we just replace entire changed lines, a proper diffing algorithm would minimize the number of writes to the crossterm queue 
 
 # Feature/Bug Requests
 
