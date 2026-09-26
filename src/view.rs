@@ -64,7 +64,7 @@ impl View {
         unsafe { view_box.as_mut().unwrap() }
     }
 
-    /// Guaranteed to not mutatble `self`
+    /// Guaranteed to not mutate `self`
     pub fn get_view_box(&self) -> &ViewBox {
         let view_node = unsafe {
             self.current_view_node
@@ -250,14 +250,21 @@ impl View {
 
         // Copy the leaf onto the stack, then back to the heap
         let new_leaf = Box::new(unsafe { old_node_ptr.read() });
+        let new_leaf_ptr = (&new_leaf).into();
 
+        // Create a new blank leaf on the heap
         let blank_leaf = Box::new(ViewNode::Leaf(ViewBox::new()));
 
+        // Create a branch node
         let split_node = generator(new_leaf, blank_leaf);
 
+        // Replace the old leaf with the new branch
         unsafe {
             old_node_ptr.write(split_node);
         }
+
+        // The current view node doesn't changed, but the address does
+        self.current_view_node = new_leaf_ptr;
     }
 
     pub fn split_view_box_vertical(&mut self) {

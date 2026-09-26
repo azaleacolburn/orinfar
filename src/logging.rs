@@ -17,7 +17,9 @@ pub fn setup_logging_and_data() -> Result<OrinfarData> {
     {
         return Err(err.into());
     }
+
     std::fs::File::create(log_file())?;
+
     let data_path = data_file();
     if !data_path.exists() {
         std::fs::File::create(&data_path)?;
