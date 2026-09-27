@@ -38,8 +38,6 @@ pub struct ViewBox {
     pub top: usize,
     // The leftmost row of the buffer being displayed (zero-indexed)
     pub left: usize,
-
-    pub render_info: Option<RenderInfo>,
 }
 
 impl ViewBox {
@@ -463,7 +461,7 @@ impl ViewBox {
     /// # Returns
     /// The current cursor position on the absolute screen
     /// Given that the cursor is in the given view box
-    pub fn cursor_position(&self, render_info: &RenderInfo) -> (u16, u16) {
+    pub fn cursor_position(&self) -> (u16, u16) {
         let left_padding = self.left_padding();
         let buffer_col = self.buffer.get_col();
         let buffer_row = self.buffer.get_row();

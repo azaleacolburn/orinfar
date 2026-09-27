@@ -1,10 +1,5 @@
 use crate::{
-    buffer::Buffer,
-    global_state::GlobalState,
-    mode::Mode,
-    status_bar::StatusBar,
-    view_box::ViewBox,
-    view_node::ViewNode::{self},
+    buffer::Buffer, global_state::GlobalState, mode::Mode, status_bar::StatusBar, view_box::ViewBox,
 };
 use anyhow::Result;
 use crossterm::{
@@ -24,20 +19,17 @@ use std::{
 
 /// Represents the entire view of the editor in the terminal
 pub struct View {
-    view_tree: Box<ViewNode>,
-    current_view_node: *mut ViewNode,
+    view_boxes: Vec<ViewBox>,
+    current_view_box: usize,
     width: u16,
     height: u16,
 }
 
 impl View {
     pub fn new(cols: u16, rows: u16) -> Self {
-        let mut boxed = Box::new(ViewNode::Leaf(ViewBox::new()));
-        let ptr = ptr::from_mut(boxed.as_mut());
-
         Self {
-            view_tree: boxed,
-            current_view_node: ptr,
+            view_boxes: vec![ViewBox::new()],
+            current_view_box: 0,
             width: cols, // Don't subtract one because each viewbox handles line nums separately
             height: rows - 1,
         }
@@ -66,16 +58,7 @@ impl View {
 
     /// Guaranteed to not mutate `self`
     pub fn get_view_box(&self) -> &ViewBox {
-        let view_node = unsafe {
-            self.current_view_node
-                .as_ref()
-                .expect("Invalid Pointer to Current View Box: Bug In Orinfar")
-        };
-
-        match view_node {
-            ViewNode::Leaf(b) => b,
-            _ => panic!("Current View Box Not Leaf: Bug In Orinfar"),
-        }
+        &self.view_boxes[self.current_view_box]
     }
 
     pub fn normal_unattached_status(chained: &[char], count: u32, register: char) -> String {
@@ -190,8 +173,7 @@ impl View {
         adjusted: bool,
         resized: bool,
     ) -> Result<()> {
-        self.view_tree
-            .render_view_node(0, 0, self.height, self.width, adjusted, resized)?;
+        self.get_view_box().render(adjusted, resized);
 
         let mut stdout = stdout().lock();
 
@@ -217,7 +199,7 @@ impl View {
             (global_state.status_bar.idx(), self.height + 1)
         } else {
             let view_box = &self.get_view_box();
-            view_box.cursor_position(view_box.render_info.as_ref().unwrap())
+            view_box.cursor_position()
         };
         queue!(stdout, MoveToColumn(new_col), MoveToRow(new_row), Show)?;
 
