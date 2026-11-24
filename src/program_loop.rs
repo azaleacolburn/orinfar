@@ -150,7 +150,7 @@ pub fn program_loop(mut global_state: GlobalState, mut view: View) -> Result<()>
         let _ = view.get_view_box_mut().parse();
 
         let adjusted = view.adjust();
-        view.render(&global_state, adjusted)?;
+        view.render(&global_state, adjusted, false)?;
     }
 
     Ok(())

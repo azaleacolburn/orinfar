@@ -4,7 +4,7 @@ use crate::{
     mode::Mode,
     status_bar::StatusBar,
     view_box::ViewBox,
-    view_node::ViewNode::{self, Leaf},
+    view_node::ViewNode::{self},
 };
 use anyhow::Result;
 use crossterm::{
@@ -76,6 +76,21 @@ impl View {
             ViewNode::Leaf(b) => b,
             _ => panic!("Current View Box Not Leaf: Bug In Orinfar"),
         }
+    }
+
+    pub fn set_view_box(&mut self, view_box: &ViewBox) {
+        // We have to search for the view box in our tree
+        // because they may have passed a reference to a clone
+        let equals = |current_view_box: &ViewBox| current_view_box == view_box;
+        let Some(view_node) = self.search_view_boxes_where(equals) else {
+            return;
+        };
+
+        self.current_view_box = ptr::from_ref(view_node).cast_mut();
+    }
+
+    pub fn get_view_node_ptr(&self) -> *const ViewNode {
+        self.current_view_box
     }
 
     pub fn normal_unattached_status(chained: &[char], count: u32, register: char) -> String {
@@ -316,49 +331,102 @@ impl View {
         self.split_view_box_generic(generator);
     }
 
-    pub fn get_siblings(&mut self) {
+    pub fn get_sibling(&self) -> Option<&ViewBox> {
         let view_node_ptr = self.current_view_box as *const ViewNode;
-        let predicate = |view_node| view_node_ptr == ptr::from_ref(view_node);
+        let predicate = |view_node: &ViewNode| view_node_ptr == ptr::from_ref(view_node);
 
-        self.search_view_boxes_where(predicate);
+        self.search_view_nodes_where(predicate)
     }
 
-    fn search_view_boxes_where(&self, predicate: impl Fn(&ViewNode) -> bool) -> Option<&ViewBox> {
-        match self.view_tree.as_ref() {
-            ViewNode::Leaf(b) => {
-                if predicate(self.view_tree.as_ref()) {
-                    return Some(&b);
-                }
+    fn search_view_boxes_where(&self, predicate: impl Fn(&ViewBox) -> bool) -> Option<&ViewNode> {
+        search_view_boxes_where_rec(&self.view_tree, predicate)
+    }
 
-                None
+    fn search_view_nodes_where(&self, predicate: impl Fn(&ViewNode) -> bool) -> Option<&ViewBox> {
+        search_view_nodes_where_rec(&self.view_tree, predicate)
+    }
+}
+
+fn search_view_boxes_where_rec(
+    view_node: &ViewNode,
+    predicate: impl Fn(&ViewBox) -> bool,
+) -> Option<&ViewNode> {
+    match view_node {
+        ViewNode::Leaf(b) => {
+            if predicate(b) {
+                return Some(&view_node);
             }
 
-            ViewNode::SplitVertical { top, bottom } => {
-                let result = self.search_view_boxes_where(top.as_ref() as *const ViewNode);
-                if result.is_some() {
-                    return result;
-                }
+            None
+        }
 
-                let result = self.search_view_boxes_where(bottom.as_ref() as *const ViewNode);
-                if result.is_some() {
-                    return result;
-                }
-
-                return None;
+        ViewNode::SplitVertical { top, bottom } => {
+            let result = search_view_boxes_where_rec(top, &predicate);
+            if result.is_some() {
+                return result;
             }
-            ViewNode::SplitHorizontal { left, right } => {
-                let result = self.search_view_boxes_where(left.as_ref() as *const ViewNode);
-                if result.is_some() {
-                    return result;
-                }
 
-                let result = self.search_view_boxes_where(right.as_ref() as *const ViewNode);
-                if result.is_some() {
-                    return result;
-                }
-
-                return None;
+            let result = search_view_boxes_where_rec(bottom, predicate);
+            if result.is_some() {
+                return result;
             }
+
+            return None;
+        }
+        ViewNode::SplitHorizontal { left, right } => {
+            let result = search_view_boxes_where_rec(left, &predicate);
+            if result.is_some() {
+                return result;
+            }
+
+            let result = search_view_boxes_where_rec(right, predicate);
+            if result.is_some() {
+                return result;
+            }
+
+            return None;
+        }
+    }
+}
+
+fn search_view_nodes_where_rec(
+    view_node: &ViewNode,
+    predicate: impl Fn(&ViewNode) -> bool,
+) -> Option<&ViewBox> {
+    match view_node {
+        ViewNode::Leaf(b) => {
+            if predicate(view_node) {
+                return Some(&b);
+            }
+
+            None
+        }
+
+        ViewNode::SplitVertical { top, bottom } => {
+            let result = search_view_nodes_where_rec(top, &predicate);
+            if result.is_some() {
+                return result;
+            }
+
+            let result = search_view_nodes_where_rec(bottom, predicate);
+            if result.is_some() {
+                return result;
+            }
+
+            return None;
+        }
+        ViewNode::SplitHorizontal { left, right } => {
+            let result = search_view_nodes_where_rec(left, &predicate);
+            if result.is_some() {
+                return result;
+            }
+
+            let result = search_view_nodes_where_rec(right, predicate);
+            if result.is_some() {
+                return result;
+            }
+
+            return None;
         }
     }
 }

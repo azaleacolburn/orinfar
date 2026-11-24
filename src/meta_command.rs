@@ -1,8 +1,8 @@
 use crate::{
     buffer::Buffer, global_state::GlobalState, mode::Mode, undo::UndoTree, utility::SplitOnce,
-    view::View, view_box::ViewBox, view_command::split_curr_view_box_horizontal,
+    view::View, view_box::ViewBox,
 };
-use anyhow::Result;
+use anyhow::{Result, bail};
 use ropey::Rope;
 use std::{ops::ControlFlow, path::PathBuf};
 
@@ -37,16 +37,21 @@ pub fn match_meta_command(
 
         "load" | "l" => {
             view.load_file()?;
-            let view_box = view.get_view_box();
-            view_box.render(view_box.cached_render_info.unwrap(), false, false)?;
+
+            let view_box = view.get_view_box_mut();
+            let render_info = view_box.cached_render_info.clone().unwrap();
+
+            view_box.render(render_info, false, false)?;
         }
 
         "open" | "o" => {
             attach_buffer(&arg, view.get_view_box_mut());
             view.load_file()?;
 
-            let view_box = view.get_view_box();
-            view_box.render(view_box.cached_render_info.unwrap(), false, false)?;
+            let view_box = view.get_view_box_mut();
+            let render_info = view_box.cached_render_info.clone().unwrap();
+
+            view_box.render(render_info, false, false)?;
         }
 
         "sub" | "s" => {
@@ -62,11 +67,17 @@ pub fn match_meta_command(
 
             view.split_view_box_horizontal();
 
-            let anchor = view.cursor;
-            view.cursor = view.boxes.len() - 1;
+            let Some(sibiling) = view.get_sibling() else {
+                log!("Failed to split View Box");
+
+                break 'block;
+            };
+
+            let anchor = view.get_view_box();
+            view.set_view_box(sibiling);
 
             print_directories(view, &mut global_state.undo_tree)?;
-            view.cursor = anchor;
+            view.set_view_box(anchor);
         }
 
         "reg" => {
@@ -77,15 +88,18 @@ pub fn match_meta_command(
                     .replace_contents(registers, &mut global_state.undo_tree);
             }
 
-            split_curr_view_box_horizontal(view);
+            view.split_view_box_horizontal();
 
-            let anchor = view.cursor;
-            view.cursor = view.boxes.len() - 1;
+            let Some(sibiling) = view.get_sibling() else {
+                bail!("Failed to split View Box");
+            };
+
+            let anchor = view.get_view_box();
+            view.set_view_box(sibiling);
 
             view.get_buffer_mut()
                 .replace_contents(registers, &mut global_state.undo_tree);
-
-            view.cursor = anchor;
+            view.set_view_box(anchor);
         }
 
         n => {

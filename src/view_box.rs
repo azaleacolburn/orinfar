@@ -17,7 +17,7 @@ use std::{
 };
 use tree_sitter::{Parser, Tree};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RenderInfo {
     pub x: u16,
     pub y: u16,
@@ -418,6 +418,7 @@ impl ViewBox {
     }
 
     pub fn left_padding(&self, height: u16) -> usize {
+        // Line number length + 1
         (self.top + height as usize).to_string().len() + 1
     }
 
@@ -499,5 +500,16 @@ impl ViewBox {
 
     pub const fn path(&self) -> Option<&PathBuf> {
         self.path.as_ref()
+    }
+}
+
+impl PartialEq for ViewBox {
+    fn eq(&self, other: &Self) -> bool {
+        self.top == other.top
+            && self.left == other.left
+            && self.cached_render_info == other.cached_render_info
+            && self.path == other.path
+            && self.git_hash == other.git_hash
+            && self.buffer == other.buffer
     }
 }

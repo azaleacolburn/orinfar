@@ -1,4 +1,4 @@
-use crate::view::View;
+use crate::{view::View, view_box::ViewBox};
 
 pub struct ViewCommand<'a> {
     pub name: &'a str,
@@ -16,9 +16,13 @@ impl<'a> ViewCommand<'a> {
 }
 
 pub fn center_viewbox_on_cursor(view: &mut View) {
-    let view_box = view.get_view_box();
+    let view_box: &mut ViewBox = view.get_view_box_mut();
 
-    let half_height = view_box.height as usize / 2;
+    let Some(ref render_info) = view_box.cached_render_info else {
+        return;
+    };
+
+    let half_height = render_info.height as usize / 2;
     let row = view_box.buffer.get_row();
     if row < half_height {
         return;
@@ -31,24 +35,7 @@ pub fn center_viewbox_on_cursor(view: &mut View) {
     view_box.buffer.has_changed = true;
 }
 
-pub fn move_down_one_view_box(view: &mut View) {
-    if let Some(i) = view.position_view_box_down() {
-        view.cursor = i;
-    }
-}
-pub fn move_up_one_view_box(view: &mut View) {
-    if let Some(i) = view.position_view_box_up() {
-        view.cursor = i;
-    }
-}
-
-pub fn move_left_one_view_box(view: &mut View) {
-    if let Some(i) = view.position_view_box_left() {
-        view.cursor = i;
-    }
-}
-pub fn move_right_one_view_box(view: &mut View) {
-    if let Some(i) = view.position_view_box_right() {
-        view.cursor = i;
-    }
-}
+pub fn move_down_one_view_box(view: &mut View) {}
+pub fn move_up_one_view_box(view: &mut View) {}
+pub fn move_left_one_view_box(view: &mut View) {}
+pub fn move_right_one_view_box(view: &mut View) {}
