@@ -4,7 +4,10 @@ use crate::{
     mode::Mode,
     status_bar::StatusBar,
     view_box::ViewBox,
-    view_node::ViewNode::{self},
+    view_node::{
+        ViewNode::{self},
+        ViewNodePath,
+    },
 };
 use anyhow::Result;
 use crossterm::{
@@ -25,19 +28,18 @@ use std::{
 /// Represents the entire view of the editor in the terminal
 pub struct View {
     view_tree: Box<ViewNode>,
-    current_view_box: *mut ViewNode,
+    current_view_node: ViewNodePath,
     width: u16,
     height: u16,
 }
 
 impl View {
     pub fn new(cols: u16, rows: u16) -> Self {
-        let mut boxed = Box::new(ViewNode::Leaf(ViewBox::new()));
-        let ptr = ptr::from_mut(boxed.as_mut());
+        let boxed = Box::new(ViewNode::Leaf(Box::new(ViewBox::new())));
 
         Self {
             view_tree: boxed,
-            current_view_box: ptr,
+            current_view_node: vec![],
             width: cols, // Don't subtract one because each viewbox handles line nums separately
             height: rows - 1,
         }
@@ -64,33 +66,16 @@ impl View {
         unsafe { view_box.as_mut().unwrap() }
     }
 
-    /// Guaranteed to not mutatble `self`
     pub fn get_view_box(&self) -> &ViewBox {
-        let view_node = unsafe {
-            self.current_view_box
-                .as_ref()
-                .expect("Invalid Pointer to Current View Box: Bug In Orinfar")
-        };
-
-        match view_node {
-            ViewNode::Leaf(b) => b,
-            _ => panic!("Current View Box Not Leaf: Bug In Orinfar"),
-        }
+        self.view_tree
+            .evaluate_view_box_path(&self.current_view_node)
+            .unwrap()
     }
 
-    pub fn set_view_box(&mut self, view_box: &ViewBox) {
-        // We have to search for the view box in our tree
-        // because they may have passed a reference to a clone
-        let equals = |current_view_box: &ViewBox| current_view_box == view_box;
-        let Some(view_node) = self.search_view_boxes_where(equals) else {
-            return;
-        };
-
-        self.current_view_box = ptr::from_ref(view_node).cast_mut();
-    }
-
-    pub fn get_view_node_ptr(&self) -> *const ViewNode {
-        self.current_view_box
+    pub fn get_view_node(&self) -> &ViewNode {
+        self.view_tree
+            .evaluate_view_node_path(&self.current_view_node)
+            .unwrap()
     }
 
     pub fn normal_unattached_status(chained: &[char], count: u32, register: char) -> String {
@@ -208,7 +193,7 @@ impl View {
         let register = global_state.register_handler.get_curr_reg();
 
         self.view_tree
-            .render_view_node(0, 0, self.height, self.width, adjusted, resized);
+            .render_view_node(0, 0, self.height, self.width, adjusted, resized)?;
 
         let mut stdout = stdout().lock();
 
@@ -297,139 +282,107 @@ impl View {
     fn split_view_box_generic(
         &mut self,
         generator: impl FnOnce(Box<ViewNode>, Box<ViewNode>) -> ViewNode,
-    ) {
-        // We don't have access to the parent node, so we do some tricky in-place writing
-        let old_node_ptr = self.current_view_box;
+    ) -> &mut ViewBox {
+        let current: &ViewNode = self.get_view_node();
 
-        // Copy the leaf onto the stack, then back to the heap
-        let new_leaf = Box::new(unsafe { old_node_ptr.read() });
+        let current_leaf_ptr = ptr::from_ref(current).cast_mut();
+        let new_current_leaf_allocation: Box<ViewNode> =
+            // Read the value without deep copying 
+            Box::new(unsafe { current_leaf_ptr.read() });
 
-        let blank_leaf = Box::new(ViewNode::Leaf(ViewBox::new()));
+        let blank_view_box = Box::new(ViewBox::new());
+        let blank_view_box_ptr = ptr::from_ref(blank_view_box.as_ref());
+        let blank_leaf = Box::new(ViewNode::Leaf(blank_view_box));
 
-        let split_node = generator(new_leaf, blank_leaf);
+        let new_parent: ViewNode = generator(new_current_leaf_allocation, blank_leaf);
 
         unsafe {
-            old_node_ptr.write(split_node);
+            current_leaf_ptr.write(new_parent);
+
+            blank_view_box_ptr.cast_mut().as_mut().unwrap()
         }
     }
 
-    pub fn split_view_box_vertical(&mut self) {
-        let generator = |new_leaf, blank_leaf| ViewNode::SplitVertical {
-            top: new_leaf,
+    /// Splits the current view box (a leaf) into two vertical stacked sibilings.
+    /// The previous leaf is guaranteed to be the top view box.
+    /// A reference to the new bottom leaf is returned.
+    pub fn split_view_box_vertical(&mut self) -> &mut ViewBox {
+        let generator = |old_leaf, blank_leaf| ViewNode::SplitVertical {
+            top: old_leaf,
             bottom: blank_leaf,
         };
 
-        self.split_view_box_generic(generator);
+        self.split_view_box_generic(generator)
     }
 
-    pub fn split_view_box_horizontal(&mut self) {
-        let generator = |new_leaf, blank_leaf| ViewNode::SplitHorizontal {
-            left: new_leaf,
+    pub fn split_view_box_horizontal(&mut self) -> &mut ViewBox {
+        let generator = |old_leaf, blank_leaf| ViewNode::SplitHorizontal {
+            left: old_leaf,
             right: blank_leaf,
         };
 
-        self.split_view_box_generic(generator);
+        self.split_view_box_generic(generator)
     }
 
-    pub fn get_sibling(&self) -> Option<&ViewBox> {
-        let view_node_ptr = self.current_view_box as *const ViewNode;
-        let predicate = |view_node: &ViewNode| view_node_ptr == ptr::from_ref(view_node);
+    // pub fn get_sibiling_ptr(&self) -> Option<*const ViewNode> {
+    //     self.parent_view_node
+    // }
 
-        self.search_view_nodes_where(predicate)
-    }
+    pub fn get_sibling(&mut self) -> Option<&ViewNode> {
+        let path_len = self.current_view_node.len();
 
-    fn search_view_boxes_where(&self, predicate: impl Fn(&ViewBox) -> bool) -> Option<&ViewNode> {
-        search_view_boxes_where_rec(&self.view_tree, predicate)
-    }
+        let Some(direction) = self.current_view_node.last().map(|n| n.clone()) else {
+            return None;
+        };
 
-    fn search_view_nodes_where(&self, predicate: impl Fn(&ViewNode) -> bool) -> Option<&ViewBox> {
-        search_view_nodes_where_rec(&self.view_tree, predicate)
+        let mut sibiling_path = self.current_view_node.clone();
+        sibiling_path[path_len - 1] = direction.other();
+
+        self.view_tree.evaluate_view_node_path(&sibiling_path)
     }
 }
 
-fn search_view_boxes_where_rec(
-    view_node: &ViewNode,
-    predicate: impl Fn(&ViewBox) -> bool,
-) -> Option<&ViewNode> {
-    match view_node {
-        ViewNode::Leaf(b) => {
-            if predicate(b) {
-                return Some(&view_node);
-            }
-
-            None
-        }
-
-        ViewNode::SplitVertical { top, bottom } => {
-            let result = search_view_boxes_where_rec(top, &predicate);
-            if result.is_some() {
-                return result;
-            }
-
-            let result = search_view_boxes_where_rec(bottom, predicate);
-            if result.is_some() {
-                return result;
-            }
-
-            return None;
-        }
-        ViewNode::SplitHorizontal { left, right } => {
-            let result = search_view_boxes_where_rec(left, &predicate);
-            if result.is_some() {
-                return result;
-            }
-
-            let result = search_view_boxes_where_rec(right, predicate);
-            if result.is_some() {
-                return result;
-            }
-
-            return None;
-        }
-    }
-}
-
-fn search_view_nodes_where_rec(
-    view_node: &ViewNode,
-    predicate: impl Fn(&ViewNode) -> bool,
-) -> Option<&ViewBox> {
-    match view_node {
-        ViewNode::Leaf(b) => {
-            if predicate(view_node) {
-                return Some(&b);
-            }
-
-            None
-        }
-
-        ViewNode::SplitVertical { top, bottom } => {
-            let result = search_view_nodes_where_rec(top, &predicate);
-            if result.is_some() {
-                return result;
-            }
-
-            let result = search_view_nodes_where_rec(bottom, predicate);
-            if result.is_some() {
-                return result;
-            }
-
-            return None;
-        }
-        ViewNode::SplitHorizontal { left, right } => {
-            let result = search_view_nodes_where_rec(left, &predicate);
-            if result.is_some() {
-                return result;
-            }
-
-            let result = search_view_nodes_where_rec(right, predicate);
-            if result.is_some() {
-                return result;
-            }
-
-            return None;
-        }
-    }
-}
+// fn search_view_boxes_where_rec(
+//     view_node: &ViewNode,
+//     predicate: impl Fn(&ViewBox) -> bool,
+// ) -> Option<&ViewNode> {
+//     match view_node {
+//         ViewNode::Leaf(b) => {
+//             if predicate(b) {
+//                 return Some(&view_node);
+//             }
+//
+//             None
+//         }
+//
+//         ViewNode::SplitVertical { top, bottom } => {
+//             let result = search_view_boxes_where_rec(top, &predicate);
+//             if result.is_some() {
+//                 return result;
+//             }
+//
+//             let result = search_view_boxes_where_rec(bottom, predicate);
+//             if result.is_some() {
+//                 return result;
+//             }
+//
+//             return None;
+//         }
+//         ViewNode::SplitHorizontal { left, right } => {
+//             let result = search_view_boxes_where_rec(left, &predicate);
+//             if result.is_some() {
+//                 return result;
+//             }
+//
+//             let result = search_view_boxes_where_rec(right, predicate);
+//             if result.is_some() {
+//                 return result;
+//             }
+//
+//             return None;
+//         }
+//     }
+// }
 
 pub fn cleanup() -> Result<()> {
     disable_raw_mode()?;

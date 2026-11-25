@@ -26,7 +26,7 @@ pub fn program_loop(mut global_state: GlobalState, mut view: View) -> Result<()>
 
         if let Event::Resize(cols, rows) = event {
             view.resize(cols, rows);
-            view.render(&global_state, false, true);
+            view.render(&global_state, false, true)?;
 
             continue;
         }

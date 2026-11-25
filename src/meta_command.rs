@@ -2,7 +2,7 @@ use crate::{
     buffer::Buffer, global_state::GlobalState, mode::Mode, undo::UndoTree, utility::SplitOnce,
     view::View, view_box::ViewBox,
 };
-use anyhow::{Result, bail};
+use anyhow::Result;
 use ropey::Rope;
 use std::{ops::ControlFlow, path::PathBuf};
 
@@ -65,19 +65,8 @@ pub fn match_meta_command(
                 break 'block;
             }
 
-            view.split_view_box_horizontal();
-
-            let Some(sibiling) = view.get_sibling() else {
-                log!("Failed to split View Box");
-
-                break 'block;
-            };
-
-            let anchor = view.get_view_box();
-            view.set_view_box(sibiling);
-
-            print_directories(view, &mut global_state.undo_tree)?;
-            view.set_view_box(anchor);
+            let sibiling = view.split_view_box_horizontal();
+            print_directories_to_view_box(sibiling, &mut global_state.undo_tree)?;
         }
 
         "reg" => {
@@ -88,18 +77,11 @@ pub fn match_meta_command(
                     .replace_contents(registers, &mut global_state.undo_tree);
             }
 
-            view.split_view_box_horizontal();
+            let sibiling = view.split_view_box_horizontal();
 
-            let Some(sibiling) = view.get_sibling() else {
-                bail!("Failed to split View Box");
-            };
-
-            let anchor = view.get_view_box();
-            view.set_view_box(sibiling);
-
-            view.get_buffer_mut()
+            sibiling
+                .buffer
                 .replace_contents(registers, &mut global_state.undo_tree);
-            view.set_view_box(anchor);
         }
 
         n => {
@@ -151,6 +133,13 @@ pub fn substitute_cmd(buffer: &mut Buffer, arg: &str, undo_tree: &mut UndoTree) 
 }
 
 pub fn print_directories(view: &mut View, undo_tree: &mut UndoTree) -> Result<()> {
+    print_directories_to_view_box(view.get_view_box_mut(), undo_tree)
+}
+
+pub fn print_directories_to_view_box(
+    view_box: &mut ViewBox,
+    undo_tree: &mut UndoTree,
+) -> Result<()> {
     let path = PathBuf::from("./");
 
     let dir = std::fs::read_dir(path)?;
@@ -164,7 +153,8 @@ pub fn print_directories(view: &mut View, undo_tree: &mut UndoTree) -> Result<()
         .collect::<String>();
 
     // Some issue with replacing contents that has a trailing newline
-    view.get_buffer_mut()
+    view_box
+        .buffer
         .replace_contents(&contents[0..contents.len() - 1], undo_tree);
 
     Ok(())

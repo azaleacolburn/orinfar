@@ -34,8 +34,3 @@ pub fn center_viewbox_on_cursor(view: &mut View) {
     view_box.buffer.update_list_set(.., true);
     view_box.buffer.has_changed = true;
 }
-
-pub fn move_down_one_view_box(view: &mut View) {}
-pub fn move_up_one_view_box(view: &mut View) {}
-pub fn move_left_one_view_box(view: &mut View) {}
-pub fn move_right_one_view_box(view: &mut View) {}

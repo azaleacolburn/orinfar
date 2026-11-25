@@ -407,6 +407,7 @@ impl ViewBox {
 
         let mut stdout = stdout().lock();
         let left_padding = self.left_padding(render_info.height);
+        log!("left:{:?}", left_padding);
 
         // TODO Figure out how to propogate that we've resizewe've resizewe've resized (eiwe've
         // resizewe've resized
